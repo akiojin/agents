@@ -3,9 +3,11 @@
 You are an API development expert specializing in creating production-ready, scalable REST APIs with modern frameworks. Design comprehensive API implementations with proper architecture, security, testing, and documentation.
 
 ## Context
+
 The user needs to create a new API endpoint or service with complete implementation including models, validation, security, testing, and deployment configuration. Focus on production-ready code that follows industry best practices.
 
 ## Requirements
+
 $ARGUMENTS
 
 ## Instructions
@@ -15,10 +17,11 @@ $ARGUMENTS
 Choose the appropriate framework based on requirements:
 
 **Framework Comparison Matrix**
+
 ```python
 def select_framework(requirements):
     """Select optimal API framework based on requirements"""
-    
+
     frameworks = {
         'fastapi': {
             'best_for': ['high_performance', 'async_operations', 'type_safety', 'modern_python'],
@@ -45,7 +48,7 @@ def select_framework(requirements):
             'example_stack': 'Spring Boot + JPA + PostgreSQL + Redis'
         }
     }
-    
+
     # Selection logic based on requirements
     if 'high_performance' in requirements:
         return frameworks['fastapi']
@@ -55,7 +58,7 @@ def select_framework(requirements):
         return frameworks['django_rest']
     elif 'real_time' in requirements:
         return frameworks['express']
-    
+
     return frameworks['fastapi']  # Default recommendation
 ```
 
@@ -64,6 +67,7 @@ def select_framework(requirements):
 Complete FastAPI API implementation:
 
 **Project Structure**
+
 ```
 project/
 ├── app/
@@ -105,6 +109,7 @@ project/
 ```
 
 **Core Configuration**
+
 ```python
 # app/core/config.py
 from pydantic import BaseSettings, validator
@@ -117,34 +122,34 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     SERVER_NAME: str = "localhost"
     SERVER_HOST: str = "0.0.0.0"
-    
+
     # Database
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = "app"
     DATABASE_URL: Optional[str] = None
-    
+
     @validator("DATABASE_URL", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
         return f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}@{values.get('POSTGRES_SERVER')}/{values.get('POSTGRES_DB')}"
-    
+
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
-    
+
     # Security
     BACKEND_CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:8000"]
-    
+
     # Rate Limiting
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW: int = 60
-    
+
     # Monitoring
     SENTRY_DSN: Optional[str] = None
     LOG_LEVEL: str = "INFO"
-    
+
     class Config:
         env_file = ".env"
 
@@ -152,6 +157,7 @@ settings = Settings()
 ```
 
 **Database Setup**
+
 ```python
 # app/core/database.py
 from sqlalchemy import create_engine
@@ -192,6 +198,7 @@ def get_redis():
 ```
 
 **Security Implementation**
+
 ```python
 # app/core/security.py
 from datetime import datetime, timedelta
@@ -213,7 +220,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
     return encoded_jwt
@@ -222,8 +229,8 @@ def verify_token(credentials: HTTPAuthorizationCredentials) -> dict:
     """Verify JWT token"""
     try:
         payload = jwt.decode(
-            credentials.credentials, 
-            settings.SECRET_KEY, 
+            credentials.credentials,
+            settings.SECRET_KEY,
             algorithms=["HS256"]
         )
         username: str = payload.get("sub")
@@ -251,6 +258,7 @@ def get_password_hash(password: str) -> str:
 ```
 
 **Models Implementation**
+
 ```python
 # app/models/user.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
@@ -261,7 +269,7 @@ from app.core.database import Base
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
@@ -271,7 +279,7 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     items = relationship("Item", back_populates="owner")
 
@@ -284,7 +292,7 @@ from app.core.database import Base
 
 class Item(Base):
     __tablename__ = "items"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
     description = Column(Text)
@@ -292,12 +300,13 @@ class Item(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     owner = relationship("User", back_populates="items")
 ```
 
 **Pydantic Schemas**
+
 ```python
 # app/schemas/user.py
 from pydantic import BaseModel, EmailStr, validator
@@ -311,7 +320,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-    
+
     @validator('password')
     def validate_password(cls, v):
         if len(v) < 8:
@@ -330,7 +339,7 @@ class UserInDB(UserBase):
     is_superuser: bool
     created_at: datetime
     updated_at: Optional[datetime]
-    
+
     class Config:
         orm_mode = True
 
@@ -364,7 +373,7 @@ class ItemInDB(ItemBase):
     owner_id: int
     created_at: datetime
     updated_at: Optional[datetime]
-    
+
     class Config:
         orm_mode = True
 
@@ -373,6 +382,7 @@ class Item(ItemInDB):
 ```
 
 **Service Layer**
+
 ```python
 # app/services/user_service.py
 from typing import Optional, List
@@ -386,19 +396,19 @@ from app.core.security import get_password_hash, verify_password
 class UserService:
     def __init__(self, db: Session):
         self.db = db
-    
+
     def get_user(self, user_id: int) -> Optional[User]:
         """Get user by ID"""
         return self.db.query(User).filter(User.id == user_id).first()
-    
+
     def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email"""
         return self.db.query(User).filter(User.email == email).first()
-    
+
     def get_users(self, skip: int = 0, limit: int = 100) -> List[User]:
         """Get list of users"""
         return self.db.query(User).offset(skip).limit(limit).all()
-    
+
     def create_user(self, user_create: UserCreate) -> User:
         """Create new user"""
         # Check if user exists
@@ -407,7 +417,7 @@ class UserService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
-        
+
         # Create user
         hashed_password = get_password_hash(user_create.password)
         db_user = User(
@@ -420,7 +430,7 @@ class UserService:
         self.db.commit()
         self.db.refresh(db_user)
         return db_user
-    
+
     def update_user(self, user_id: int, user_update: UserUpdate) -> User:
         """Update user"""
         db_user = self.get_user(user_id)
@@ -429,15 +439,15 @@ class UserService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
-        
+
         update_data = user_update.dict(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_user, field, value)
-        
+
         self.db.commit()
         self.db.refresh(db_user)
         return db_user
-    
+
     def authenticate_user(self, email: str, password: str) -> Optional[User]:
         """Authenticate user"""
         user = self.get_user_by_email(email)
@@ -447,6 +457,7 @@ class UserService:
 ```
 
 **Rate Limiting Middleware**
+
 ```python
 # app/core/rate_limiting.py
 import time
@@ -463,13 +474,13 @@ class RateLimiter:
         self.redis = redis_client
         self.requests = settings.RATE_LIMIT_REQUESTS
         self.window = settings.RATE_LIMIT_WINDOW
-    
+
     async def __call__(self, request: Request, call_next: Callable):
         # Get client identifier
         client_ip = request.client.host
         user_id = getattr(request.state, 'user_id', None)
         key = f"rate_limit:{user_id or client_ip}"
-        
+
         # Check rate limit
         current = self.redis.get(key)
         if current is None:
@@ -484,19 +495,20 @@ class RateLimiter:
                     headers={"Retry-After": str(self.redis.ttl(key))}
                 )
             self.redis.incr(key)
-        
+
         response = await call_next(request)
-        
+
         # Add rate limit headers
         remaining = max(0, self.requests - int(self.redis.get(key) or 0))
         response.headers["X-RateLimit-Limit"] = str(self.requests)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
         response.headers["X-RateLimit-Reset"] = str(int(time.time()) + self.redis.ttl(key))
-        
+
         return response
 ```
 
 **API Endpoints**
+
 ```python
 # app/api/v1/endpoints/users.py
 from typing import List
@@ -574,6 +586,7 @@ async def list_users(
 ```
 
 **Main Application**
+
 ```python
 # app/main.py
 from fastapi import FastAPI, Request
@@ -627,11 +640,11 @@ async def add_process_time_header(request: Request, call_next):
     """Add processing time and correlation ID"""
     correlation_id = str(uuid.uuid4())
     request.state.correlation_id = correlation_id
-    
+
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
-    
+
     response.headers["X-Process-Time"] = str(process_time)
     response.headers["X-Correlation-ID"] = correlation_id
     return response
@@ -640,12 +653,12 @@ async def add_process_time_header(request: Request, call_next):
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler"""
     correlation_id = getattr(request.state, 'correlation_id', 'unknown')
-    
+
     logger.error(
         f"Unhandled exception: {exc}",
         extra={"correlation_id": correlation_id, "path": request.url.path}
     )
-    
+
     return JSONResponse(
         status_code=500,
         content={
@@ -682,6 +695,7 @@ if __name__ == "__main__":
 Complete Express.js TypeScript implementation:
 
 **Project Structure & Setup**
+
 ```typescript
 // package.json
 {
@@ -769,7 +783,7 @@ import Joi from 'joi';
 export const validateRequest = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const { error } = schema.validate(req.body);
-    
+
     if (error) {
       return res.status(400).json({
         success: false,
@@ -780,7 +794,7 @@ export const validateRequest = (schema: Joi.ObjectSchema) => {
         }))
       });
     }
-    
+
     next();
   };
 };
@@ -793,7 +807,7 @@ export const userSchemas = {
     password: Joi.string().min(8).required(),
     fullName: Joi.string().max(100).optional()
   }),
-  
+
   update: Joi.object({
     email: Joi.string().email().optional(),
     username: Joi.string().alphanum().min(3).max(30).optional(),
@@ -946,9 +960,9 @@ export class UserController {
   async createUser(req: Request, res: Response) {
     try {
       const user = await userService.createUser(req.body);
-      
+
       logger.info('User created successfully', { userId: user.id });
-      
+
       res.status(201).json({
         success: true,
         message: 'User created successfully',
@@ -956,7 +970,7 @@ export class UserController {
       });
     } catch (error) {
       logger.error('Error creating user', { error: error.message });
-      
+
       res.status(400).json({
         success: false,
         message: error.message || 'Failed to create user'
@@ -982,7 +996,7 @@ export class UserController {
       });
     } catch (error) {
       logger.error('Error fetching user', { error: error.message });
-      
+
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -1007,7 +1021,7 @@ export class UserController {
       });
     } catch (error) {
       logger.error('Error fetching current user', { error: error.message });
-      
+
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -1034,7 +1048,7 @@ export class UserController {
       });
     } catch (error) {
       logger.error('Error during login', { error: error.message });
-      
+
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -1049,6 +1063,7 @@ export class UserController {
 Comprehensive testing setup:
 
 **FastAPI Tests**
+
 ```python
 # tests/conftest.py
 import pytest
@@ -1090,9 +1105,9 @@ def db_session(db_engine):
     connection = db_engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
-    
+
     yield session
-    
+
     session.close()
     transaction.rollback()
     connection.close()
@@ -1114,10 +1129,10 @@ def test_create_user(client: TestClient):
         "password": "testpassword123",
         "full_name": "Test User"
     }
-    
+
     response = client.post("/api/v1/users/", json=user_data)
     assert response.status_code == 201
-    
+
     data = response.json()
     assert data["email"] == user_data["email"]
     assert data["username"] == user_data["username"]
@@ -1131,11 +1146,11 @@ def test_create_user_duplicate_email(client: TestClient):
         "username": "user1",
         "password": "password123"
     }
-    
+
     # Create first user
     response1 = client.post("/api/v1/users/", json=user_data)
     assert response1.status_code == 201
-    
+
     # Try to create second user with same email
     user_data["username"] = "user2"
     response2 = client.post("/api/v1/users/", json=user_data)
@@ -1156,10 +1171,10 @@ async def test_user_authentication_flow(client: TestClient):
         "username": "authuser",
         "password": "authpassword123"
     }
-    
+
     create_response = client.post("/api/v1/users/", json=user_data)
     assert create_response.status_code == 201
-    
+
     # Login
     login_data = {
         "email": user_data["email"],
@@ -1167,14 +1182,14 @@ async def test_user_authentication_flow(client: TestClient):
     }
     login_response = client.post("/api/v1/auth/login", json=login_data)
     assert login_response.status_code == 200
-    
+
     token = login_response.json()["access_token"]
-    
+
     # Access protected endpoint
     headers = {"Authorization": f"Bearer {token}"}
     profile_response = client.get("/api/v1/users/me", headers=headers)
     assert profile_response.status_code == 200
-    
+
     profile_data = profile_response.json()
     assert profile_data["email"] == user_data["email"]
 ```
@@ -1182,6 +1197,7 @@ async def test_user_authentication_flow(client: TestClient):
 ### 5. Deployment Configuration
 
 **Docker Configuration**
+
 ```dockerfile
 # Dockerfile (FastAPI)
 FROM python:3.11-slim
@@ -1215,6 +1231,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 **Docker Compose**
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -1223,7 +1240,7 @@ services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - '8000:8000'
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/appdb
       - REDIS_URL=redis://redis:6379
@@ -1244,13 +1261,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5432:5432"
+      - '5432:5432'
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -1258,8 +1275,8 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./ssl:/etc/nginx/ssl
@@ -1275,6 +1292,7 @@ volumes:
 ### 6. CI/CD Pipeline
 
 **GitHub Actions Workflow**
+
 ```yaml
 # .github/workflows/api.yml
 name: API CI/CD
@@ -1292,7 +1310,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -1306,7 +1324,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
+
       redis:
         image: redis:7
         options: >-
@@ -1318,96 +1336,97 @@ jobs:
           - 6379:6379
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    
-    - name: Run linting
-      run: |
-        flake8 app tests
-        black --check app tests
-        isort --check-only app tests
-    
-    - name: Run type checking
-      run: mypy app
-    
-    - name: Run security scan
-      run: bandit -r app
-    
-    - name: Run tests
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-        REDIS_URL: redis://localhost:6379
-      run: |
-        pytest tests/ -v --cov=app --cov-report=xml
-    
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run linting
+        run: |
+          flake8 app tests
+          black --check app tests
+          isort --check-only app tests
+
+      - name: Run type checking
+        run: mypy app
+
+      - name: Run security scan
+        run: bandit -r app
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+        run: |
+          pytest tests/ -v --cov=app --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
 
   build:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha
-    
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
-    - name: Deploy to staging
-      run: |
-        echo "Deploying to staging environment"
-        # Add deployment commands here
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment"
+          # Add deployment commands here
 ```
 
 ### 7. Monitoring and Observability
 
 **Prometheus Metrics**
+
 ```python
 # app/core/metrics.py
 from prometheus_client import Counter, Histogram, Gauge, generate_latest
@@ -1435,26 +1454,26 @@ ACTIVE_CONNECTIONS = Gauge(
 async def record_metrics(request: Request, call_next):
     """Record metrics for each request"""
     start_time = time.time()
-    
+
     ACTIVE_CONNECTIONS.inc()
-    
+
     try:
         response = await call_next(request)
-        
+
         # Record metrics
         REQUEST_COUNT.labels(
             method=request.method,
             endpoint=request.url.path,
             status=response.status_code
         ).inc()
-        
+
         REQUEST_DURATION.labels(
             method=request.method,
             endpoint=request.url.path
         ).observe(time.time() - start_time)
-        
+
         return response
-    
+
     finally:
         ACTIVE_CONNECTIONS.dec()
 
@@ -1474,6 +1493,7 @@ This command integrates seamlessly with other Claude Code commands to create com
 ### 1. Complete API Development Workflow
 
 **Standard Development Pipeline:**
+
 ```bash
 # 1. Start with API scaffold
 /api-scaffold "User management API with FastAPI, PostgreSQL, and JWT auth"
@@ -1497,6 +1517,7 @@ This command integrates seamlessly with other Claude Code commands to create com
 ### 2. Database-First Development
 
 **When starting with existing data:**
+
 ```bash
 # 1. Handle database migrations first
 /db-migrate "PostgreSQL schema migration from legacy system to modern structure"
@@ -1510,6 +1531,7 @@ This command integrates seamlessly with other Claude Code commands to create com
 ### 3. Microservices Architecture
 
 **For distributed systems:**
+
 ```bash
 # Generate multiple related APIs
 /api-scaffold "User service with authentication and profile management"
@@ -1526,15 +1548,16 @@ This command integrates seamlessly with other Claude Code commands to create com
 ### 4. Integration with Generated Code
 
 **Test Integration Setup:**
+
 ```yaml
 # After running /api-scaffold, use this with /test-harness
 test_config:
-  api_base_url: "http://localhost:8000"
-  test_database: "postgresql://test:test@localhost:5432/test_db"
+  api_base_url: 'http://localhost:8000'
+  test_database: 'postgresql://test:test@localhost:5432/test_db'
   authentication:
-    test_user: "test@example.com"
-    test_password: "testpassword123"
-  
+    test_user: 'test@example.com'
+    test_password: 'testpassword123'
+
   endpoints_to_test:
     - POST /api/v1/users/
     - POST /api/v1/auth/login
@@ -1543,16 +1566,17 @@ test_config:
 ```
 
 **Security Scan Configuration:**
+
 ```yaml
 # Configuration for /security-scan after API scaffold
 security_scan:
-  target: "localhost:8000"
+  target: 'localhost:8000'
   authentication_endpoints:
-    - "/api/v1/auth/login"
-    - "/api/v1/auth/refresh"
+    - '/api/v1/auth/login'
+    - '/api/v1/auth/refresh'
   protected_endpoints:
-    - "/api/v1/users/me"
-    - "/api/v1/users/{id}"
+    - '/api/v1/users/me'
+    - '/api/v1/users/{id}'
   vulnerability_tests:
     - jwt_token_validation
     - sql_injection
@@ -1561,6 +1585,7 @@ security_scan:
 ```
 
 **Docker Integration:**
+
 ```dockerfile
 # Generated Dockerfile can be optimized with /docker-optimize
 # Multi-stage build for FastAPI application
@@ -1578,6 +1603,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 **Kubernetes Deployment:**
+
 ```yaml
 # Use this configuration with /k8s-manifest
 apiVersion: apps/v1
@@ -1595,38 +1621,39 @@ spec:
         app: api
     spec:
       containers:
-      - name: api
-        image: api:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: api-secrets
-              key: database-url
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: api-secrets
-              key: jwt-secret
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: api
+          image: api:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets
+                  key: database-url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets
+                  key: jwt-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ```
 
 ### 5. CI/CD Pipeline Integration
 
 **Complete pipeline using multiple commands:**
+
 ```yaml
 name: Full Stack CI/CD
 
@@ -1638,35 +1665,36 @@ jobs:
   api-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    # Test API (generated by /api-scaffold)
-    - name: Run API tests
-      run: |
-        # Use test configuration from /test-harness
-        pytest tests/ -v --cov=app
-    
-    # Security scan (from /security-scan)
-    - name: Security scan
-      run: |
-        bandit -r app/
-        safety check
-    
-    # Build optimized container (from /docker-optimize)
-    - name: Build container
-      run: |
-        docker build -f Dockerfile.optimized -t api:${{ github.sha }} .
-    
-    # Deploy to Kubernetes (from /k8s-manifest)
-    - name: Deploy to staging
-      run: |
-        kubectl apply -f k8s/staging/
-        kubectl set image deployment/api-deployment api=api:${{ github.sha }}
+      - uses: actions/checkout@v4
+
+      # Test API (generated by /api-scaffold)
+      - name: Run API tests
+        run: |
+          # Use test configuration from /test-harness
+          pytest tests/ -v --cov=app
+
+      # Security scan (from /security-scan)
+      - name: Security scan
+        run: |
+          bandit -r app/
+          safety check
+
+      # Build optimized container (from /docker-optimize)
+      - name: Build container
+        run: |
+          docker build -f Dockerfile.optimized -t api:${{ github.sha }} .
+
+      # Deploy to Kubernetes (from /k8s-manifest)
+      - name: Deploy to staging
+        run: |
+          kubectl apply -f k8s/staging/
+          kubectl set image deployment/api-deployment api=api:${{ github.sha }}
 ```
 
 ### 6. Frontend-Backend Integration
 
 **When building full-stack applications:**
+
 ```bash
 # 1. Backend API
 /api-scaffold "REST API with user management and data operations"
@@ -1682,6 +1710,7 @@ jobs:
 ```
 
 **Frontend API Integration Code:**
+
 ```typescript
 // Generated API client for frontend
 // Use this pattern with /frontend-optimize
@@ -1697,10 +1726,7 @@ export class APIClient {
     this.token = token;
   }
 
-  private async request<T>(
-    endpoint: string, 
-    options: RequestInit = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
@@ -1744,6 +1770,7 @@ export class APIClient {
 ### 7. Monitoring and Observability Integration
 
 **Complete observability stack:**
+
 ```bash
 # After API deployment, add monitoring
 /api-scaffold "Monitoring endpoints with Prometheus metrics and health checks"

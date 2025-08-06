@@ -3,7 +3,9 @@
 Use Gemini CLI to conduct in-depth discussions about current work, enhancing Claude Code's accuracy through multi-perspective analysis and iterative refinement.
 
 ## Prerequisites
+
 Before using this command, ensure:
+
 - Gemini CLI is installed (`gemini` command available)
 - Authenticated via `gcloud auth application-default login`
 
@@ -11,6 +13,7 @@ Before using this command, ensure:
 
 1. **Gather Current Context**
    First, I'll collect information about your current work:
+
    ```bash
    # Check Git status and recent changes
    !git status --porcelain
@@ -29,6 +32,7 @@ Before using this command, ensure:
 
 3. **Initiate Gemini Discussion**
    I'll create a comprehensive prompt and start the discussion:
+
    ```bash
    # Create temporary file with context and questions
    !echo "[Discussion prompt will be here]" > /tmp/gemini_discussion.md
@@ -58,6 +62,7 @@ Before using this command, ensure:
 
 6. **Save Discussion Log**
    The complete discussion will be saved for future reference:
+
    ```bash
    # Create discussion log directory if needed
    !mkdir -p .claude/discussion_logs
@@ -69,33 +74,43 @@ Before using this command, ensure:
 ## Usage Examples
 
 ### Basic Discussion
+
 ```
 /p-discuss-with-gemini
 ```
+
 Analyzes current Git changes and work context
 
 ### Specific Topic Discussion
+
 ```
 /p-discuss-with-gemini GraphQL schema optimization
 ```
+
 Focuses discussion on a particular area
 
 ### File-Specific Analysis
+
 ```
 /p-discuss-with-gemini Review the implementation in backend/apps/cotomu/domain/usecases/file_operations.go
 ```
+
 Analyzes a specific file with Gemini's insights
 
 ### Deep Analysis Mode
+
 ```
 /p-discuss-with-gemini --deep Performance optimization for large file uploads
 ```
+
 Conducts 5 rounds of discussion instead of the default 3
 
 ## Additional Instructions
+
 $ARGUMENTS
 
 ## Expected Outcomes
+
 - Deeper understanding of code quality issues
 - Concrete improvement suggestions with examples
 - Prioritized action items for implementation
@@ -103,6 +118,7 @@ $ARGUMENTS
 - Early detection of potential problems
 
 ## Notes
+
 - The discussion will be conducted entirely in English for optimal AI interaction
 - Each discussion round builds upon previous insights
 - The final action plan will include specific code examples where applicable

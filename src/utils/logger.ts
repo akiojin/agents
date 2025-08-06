@@ -4,7 +4,7 @@ import chalk from 'chalk';
 // カスタムフォーマット
 const customFormat = winston.format.printf(({ level, message, timestamp, ...metadata }) => {
   let msg = `${timestamp} `;
-  
+
   // レベルに応じて色を変更
   switch (level) {
     case 'error':
@@ -22,14 +22,14 @@ const customFormat = winston.format.printf(({ level, message, timestamp, ...meta
     default:
       msg += `[${level.toUpperCase()}]`;
   }
-  
+
   msg += ` ${message}`;
-  
+
   // メタデータがある場合は追加
   if (Object.keys(metadata).length > 0) {
     msg += ` ${JSON.stringify(metadata)}`;
   }
-  
+
   return msg;
 });
 
@@ -37,14 +37,14 @@ const customFormat = winston.format.printf(({ level, message, timestamp, ...meta
 const createLogger = (): winston.Logger => {
   const logLevel = process.env.AGENTS_LOG_LEVEL || 'info';
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   return winston.createLogger({
     level: logLevel,
     format: winston.format.combine(
       winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
       winston.format.errors({ stack: true }),
       winston.format.splat(),
-      customFormat
+      customFormat,
     ),
     transports: [
       // コンソール出力
@@ -77,9 +77,13 @@ export const debug = (message: string, ...args: unknown[]): void => {
 };
 
 // タスク実行ログ用のヘルパー関数
-export const logTask = (taskName: string, status: 'start' | 'success' | 'error', message?: string): void => {
+export const logTask = (
+  taskName: string,
+  status: 'start' | 'success' | 'error',
+  message?: string,
+): void => {
   const timestamp = new Date().toISOString();
-  
+
   switch (status) {
     case 'start':
       logger.info(`Task started: ${taskName}`, { timestamp });
@@ -97,13 +101,13 @@ export const logTask = (taskName: string, status: 'start' | 'success' | 'error',
 export class PerformanceLogger {
   private startTime: number;
   private taskName: string;
-  
+
   constructor(taskName: string) {
     this.taskName = taskName;
     this.startTime = performance.now();
     logger.debug(`Performance measurement started: ${taskName}`);
   }
-  
+
   end(message?: string): void {
     const duration = performance.now() - this.startTime;
     logger.info(`Performance: ${this.taskName} completed in ${duration.toFixed(2)}ms`, { message });

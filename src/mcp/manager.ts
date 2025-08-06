@@ -28,7 +28,7 @@ export class MCPManager extends EventEmitter {
     }
 
     logger.info('MCPサーバーを初期化中...');
-    
+
     for (const serverConfig of this.config.mcpServers) {
       try {
         await this.startServer(serverConfig);
@@ -40,18 +40,18 @@ export class MCPManager extends EventEmitter {
 
   private async startServer(serverConfig: MCPServerConfig): Promise<void> {
     logger.info(`MCPサーバーを起動中: ${serverConfig.name}`);
-    
+
     // プロセスを起動
-    const process = spawn(serverConfig.command, serverConfig.args || [], {
+    const childProcess = spawn(serverConfig.command, serverConfig.args || [], {
       env: { ...process.env, ...serverConfig.env },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
-    this.processes.set(serverConfig.name, process);
+    this.processes.set(serverConfig.name, childProcess);
 
     // MCPクライアントを作成
     const client = new MCPClient(serverConfig.name);
-    await client.connect(process);
+    await client.connect(childProcess);
     this.servers.set(serverConfig.name, client);
 
     // ツールを取得
@@ -68,16 +68,16 @@ export class MCPManager extends EventEmitter {
   }
 
   async invokeTool(toolName: string, params?: Record<string, unknown>): Promise<unknown> {
-    const [serverName, name] = toolName.includes(':') 
-      ? toolName.split(':', 2) 
+    const [serverName, name] = toolName.includes(':')
+      ? toolName.split(':', 2)
       : [this.getDefaultServer(), toolName];
 
-    const client = this.servers.get(serverName);
+    const client = this.servers.get(serverName || '');
     if (!client) {
-      throw new Error(`MCPサーバーが見つかりません: ${serverName}`);
+      throw new Error(`MCPサーバーが見つかりません: ${serverName || 'デフォルト'}`);
     }
 
-    return client.invokeTool(name, params);
+    return client.invokeTool(name || '', params);
   }
 
   private getDefaultServer(): string {
@@ -90,7 +90,7 @@ export class MCPManager extends EventEmitter {
 
   async shutdown(): Promise<void> {
     logger.info('MCPサーバーをシャットダウン中...');
-    
+
     // すべてのクライアントを切断
     for (const [name, client] of this.servers) {
       try {

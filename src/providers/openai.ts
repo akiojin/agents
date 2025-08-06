@@ -16,7 +16,7 @@ export class OpenAIProvider extends LLMProvider {
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string> {
     try {
       const openaiMessages = messages.map((msg) => ({
-        role: msg.role as 'user' | 'assistant' | 'system',
+        role: msg.role,
         content: msg.content,
       }));
 
@@ -25,15 +25,18 @@ export class OpenAIProvider extends LLMProvider {
         messages: openaiMessages,
         temperature: options?.temperature || 0.7,
         max_tokens: options?.maxTokens || 2000,
-        stream: options?.stream || false,
+        stream: false as const,
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('応答が空です');
+      if ('choices' in response) {
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error('応答が空です');
+        }
+        return content;
+      } else {
+        throw new Error('ストリーミング応答は非対応です');
       }
-
-      return content;
     } catch (error) {
       logger.error('OpenAI chat error:', error);
       throw error;
@@ -47,15 +50,18 @@ export class OpenAIProvider extends LLMProvider {
         messages: [{ role: 'user', content: options.prompt }],
         temperature: options.temperature || 0.7,
         max_tokens: options.maxTokens || 2000,
-        stream: options.stream || false,
+        stream: false as const,
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('応答が空です');
+      if ('choices' in response) {
+        const content = response.choices[0]?.message?.content;
+        if (!content) {
+          throw new Error('応答が空です');
+        }
+        return content;
+      } else {
+        throw new Error('ストリーミング応答は非対応です');
       }
-
-      return content;
     } catch (error) {
       logger.error('OpenAI completion error:', error);
       throw error;
@@ -65,9 +71,7 @@ export class OpenAIProvider extends LLMProvider {
   async listModels(): Promise<string[]> {
     try {
       const response = await this.client.models.list();
-      return response.data
-        .filter((model) => model.id.includes('gpt'))
-        .map((model) => model.id);
+      return response.data.filter((model) => model.id.includes('gpt')).map((model) => model.id);
     } catch (error) {
       logger.error('OpenAI list models error:', error);
       throw error;

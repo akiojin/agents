@@ -14,12 +14,16 @@ const ConfigSchema = z.object({
   useMCP: z.boolean().default(true),
   maxParallel: z.number().min(1).max(10).default(5),
   timeout: z.number().min(10).max(3600).default(300),
-  mcpServers: z.array(z.object({
-    name: z.string(),
-    command: z.string(),
-    args: z.array(z.string()).optional(),
-    env: z.record(z.string()).optional(),
-  })).optional(),
+  mcpServers: z
+    .array(
+      z.object({
+        name: z.string(),
+        command: z.string(),
+        args: z.array(z.string()).optional(),
+        env: z.record(z.string()).optional(),
+      }),
+    )
+    .optional(),
   logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   cachePath: z.string().default('.agents-cache'),
   historyPath: z.string().default('.agents-history'),
@@ -64,7 +68,7 @@ class ConfigLoader {
   async save(config: Partial<Config>): Promise<void> {
     const mergedConfig = { ...this.getDefaultConfig(), ...config };
     const validated = ConfigSchema.parse(mergedConfig);
-    
+
     const yamlContent = yaml.stringify(validated, {
       indent: 2,
       lineWidth: 80,

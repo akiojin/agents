@@ -1,5 +1,5 @@
 import type { Config } from '../types/config.js';
-import { LLMProvider } from './base.js';
+import type { LLMProvider } from './base.js';
 import { OpenAIProvider } from './openai.js';
 import { AnthropicProvider } from './anthropic.js';
 import { LocalProvider } from './local.js';

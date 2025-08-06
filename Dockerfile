@@ -56,6 +56,21 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | g
 # ログディレクトリの作成
 RUN mkdir -p /147-Xyla/.logs
 
+# プロジェクトファイルをコピー
+COPY package.json bun.lock tsconfig.json ./
+COPY src/ ./src/
+COPY examples/ ./examples/
+COPY tests/ ./tests/
+
+# 依存関係のインストール
+RUN bun install
+
+# プロジェクトのビルド
+RUN bun run build:all
+
+# グローバルにインストール（binが有効になる）
+RUN npm install -g .
+
 # エントリーポイントスクリプトをコピー
 COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

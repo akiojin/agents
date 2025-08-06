@@ -142,7 +142,7 @@ bunx @akiojin/agents
 ```yaml
 runtime: Bun v1.0+
 language: TypeScript 5.0+
-framework: 
+framework:
   - CLI: Commander.js / Yargs
   - UI: Ink (React for CLI)
 package_manager: Bun
@@ -152,20 +152,20 @@ package_manager: Bun
 
 ```yaml
 core:
-  - "@anthropic-ai/mcp": MCPプロトコル実装
-  - "serena-mcp": コード解析・編集ツール
-  - "langchain": LLMオーケストレーション
+  - '@anthropic-ai/mcp': MCPプロトコル実装
+  - 'serena-mcp': コード解析・編集ツール
+  - 'langchain': LLMオーケストレーション
 
 llm_providers:
-  - "openai": OpenAI API
-  - "@anthropic-ai/sdk": Claude API
-  - "@google/generative-ai": Gemini API
-  - "ollama": ローカルLLM
+  - 'openai': OpenAI API
+  - '@anthropic-ai/sdk': Claude API
+  - '@google/generative-ai': Gemini API
+  - 'ollama': ローカルLLM
 
 utilities:
-  - "chalk": ターミナル出力
-  - "ora": スピナー・プログレス表示
-  - "winston": ロギング
+  - 'chalk': ターミナル出力
+  - 'ora': スピナー・プログレス表示
+  - 'winston': ロギング
 ```
 
 ### アーキテクチャパターン
@@ -210,19 +210,19 @@ utilities:
 
 ### 技術的リスク
 
-| リスク | 影響度 | 対策 |
-|--------|--------|------|
-| ローカルLLMの性能不足 | 高 | GPT-OSSの採用、クラウドへのフォールバック |
-| MCPプロトコルの仕様変更 | 中 | アダプター層の実装、バージョン管理 |
-| 並列処理の競合状態 | 中 | ロック機構、トランザクション管理 |
+| リスク                  | 影響度 | 対策                                      |
+| ----------------------- | ------ | ----------------------------------------- |
+| ローカルLLMの性能不足   | 高     | GPT-OSSの採用、クラウドへのフォールバック |
+| MCPプロトコルの仕様変更 | 中     | アダプター層の実装、バージョン管理        |
+| 並列処理の競合状態      | 中     | ロック機構、トランザクション管理          |
 
 ### ビジネスリスク
 
-| リスク | 影響度 | 対策 |
-|--------|--------|------|
-| 既存ツールとの差別化不足 | 高 | 独自機能の開発、UXの向上 |
-| コミュニティ形成の失敗 | 中 | ドキュメント充実、サポート体制 |
-| メンテナンス負荷 | 低 | 自動テスト、CI/CD整備 |
+| リスク                   | 影響度 | 対策                           |
+| ------------------------ | ------ | ------------------------------ |
+| 既存ツールとの差別化不足 | 高     | 独自機能の開発、UXの向上       |
+| コミュニティ形成の失敗   | 中     | ドキュメント充実、サポート体制 |
+| メンテナンス負荷         | 低     | 自動テスト、CI/CD整備          |
 
 ## 今後の展開
 

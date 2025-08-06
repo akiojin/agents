@@ -5,18 +5,18 @@ export interface Config {
   apiKey?: string;
   localEndpoint?: string;
   model?: string;
-  
+
   // MCP設定
   useMCP: boolean;
   mcpServers?: MCPServerConfig[];
-  
+
   // 実行設定
   maxParallel: number;
   timeout: number;
-  
+
   // ログ設定
   logLevel: 'debug' | 'info' | 'warn' | 'error';
-  
+
   // パス設定
   cachePath: string;
   historyPath: string;

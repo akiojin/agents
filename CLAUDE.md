@@ -37,11 +37,13 @@
 ### 重要: AIによるWorktree操作の制限
 
 **AIは以下の操作を自動的に行ってはいけない：**
+
 - `git worktree add`コマンドの実行
 - `git worktree remove`コマンドの実行
 - 新しいworktreeディレクトリへの移動
 
 **AIが実行可能な操作：**
+
 - 現在の作業ディレクトリでのブランチ作成・切り替え（`git checkout -b`、`git switch`）
 - ユーザーが明示的に指示した場合のworktree操作
 - 既存のworktree内での作業（ユーザーが既にそのディレクトリにいる場合）
@@ -58,6 +60,7 @@
 **重要: コード探索と編集にはSerenaツールを優先的に使用すること**
 
 ### 基本方針
+
 - **ファイル全体の読み取りを避ける**: `Read`ツールでファイル全体を読む代わりに、Serenaのシンボリックツールを使用
 - **効率的なコード探索**: 必要な部分のみを読み取ることでトークン使用量を削減
 - **精密な編集**: シンボル単位またはパターンベースの編集で正確な変更を実現
@@ -65,23 +68,28 @@
 ### 推奨ツール使用順序
 
 #### 1. コード探索時
+
 1. `mcp__serena__get_symbols_overview` - ファイル/ディレクトリの構造把握
 2. `mcp__serena__find_symbol` - 特定のクラス/メソッドの検索（include_body=false）
 3. `mcp__serena__find_symbol` - 必要な部分のみ読み取り（include_body=true）
 4. `mcp__serena__find_referencing_symbols` - 参照関係の把握
 
 #### 2. コード編集時
+
 **シンボル全体の変更:**
+
 - `mcp__serena__replace_symbol_body` - クラス/メソッド全体の置換
 - `mcp__serena__insert_before_symbol` - インポート文の追加など
 - `mcp__serena__insert_after_symbol` - 新規メソッド/クラスの追加
 
 **部分的な変更:**
+
 - `mcp__serena__replace_regex` - ワイルドカードを活用した効率的な置換
   - 小さな変更: エスケープした元のコードを直接置換
   - 大きな変更: `.*?`を使って中間部分を省略
 
 #### 3. ファイル検索時
+
 - `mcp__serena__find_file` - ファイル名のパターン検索
 - `mcp__serena__search_for_pattern` - コード内容のパターン検索
 - `mcp__serena__list_dir` - ディレクトリ構造の確認

@@ -9,7 +9,7 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    
+
     // 型チェック設定
     "strict": true,
     "noImplicitAny": true,
@@ -24,21 +24,21 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    
+
     // 出力設定
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": true,
-    
+
     // Bun対応
     "types": ["bun", "node"],
     "allowJs": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    
+
     // パス設定
     "baseUrl": ".",
     "paths": {
@@ -51,14 +51,6 @@
       "@types/*": ["src/types/*"]
     }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "examples/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }
