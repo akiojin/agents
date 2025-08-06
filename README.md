@@ -23,39 +23,68 @@ bunx @akiojin/agents
 
 ## 使い方
 
-### インタラクティブモード
+### 初期設定
 
 ```bash
-# プロジェクトディレクトリで実行
-@akiojin/agents
+# 対話形式で設定を初期化
+agents init
 
-> タスク: Todoアプリを作成してください
-[Agent] タスクを分析中...
-[Agent] 並列実行: Frontend構築、Backend構築、設定ファイル作成
-[Agent] 完了しました！
+# LLMプロバイダーを選択:
+# - OpenAI
+# - Anthropic
+# - Local (GPT-OSS)
+# - Local (LM Studio)
 ```
 
-### バッチモード
+### インタラクティブモード（REPL）
 
 ```bash
-# コマンドラインから直接タスク実行
-@akiojin/agents --task "RESTful APIを実装" --provider local --model gpt-oss-20b
+# 対話モードを開始
+agents chat
+
+# スラッシュコマンドが利用可能
+agents> /help
+agents> /tools
+agents> /model gpt-4-turbo-preview
+agents> Todoアプリを作成してください
 ```
 
-### 設定ファイル
+### タスク実行モード
 
-```json
-{
-  "provider": "local",
-  "model": "gpt-oss-20b",
-  "parallel": 10,
-  "mcp": {
-    "serena": {
-      "enabled": true,
-      "memory": "project"
-    }
-  }
-}
+```bash
+# タスクを直接実行
+agents task "RESTful APIを実装"
+
+# ファイルを指定して実行
+agents task "このファイルをリファクタリング" -f src/main.ts
+
+# 並列実行を有効化
+agents task "テストを追加" --parallel
+```
+
+### ファイル監視モード
+
+```bash
+# ファイル変更を監視して自動実行
+agents watch src/ --task "変更されたファイルをフォーマット"
+```
+
+### 設定ファイル（.agents.yaml）
+
+```yaml
+provider: openai
+apiKey: sk-...
+model: gpt-4-turbo-preview
+useMCP: true
+maxParallel: 5
+timeout: 300
+logLevel: info
+cachePath: .agents-cache
+historyPath: .agents-history
+mcpServers:
+  - name: filesystem
+    command: npx
+    args: ['-y', '@modelcontextprotocol/server-filesystem']
 ```
 
 ## ドキュメント
@@ -80,14 +109,23 @@ bunx @akiojin/agents
 
 ## 開発状況
 
-現在、Phase 0（基盤構築）を実施中です。詳細は[ロードマップ](docs/ROADMAP.md)をご覧ください。
+現在、v0.1.0の初期実装が完了しました。詳細は[ロードマップ](docs/ROADMAP.md)をご覧ください。
 
-### 次のマイルストーン
+### 完了済み
 
-- [ ] Week 1-2: 開発環境セットアップ
-- [ ] Week 3-6: MVP開発
-- [ ] Week 7-10: Serena統合
-- [ ] Week 11-14: 並列処理実装
+- ✅ CLIインターフェース実装
+- ✅ エージェントコア実装
+- ✅ MCPマネージャー実装
+- ✅ LLMプロバイダー実装（OpenAI、Anthropic、ローカル）
+- ✅ REPLモード実装
+- ✅ 基本的なタスク実行機能
+
+### 次のマイルストーン（v0.2.0）
+
+- [ ] Serena MCPツール統合
+- [ ] 並列タスク実行の最適化
+- [ ] テストカバレッジ向上
+- [ ] パフォーマンス改善
 
 ## コントリビューション
 
