@@ -3,6 +3,7 @@
 Generate daily standup notes by reviewing Obsidian vault context and Jira tickets.
 
 ## Usage
+
 ```
 /standup-notes
 ```
@@ -23,19 +24,20 @@ Generate daily standup notes by reviewing Obsidian vault context and Jira ticket
 
 3. **Generate Standup Notes**
    Format:
+
    ```
    Morning!
    Yesterday:
-   
+
    • [Completed tasks from Jira and Obsidian notes]
    • [Key accomplishments and milestones]
-   
+
    Today:
-   
+
    • [In-progress Jira tickets]
    • [Planned work from tickets and notes]
    • [Meetings from calendar/notes]
-   
+
    Note: [Any blockers, dependencies, or important context]
    ```
 

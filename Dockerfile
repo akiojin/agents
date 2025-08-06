@@ -27,16 +27,17 @@ RUN apt-get update && apt-get install -y  --no-install-recommends \
 # npmを最新バージョンに更新
 RUN npm install -g npm@latest
 
-# pnpmとClaude Codeのインストール（最新バージョン）
-RUN npm install -g pnpm@latest @anthropic-ai/claude-code@latest
+# Bunのインストール
+RUN curl -fsSL https://bun.sh/install | bash
+ENV BUN_INSTALL="/root/.bun"
+ENV PATH="$BUN_INSTALL/bin:$PATH"
 
-# pnpmの環境変数設定
-ENV PNPM_HOME=/pnpm
-ENV PATH="$PNPM_HOME:$PATH"
+# Claude Codeのインストール（最新バージョン）
+RUN bun add -g @anthropic-ai/claude-code@latest
 
 # グローバルNode.jsツールのインストール（必要に応じて追加）
- RUN pnpm add -g \
-     @google/gemini-cli@latest \
+RUN bun add -g \
+     @google/gemini-cli@latest
 #     @aws-amplify/cli@latest \
 #     eslint@latest \
 #     prettier@latest
@@ -55,8 +56,20 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | g
 # ログディレクトリの作成
 RUN mkdir -p /147-Xyla/.logs
 
-# pnpmのグローバルストアを設定（コンテナ内でキャッシュ）
-RUN pnpm config set store-dir /pnpm-store
+# プロジェクトファイルをコピー
+COPY package.json bun.lock tsconfig.json ./
+COPY src/ ./src/
+COPY examples/ ./examples/
+COPY tests/ ./tests/
+
+# 依存関係のインストール
+RUN bun install
+
+# プロジェクトのビルド
+RUN bun run build:all
+
+# グローバルにインストール（binが有効になる）
+RUN npm install -g .
 
 # エントリーポイントスクリプトをコピー
 COPY scripts/entrypoint.sh /entrypoint.sh

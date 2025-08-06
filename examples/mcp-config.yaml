@@ -1,0 +1,80 @@
+# MCP ツール統合のサンプル設定ファイル
+# このファイルは、.agents.yaml の mcpServers セクションで参照される設定例です
+
+# Claude Code と互換性のあるサーバー設定例
+provider: openai
+model: gpt-4-turbo-preview
+apiKey: ${OPENAI_API_KEY}
+useMCP: true
+maxParallel: 3
+logLevel: info
+historyPath: ~/.agents/history
+
+# MCPサーバー設定
+mcpServers:
+  # ファイルシステム操作ツール
+  - name: filesystem
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-filesystem"
+      - "/path/to/workspace"
+    env:
+      MCP_LOG_LEVEL: info
+
+  # Git操作ツール  
+  - name: git
+    command: uvx
+    args:
+      - "mcp-server-git"
+      - "--repository"
+      - "/path/to/repo"
+    env:
+      MCP_LOG_LEVEL: info
+
+  # Web検索ツール（Brave Search）
+  - name: brave-search
+    command: uvx
+    args:
+      - "mcp-server-brave-search"
+    env:
+      BRAVE_API_KEY: ${BRAVE_API_KEY}
+      MCP_LOG_LEVEL: info
+
+  # SQLite データベース操作
+  - name: sqlite
+    command: uvx
+    args:
+      - "mcp-server-sqlite"
+      - "--db-path"
+      - "/path/to/database.db"
+    env:
+      MCP_LOG_LEVEL: info
+
+  # コード実行ツール（シェルコマンド）
+  - name: shell
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-shell"
+    env:
+      MCP_LOG_LEVEL: info
+
+  # Serenaツール（コード探索・編集）
+  - name: serena
+    command: bun
+    args:
+      - "run"
+      - "mcp-server-serena"
+      - "--project-path"
+      - "/path/to/project"
+    env:
+      MCP_LOG_LEVEL: info
+
+  # Claude Code互換ツール（Unity開発支援）
+  - name: unity
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-unity"
+      - "--unity-project"
+      - "/path/to/unity/project"
+    env:
+      MCP_LOG_LEVEL: info

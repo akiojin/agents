@@ -1,27 +1,5 @@
 {
   "mcpServers": {
-    "UnityMCP": {
-      "command": "npx",
-      "args": [
-        "unity-editor-mcp"
-      ]
-    },
-    "Notion": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@notionhq/notion-mcp-server"
-      ]
-    },
-    "azure": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@azure/mcp@latest",
-        "server",
-        "start"
-      ]
-    },
     "microsoft.docs.mcp": {
       "type": "http",
       "url": "https://learn.microsoft.com/api/mcp"
@@ -30,38 +8,21 @@
       "type": "sse",
       "url": "https://mcp.context7.com/sse"
     },
-    "awslabs.aws-documentation": {
-      "command": "uvx",
-      "args": [
-        "awslabs.aws-documentation-mcp-server@latest"
-      ],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
     "google-search": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-gemini-google-search"
-      ],
+      "args": ["-y", "mcp-gemini-google-search"],
       "env": {}
     },
     "markitdown": {
       "type": "stdio",
       "command": "uvx",
-      "args": [
-        "markitdown-mcp"
-      ]
+      "args": ["markitdown-mcp"]
     },
     "textlint": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "textlint",
-        "--mcp"
-      ],
+      "args": ["textlint", "--mcp"],
       "env": {}
     },
     "serena": {
