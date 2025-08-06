@@ -81,13 +81,14 @@ program
   .command('chat')
   .description('対話モードを開始')
   .option('-s, --session <id>', 'セッションIDを指定')
-  .action(async (options) => {
-    const config = await loadConfig();
+  .action(async (_options) => {
+    const config = await loadConfig.load();
     const agent = new AgentCore(config);
     const mcpManager = new MCPManager(config);
     
     if (config.useMCP) {
       await mcpManager.initialize();
+      agent.setupMCPTools(mcpManager);
     }
     
     console.log(chalk.cyan('🤖 エージェントとの対話を開始します'));
@@ -104,20 +105,27 @@ program
   .option('-p, --parallel', '並列実行を有効化', false)
   .action(async (description: string, options) => {
     const spinner = ora('タスクを実行中...').start();
-    const config = await loadConfig();
+    const config = await loadConfig.load();
     const agent = new AgentCore(config);
     const mcpManager = new MCPManager(config);
     
     try {
       if (config.useMCP) {
         await mcpManager.initialize();
+        agent.setupMCPTools(mcpManager);
       }
       
-      const result = await agent.executeTask({
-        description,
-        files: options.file || [],
-        parallel: options.parallel,
-      });
+      const result = config.useMCP 
+        ? await agent.executeTaskWithMCP({
+            description,
+            files: options.file || [],
+            parallel: options.parallel,
+          })
+        : await agent.executeTask({
+            description,
+            files: options.file || [],
+            parallel: options.parallel,
+          });
       
       spinner.succeed(chalk.green('タスクが完了しました'));
       console.log(result);
@@ -135,7 +143,7 @@ program
   .option('-t, --task <task>', '実行するタスク')
   .action(async (paths: string[], options) => {
     console.log(chalk.cyan('ファイル監視を開始します...'));
-    const config = await loadConfig();
+    const config = await loadConfig.load();
     const agent = new AgentCore(config);
     
     // chokidarを使用してファイル監視
@@ -161,7 +169,7 @@ program
   .command('status')
   .description('エージェントステータスを表示')
   .action(async () => {
-    const config = await loadConfig();
+    const config = await loadConfig.load();
     console.log(chalk.cyan('エージェントステータス:'));
     console.log(chalk.gray('  プロバイダー:'), config.provider);
     console.log(chalk.gray('  モデル:'), config.model || 'デフォルト');

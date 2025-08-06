@@ -13,7 +13,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   });
 
   // スラッシュコマンドハンドラー
-  const handleSlashCommand = async (command: string, args: string[]): Promise<boolean> => {
+  const handleSlashCommand = async (command: string, args: string): Promise<boolean> => {
     switch (command) {
       case '/help':
         console.log(chalk.cyan('利用可能なコマンド:'));
@@ -24,6 +24,8 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         console.log('  /save <file> - 会話を保存');
         console.log('  /load <file> - 会話を読み込み');
         console.log('  /tools       - 利用可能なツールを表示');
+        console.log('  /mcp         - MCPサーバーのステータス表示');
+        console.log('  /mcptools    - MCPツール一覧を表示');
         console.log('  /model <name>- モデルを変更');
         console.log('  /parallel    - 並列実行モードを切り替え');
         console.log('  /verbose     - 詳細モードを切り替え');
@@ -47,26 +49,26 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         return true;
 
       case '/save':
-        if (args.length === 0) {
+        if (!args) {
           console.log(chalk.red('ファイル名を指定してください'));
           return true;
         }
         try {
-          await agent.saveSession(args[0]);
-          console.log(chalk.green(`セッションを保存しました: ${args[0]}`));
+          await agent.saveSession(args);
+          console.log(chalk.green(`セッションを保存しました: ${args}`));
         } catch (error) {
           console.log(chalk.red('保存に失敗しました:', error));
         }
         return true;
 
       case '/load':
-        if (args.length === 0) {
+        if (!args) {
           console.log(chalk.red('ファイル名を指定してください'));
           return true;
         }
         try {
-          await agent.loadSession(args[0]);
-          console.log(chalk.green(`セッションを読み込みました: ${args[0]}`));
+          await agent.loadSession(args);
+          console.log(chalk.green(`セッションを読み込みました: ${args}`));
         } catch (error) {
           console.log(chalk.red('読み込みに失敗しました:', error));
         }
@@ -80,12 +82,41 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         });
         return true;
 
+      case '/mcp':
+        const serverStatus = agent.getMCPServerStatus();
+        if (!serverStatus) {
+          console.log(chalk.red('MCPツールが初期化されていません'));
+          return true;
+        }
+        console.log(chalk.cyan('MCPサーバーステータス:'));
+        for (const [name, status] of serverStatus) {
+          const statusText = status ? chalk.green('接続済み') : chalk.red('切断');
+          console.log(`  - ${name}: ${statusText}`);
+        }
+        return true;
+
+      case '/mcptools':
+        try {
+          const mcpTools = await agent.getAvailableMCPTools();
+          if (mcpTools.length === 0) {
+            console.log(chalk.yellow('利用可能なMCPツールがありません'));
+            return true;
+          }
+          console.log(chalk.cyan('利用可能なMCPツール:'));
+          mcpTools.forEach((tool) => {
+            console.log(`  - ${chalk.green(tool.name)}: ${tool.description}`);
+          });
+        } catch (error) {
+          console.log(chalk.red('MCPツール一覧の取得に失敗しました:', error));
+        }
+        return true;
+
       case '/model':
-        if (args.length === 0) {
+        if (!args) {
           console.log(chalk.yellow(`現在のモデル: ${agent.getCurrentModel()}`));
         } else {
-          agent.setModel(args[0]);
-          console.log(chalk.green(`モデルを変更しました: ${args[0]}`));
+          agent.setModel(args);
+          console.log(chalk.green(`モデルを変更しました: ${args}`));
         }
         return true;
 
@@ -120,8 +151,9 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
     if (trimmedInput.startsWith('/')) {
       const parts = trimmedInput.split(' ');
       const command = parts[0];
+      if (!command) return;
       const args = parts.slice(1);
-      await handleSlashCommand(command, args);
+      await handleSlashCommand(command, args.join(' '));
       rl.prompt();
       return;
     }

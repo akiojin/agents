@@ -5,13 +5,13 @@ import type { LLMProvider } from '../providers/base.js';
 import { logger } from '../utils/logger.js';
 
 export class TaskExecutor extends EventEmitter {
-  private config: Config;
+  // private _config: Config;
   private parallelMode: boolean = false;
   private limit: ReturnType<typeof pLimit>;
 
   constructor(config: Config) {
     super();
-    this.config = config;
+    // this._config = config;
     this.limit = pLimit(config.maxParallel);
   }
 
@@ -143,7 +143,7 @@ export class TaskExecutor extends EventEmitter {
 
   private mergeResults(results: TaskResult[]): TaskResult {
     const allSuccess = results.every((r) => r.success);
-    const messages = results.map((r) => r.message).join('\n');
+    // const messages = results.map((r) => r.message).join('\n');
     const data = results.map((r) => r.data).filter(Boolean);
     
     return {

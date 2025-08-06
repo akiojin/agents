@@ -33,7 +33,7 @@ export class AnthropicProvider extends LLMProvider {
       });
 
       const content = response.content[0];
-      if (content.type !== 'text') {
+      if (!content || content.type !== 'text') {
         throw new Error('テキスト以外の応答を受信しました');
       }
 
@@ -54,7 +54,7 @@ export class AnthropicProvider extends LLMProvider {
       });
 
       const content = response.content[0];
-      if (content.type !== 'text') {
+      if (!content || content.type !== 'text') {
         throw new Error('テキスト以外の応答を受信しました');
       }
 

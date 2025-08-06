@@ -73,7 +73,7 @@ export class MCPClient extends EventEmitter {
           if (message.type === 'success' || message.type === 'error') {
             // レスポンスの処理
             const id = message.payload.id;
-            const pending = this.pendingRequests.get(id);
+            const pending = id !== null ? this.pendingRequests.get(id) : undefined;
             
             if (pending) {
               if (message.type === 'success') {
@@ -81,7 +81,7 @@ export class MCPClient extends EventEmitter {
               } else {
                 pending.reject(new Error(message.payload.error?.message || 'Unknown error'));
               }
-              this.pendingRequests.delete(id);
+              if (id !== null) this.pendingRequests.delete(id);
             }
           } else if (message.type === 'notification') {
             // 通知の処理
@@ -102,7 +102,7 @@ export class MCPClient extends EventEmitter {
     }
 
     const id = ++this.requestId;
-    const request = jsonrpc.request(id, method, params);
+    const request = jsonrpc.request(id, method, params as any);
     const json = JSON.stringify(request) + '\n';
 
     return new Promise((resolve, reject) => {
@@ -110,7 +110,7 @@ export class MCPClient extends EventEmitter {
       
       // タイムアウト設定
       const timeout = setTimeout(() => {
-        this.pendingRequests.delete(id);
+        if (id !== null) this.pendingRequests.delete(id);
         reject(new Error(`リクエストタイムアウト: ${method}`));
       }, 30000);
 
@@ -118,7 +118,7 @@ export class MCPClient extends EventEmitter {
       this.process!.stdin!.write(json, (error) => {
         if (error) {
           clearTimeout(timeout);
-          this.pendingRequests.delete(id);
+          if (id !== null) this.pendingRequests.delete(id);
           reject(error);
         }
       });
@@ -152,12 +152,39 @@ export class MCPClient extends EventEmitter {
 
   async invokeTool(name: string, params?: Record<string, unknown>): Promise<unknown> {
     try {
-      return await this.sendRequest('tools/call', {
+      // 接続確認
+      if (!this.connected) {
+        throw new Error(`MCPサーバー [${this.name}] が接続されていません`);
+      }
+
+      // ツール名の検証
+      if (!name || name.trim().length === 0) {
+        throw new Error('ツール名が指定されていません');
+      }
+
+      logger.debug(`ツール実行開始 [${this.name}/${name}]:`, params);
+
+      const result = await this.sendRequest('tools/call', {
         name,
         arguments: params,
       });
+
+      logger.debug(`ツール実行完了 [${this.name}/${name}]`);
+      return result;
     } catch (error) {
       logger.error(`ツール実行エラー [${this.name}/${name}]:`, error);
+      
+      // エラーメッセージを詳細化
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          throw new Error(`ツール実行タイムアウト: ${name} (30秒を超えました)`);
+        } else if (error.message.includes('not found')) {
+          throw new Error(`ツールが見つかりません: ${name}`);
+        } else if (error.message.includes('permission')) {
+          throw new Error(`ツール実行権限がありません: ${name}`);
+        }
+      }
+      
       throw error;
     }
   }
