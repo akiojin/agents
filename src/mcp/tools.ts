@@ -254,7 +254,7 @@ export class MCPTaskPlanner {
 
   private extractFilePath(task: string): string {
     // 簡単な正規表現でファイルパスを抽出
-    const match = task.match(/([\/\w\-\.]+\.\w+)/);
+    const match = task.match(/([/\w\-.]+\.\w+)/);
     return match?.[1] ?? './';
   }
 

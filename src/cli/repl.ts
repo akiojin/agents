@@ -36,6 +36,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         console.log(chalk.yellow('さようなら！'));
         rl.close();
         process.exit(0);
+        break;
       }
 
       case '/clear': {
@@ -152,37 +153,37 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   // 入力処理
   rl.on('line', (input) => {
     void (async () => {
-    const trimmedInput = input.trim();
+      const trimmedInput = input.trim();
 
-    // 空行はスキップ
-    if (!trimmedInput) {
+      // 空行はスキップ
+      if (!trimmedInput) {
+        rl.prompt();
+        return;
+      }
+
+      // スラッシュコマンドのチェック
+      if (trimmedInput.startsWith('/')) {
+        const parts = trimmedInput.split(' ');
+        const command = parts[0];
+        if (!command) return;
+        const args = parts.slice(1);
+        await handleSlashCommand(command, args.join(' '));
+        rl.prompt();
+        return;
+      }
+
+      // タスク実行
+      const spinner = ora('考え中...').start();
+      try {
+        const response = await agent.chat(trimmedInput);
+        spinner.stop();
+        console.log(chalk.green('エージェント:'), response);
+      } catch (error) {
+        spinner.fail(chalk.red('エラーが発生しました'));
+        logger.error('Chat error:', error);
+      }
+
       rl.prompt();
-      return;
-    }
-
-    // スラッシュコマンドのチェック
-    if (trimmedInput.startsWith('/')) {
-      const parts = trimmedInput.split(' ');
-      const command = parts[0];
-      if (!command) return;
-      const args = parts.slice(1);
-      await handleSlashCommand(command, args.join(' '));
-      rl.prompt();
-      return;
-    }
-
-    // タスク実行
-    const spinner = ora('考え中...').start();
-    try {
-      const response = await agent.chat(trimmedInput);
-      spinner.stop();
-      console.log(chalk.green('エージェント:'), response);
-    } catch (error) {
-      spinner.fail(chalk.red('エラーが発生しました'));
-      logger.error('Chat error:', error);
-    }
-
-    rl.prompt();
     })();
   });
 

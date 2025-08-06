@@ -57,7 +57,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | g
 RUN mkdir -p /147-Xyla/.logs
 
 # プロジェクトファイルをコピー
-COPY package.json bun.lockb tsconfig.json ./
+COPY package.json bun.lock tsconfig.json ./
 COPY src/ ./src/
 COPY examples/ ./examples/
 COPY tests/ ./tests/
