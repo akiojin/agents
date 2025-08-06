@@ -56,9 +56,6 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | g
 # ログディレクトリの作成
 RUN mkdir -p /147-Xyla/.logs
 
-# Bunのグローバルインストールディレクトリを設定
-RUN bun config set install.globalDir /bun-global
-
 # エントリーポイントスクリプトをコピー
 COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
