@@ -1,10 +1,10 @@
 ﻿{
     "curl使うな": {
-      "commands": ["curl", "wget"],
-      "message": "curlを使うな。wgetを使うな。MCPを使え。使えないなら報告しろ"
+      "commands": ["wget"],
+      "message": "wgetを使うな。MCPを使え。使えないなら報告しろ"
     },
     "npm使うな": {
       "commands": ["npm"],
-      "message": "npmを使うな。pnpmを使え"
+      "message": "npmを使うな。bunを使え"
     }
   }
