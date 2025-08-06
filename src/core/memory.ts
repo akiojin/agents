@@ -38,7 +38,7 @@ export class MemoryManager {
 
       const json = await readFile(this.historyPath, 'utf-8');
       const history = JSON.parse(json) as ChatMessage[];
-      
+
       // 日付文字列をDateオブジェクトに変換
       return history.map((msg) => ({
         ...msg,
@@ -67,14 +67,14 @@ export class MemoryManager {
       const sessionPath = join(dirname(this.historyPath), filename);
       const json = await readFile(sessionPath, 'utf-8');
       const session = JSON.parse(json) as SessionConfig;
-      
+
       // 日付文字列をDateオブジェクトに変換
       session.startedAt = new Date(session.startedAt);
       session.history = session.history.map((msg) => ({
         ...msg,
         timestamp: new Date(msg.timestamp),
       }));
-      
+
       return session;
     } catch (error) {
       logger.error('セッションの読み込みに失敗しました:', error);
@@ -111,7 +111,7 @@ export class MemoryManager {
   async pruneHistory(maxSize: number): Promise<void> {
     try {
       const history = await this.loadHistory();
-      
+
       if (history.length > maxSize) {
         const pruned = history.slice(-maxSize);
         await this.saveHistory(pruned);

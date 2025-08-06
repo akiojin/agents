@@ -3,9 +3,11 @@
 You are a Docker optimization expert specializing in creating efficient, secure, and minimal container images. Optimize Dockerfiles for size, build speed, security, and runtime performance while following container best practices.
 
 ## Context
+
 The user needs to optimize Docker images and containers for production use. Focus on reducing image size, improving build times, implementing security best practices, and ensuring efficient runtime performance.
 
 ## Requirements
+
 $ARGUMENTS
 
 ## Instructions
@@ -15,6 +17,7 @@ $ARGUMENTS
 Choose the right optimization approach based on your application type and requirements:
 
 **Optimization Strategy Matrix**
+
 ```python
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
@@ -59,43 +62,43 @@ class SmartDockerOptimizer:
                 'patterns': ['model_optimization', 'cuda_optimization', 'multi_stage_ml']
             }
         }
-    
+
     def detect_application_type(self, project_path: str) -> str:
         """Automatically detect application type from project structure"""
         path = Path(project_path)
-        
+
         # Check for ML indicators
         ml_indicators = ['requirements.txt', 'environment.yml', 'model.pkl', 'model.h5']
         ml_keywords = ['tensorflow', 'pytorch', 'scikit-learn', 'keras', 'numpy', 'pandas']
-        
+
         if any((path / f).exists() for f in ml_indicators):
             if (path / 'requirements.txt').exists():
                 with open(path / 'requirements.txt') as f:
                     content = f.read().lower()
                     if any(keyword in content for keyword in ml_keywords):
                         return 'machine_learning'
-        
+
         # Check for microservice indicators
         if any(f.name in ['go.mod', 'main.go', 'cmd'] for f in path.iterdir()):
             return 'microservice'
-        
+
         # Check for data processing
         data_indicators = ['airflow', 'kafka', 'spark', 'hadoop']
         if any((path / f).exists() for f in ['docker-compose.yml', 'k8s']):
             return 'data_processing'
-        
+
         # Default to web application
         return 'web_application'
-    
+
     def analyze_dockerfile_comprehensively(self, dockerfile_path: str, project_path: str) -> Dict[str, Any]:
         """
         Comprehensive Dockerfile analysis with modern optimization recommendations
         """
         app_type = self.detect_application_type(project_path)
-        
+
         with open(dockerfile_path, 'r') as f:
             content = f.read()
-        
+
         analysis = {
             'application_type': app_type,
             'current_issues': [],
@@ -106,7 +109,7 @@ class SmartDockerOptimizer:
             'build_optimizations': [],
             'recommendations': []
         }
-        
+
         # Comprehensive analysis
         self._analyze_base_image_strategy(content, analysis)
         self._analyze_layer_efficiency(content, analysis)
@@ -114,9 +117,9 @@ class SmartDockerOptimizer:
         self._analyze_build_performance(content, analysis)
         self._analyze_runtime_optimization(content, analysis)
         self._generate_strategic_recommendations(analysis, app_type)
-        
+
         return analysis
-    
+
     def _analyze_base_image_strategy(self, content: str, analysis: Dict):
         """Analyze base image selection and optimization opportunities"""
         base_image_patterns = {
@@ -147,7 +150,7 @@ class SmartDockerOptimizer:
                 'recommendation': 'Consider multi-stage builds for smaller final images'
             }
         }
-        
+
         # Check for base image optimization opportunities
         for issue_type, config in base_image_patterns.items():
             if 'patterns' in config:
@@ -168,12 +171,12 @@ class SmartDockerOptimizer:
                         'instances': len(matches),
                         'description': config['recommendation']
                     })
-    
+
     def _analyze_layer_efficiency(self, content: str, analysis: Dict):
         """Analyze Docker layer efficiency and caching opportunities"""
         lines = content.split('\n')
         run_commands = [line for line in lines if line.strip().startswith('RUN')]
-        
+
         # Multiple RUN commands analysis
         if len(run_commands) > 3:
             analysis['build_optimizations'].append({
@@ -184,14 +187,14 @@ class SmartDockerOptimizer:
                 'description': f'Found {len(run_commands)} RUN commands. Consider combining related operations.',
                 'implementation': 'Combine RUN commands with && to reduce layers'
             })
-        
+
         # Package manager cleanup analysis
         package_managers = {
             'apt': {'install': r'apt-get\s+install', 'cleanup': r'rm\s+-rf\s+/var/lib/apt/lists'},
             'yum': {'install': r'yum\s+install', 'cleanup': r'yum\s+clean\s+all'},
             'apk': {'install': r'apk\s+add', 'cleanup': r'rm\s+-rf\s+/var/cache/apk'}
         }
-        
+
         for pm_name, patterns in package_managers.items():
             if re.search(patterns['install'], content) and not re.search(patterns['cleanup'], content):
                 analysis['size_optimizations'].append({
@@ -201,7 +204,7 @@ class SmartDockerOptimizer:
                     'potential_savings': '50-200MB',
                     'implementation': f'Add cleanup command in same RUN layer'
                 })
-        
+
         # Copy optimization analysis
         copy_commands = [line for line in lines if line.strip().startswith(('COPY', 'ADD'))]
         if any('.' in cmd for cmd in copy_commands):
@@ -211,11 +214,11 @@ class SmartDockerOptimizer:
                 'description': 'Consider using .dockerignore and specific COPY commands',
                 'implementation': 'Copy only necessary files to improve build cache efficiency'
             })
-    
+
     def _generate_strategic_recommendations(self, analysis: Dict, app_type: str):
         """Generate strategic optimization recommendations based on application type"""
         strategy = self.optimization_strategies[app_type]
-        
+
         # Priority-based recommendations
         for priority in strategy['priorities']:
             if priority == 'security':
@@ -248,7 +251,7 @@ class SmartDockerOptimizer:
                     implementation=self._get_startup_implementation(app_type),
                     validation='Measure container startup time'
                 ))
-    
+
     def _estimate_size_savings(self, optimization_type: str) -> str:
         """Estimate potential size savings for optimization"""
         savings_map = {
@@ -260,7 +263,7 @@ class SmartDockerOptimizer:
             'multi_stage_optimization': '100-500MB'
         }
         return savings_map.get(optimization_type, '10-50MB')
-    
+
     def _get_security_implementation(self, app_type: str) -> str:
         """Get security implementation based on app type"""
         implementations = {
@@ -273,6 +276,7 @@ class SmartDockerOptimizer:
 ```
 
 **Advanced Multi-Framework Dockerfile Generator**
+
 ```python
 class FrameworkOptimizedDockerfileGenerator:
     def __init__(self):
@@ -285,19 +289,19 @@ class FrameworkOptimizedDockerfileGenerator:
             'rust_actix': self._generate_rust_optimized,
             'dotnet_core': self._generate_dotnet_optimized
         }
-    
+
     def generate_optimized_dockerfile(self, framework: str, config: Dict[str, Any]) -> str:
         """Generate highly optimized Dockerfile for specific framework"""
         if framework not in self.templates:
             raise ValueError(f"Unsupported framework: {framework}")
-        
+
         return self.templates[framework](config)
-    
+
     def _generate_node_express_optimized(self, config: Dict) -> str:
         """Generate optimized Node.js Express Dockerfile"""
         node_version = config.get('node_version', '20')
         use_bun = config.get('use_bun', False)
-        
+
         if use_bun:
             return f"""
 # Optimized Node.js with Bun - Ultra-fast builds and runtime
@@ -332,7 +336,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
 """
-        
+
         return f"""
 # Optimized Node.js Express - Production-ready multi-stage build
 FROM node:{node_version}-alpine AS deps
@@ -384,12 +388,12 @@ EXPOSE 3000
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/index.js"]
 """
-    
+
     def _generate_python_fastapi_optimized(self, config: Dict) -> str:
         """Generate optimized Python FastAPI Dockerfile"""
         python_version = config.get('python_version', '3.11')
         use_uv = config.get('use_uv', True)
-        
+
         if use_uv:
             return f"""
 # Ultra-fast Python with uv package manager
@@ -440,7 +444,7 @@ EXPOSE 8000
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "app.main:app"]
 """
-        
+
         # Standard optimized Python Dockerfile
         return f"""
 # Optimized Python FastAPI - Production-ready
@@ -496,11 +500,11 @@ EXPOSE 8000
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "app.main:app"]
 """
-    
+
     def _generate_golang_optimized(self, config: Dict) -> str:
         """Generate optimized Go Dockerfile with minimal final image"""
         go_version = config.get('go_version', '1.21')
-        
+
         return f"""
 # Optimized Go build - Ultra-minimal final image
 FROM golang:{go_version}-alpine AS build
@@ -541,13 +545,13 @@ EXPOSE 8080
 # Run the binary
 ENTRYPOINT ["/app"]
 """
-    
+
     def _check_base_image(self, content, analysis):
         """Enhanced base image optimization analysis"""
         from_match = re.search(r'^FROM\s+(.+?)(?:\s+AS\s+\w+)?$', content, re.MULTILINE)
         if from_match:
             base_image = from_match.group(1)
-            
+
             # Check for latest tag
             if ':latest' in base_image or not ':' in base_image:
                 analysis['security_risks'].append({
@@ -557,7 +561,7 @@ ENTRYPOINT ["/app"]
                     'example': f'FROM {base_image.split(":")[0]}:1.2.3',
                     'impact': 'Unpredictable builds, security vulnerabilities'
                 })
-            
+
             # Enhanced base image recommendations
             optimization_recommendations = {
                 'ubuntu': {
@@ -586,7 +590,7 @@ ENTRYPOINT ["/app"]
                     'notes': 'Slim balances size and compatibility'
                 }
             }
-            
+
             for base_name, config in optimization_recommendations.items():
                 if base_name in base_image and 'slim' not in base_image and 'alpine' not in base_image:
                     analysis['size_impact'].append({
@@ -596,7 +600,7 @@ ENTRYPOINT ["/app"]
                         'recommendation': f"Switch to {config['alternatives'][0]} for optimal size/compatibility balance",
                         'notes': config['notes']
                     })
-            
+
             # Check for deprecated or insecure base images
             deprecated_images = {
                 'centos:7': 'EOL reached, migrate to Rocky Linux or Alpine',
@@ -604,7 +608,7 @@ ENTRYPOINT ["/app"]
                 'node:14': 'Node 14 is EOL, upgrade to node:18 or node:20',
                 'python:3.8': 'Python 3.8 will reach EOL soon, upgrade to 3.11+'
             }
-            
+
             for deprecated, message in deprecated_images.items():
                 if deprecated in base_image:
                     analysis['security_risks'].append({
@@ -613,11 +617,11 @@ ENTRYPOINT ["/app"]
                         'fix': message,
                         'impact': 'Security vulnerabilities, no security updates'
                     })
-    
+
     def _check_layer_optimization(self, content, analysis):
         """Enhanced layer optimization analysis with modern best practices"""
         lines = content.split('\n')
-        
+
         # Check for multiple RUN commands
         run_commands = [line for line in lines if line.strip().startswith('RUN')]
         if len(run_commands) > 5:
@@ -627,7 +631,7 @@ ENTRYPOINT ["/app"]
                 'fix': 'Combine related RUN commands with && \\',
                 'optimization': f'Could reduce to 2-3 layers, saving ~{len(run_commands) * 10}MB'
             })
-        
+
         # Enhanced package manager cleanup checks
         package_managers = {
             'apt': {
@@ -653,19 +657,19 @@ ENTRYPOINT ["/app"]
                 'recommended_pattern': 'RUN pip install --no-cache-dir <packages>'
             }
         }
-        
+
         for pm_name, patterns in package_managers.items():
             has_install = re.search(patterns['install_pattern'], content)
             has_cleanup = re.search(patterns['cleanup_pattern'], content)
-            
+
             if has_install and not has_cleanup:
                 potential_savings = {
                     'apt': '50-200MB',
-                    'yum': '100-300MB', 
+                    'yum': '100-300MB',
                     'apk': '5-50MB',
                     'pip': '20-100MB'
                 }.get(pm_name, '10-50MB')
-                
+
                 analysis['size_impact'].append({
                     'issue': f'{pm_name} package manager without cleanup',
                     'impact': potential_savings,
@@ -673,7 +677,7 @@ ENTRYPOINT ["/app"]
                     'example': patterns['recommended_pattern'],
                     'severity': 'MEDIUM'
                 })
-        
+
         # Check for inefficient COPY operations
         copy_commands = [line for line in lines if line.strip().startswith(('COPY', 'ADD'))]
         for cmd in copy_commands:
@@ -685,7 +689,7 @@ ENTRYPOINT ["/app"]
                     'example': 'COPY package*.json ./ && COPY src/ ./src/',
                     'note': 'Copy dependency files first for better caching'
                 })
-        
+
         # Check for BuildKit optimizations
         if '--mount=type=cache' not in content:
             analysis['build_performance'].append({
@@ -695,7 +699,7 @@ ENTRYPOINT ["/app"]
                 'example': 'RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt',
                 'note': 'Requires DOCKER_BUILDKIT=1'
             })
-        
+
         # Check for multi-stage build opportunities
         from_statements = re.findall(r'FROM\s+([^\s]+)', content)
         if len(from_statements) == 1 and any(keyword in content.lower() for keyword in ['build', 'compile', 'npm install', 'pip install']):
@@ -713,6 +717,7 @@ ENTRYPOINT ["/app"]
 Implement sophisticated multi-stage builds with modern optimization techniques:
 
 **Ultra-Optimized Multi-Stage Patterns**
+
 ```dockerfile
 # Pattern 1: Node.js with Bun - Next-generation JavaScript runtime
 # 5x faster installs, 4x faster runtime, 90% smaller images
@@ -769,6 +774,7 @@ CMD ["node", "dist/index.js"]
 ```
 
 **Advanced Python Multi-Stage with UV Package Manager**
+
 ```dockerfile
 # Pattern 2: Python with UV - 10-100x faster than pip
 FROM python:3.11-slim AS base
@@ -834,6 +840,7 @@ CMD ["python", "-m", "gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--
 ```
 
 **Go Static Binary with Scratch Base**
+
 ```dockerfile
 # Pattern 3: Go with ultra-minimal scratch base
 FROM golang:1.21-alpine AS base
@@ -895,6 +902,7 @@ ENTRYPOINT ["/app"]
 ```
 
 **Rust with Cross-Compilation and Security**
+
 ```dockerfile
 # Pattern 4: Rust with musl for static linking
 FROM rust:1.70-alpine AS base
@@ -952,6 +960,7 @@ ENTRYPOINT ["/app"]
 ```
 
 **Java Spring Boot with GraalVM Native Image**
+
 ```dockerfile
 # Pattern 5: Java with GraalVM Native Image (sub-second startup)
 FROM ghcr.io/graalvm/graalvm-ce:java17 AS base
@@ -1012,6 +1021,7 @@ ENTRYPOINT ["/app"]
 ```
 
 **Python Multi-Stage Example**
+
 ```dockerfile
 # Stage 1: Build dependencies
 FROM python:3.11-slim AS builder
@@ -1056,6 +1066,7 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "app:application"]
 Minimize Docker image size:
 
 **Size Reduction Techniques**
+
 ```dockerfile
 # Alpine-based optimization
 FROM alpine:3.18
@@ -1091,17 +1102,18 @@ ENTRYPOINT ["/app"]
 ```
 
 **Layer Optimization Script**
+
 ```python
 def optimize_dockerfile_layers(dockerfile_content):
     """
     Optimize Dockerfile layers
     """
     optimizations = []
-    
+
     # Combine RUN commands
-    run_commands = re.findall(r'^RUN\s+(.+?)(?=^(?:RUN|FROM|COPY|ADD|ENV|EXPOSE|CMD|ENTRYPOINT|WORKDIR)|\Z)', 
+    run_commands = re.findall(r'^RUN\s+(.+?)(?=^(?:RUN|FROM|COPY|ADD|ENV|EXPOSE|CMD|ENTRYPOINT|WORKDIR)|\Z)',
                              dockerfile_content, re.MULTILINE | re.DOTALL)
-    
+
     if len(run_commands) > 1:
         combined = ' && \\\n    '.join(cmd.strip() for cmd in run_commands)
         optimizations.append({
@@ -1109,23 +1121,23 @@ def optimize_dockerfile_layers(dockerfile_content):
             'optimized': f'RUN {combined}',
             'benefit': f'Reduces {len(run_commands)} layers to 1'
         })
-    
+
     # Optimize package installation
-    apt_install = re.search(r'RUN\s+apt-get\s+update.*?apt-get\s+install\s+(.+?)(?=^(?:RUN|FROM)|\Z)', 
+    apt_install = re.search(r'RUN\s+apt-get\s+update.*?apt-get\s+install\s+(.+?)(?=^(?:RUN|FROM)|\Z)',
                            dockerfile_content, re.MULTILINE | re.DOTALL)
-    
+
     if apt_install:
         packages = apt_install.group(1)
         optimized = f"""RUN apt-get update && apt-get install -y --no-install-recommends \\
     {packages.strip()} \\
     && rm -rf /var/lib/apt/lists/*"""
-        
+
         optimizations.append({
             'original': apt_install.group(0),
             'optimized': optimized,
             'benefit': 'Reduces image size by cleaning apt cache'
         })
-    
+
     return optimizations
 ```
 
@@ -1134,6 +1146,7 @@ def optimize_dockerfile_layers(dockerfile_content):
 Speed up Docker builds:
 
 **.dockerignore Optimization**
+
 ```
 # .dockerignore
 # Version control
@@ -1196,6 +1209,7 @@ docker-compose*
 ```
 
 **Build Cache Optimization**
+
 ```dockerfile
 # Optimize build cache
 FROM node:18-alpine
@@ -1232,6 +1246,7 @@ RUN --mount=type=cache,target=/app/.cache \
 Implement security best practices:
 
 **Security-Hardened Dockerfile**
+
 ```dockerfile
 # Use specific version and minimal base image
 FROM alpine:3.18.4
@@ -1273,6 +1288,7 @@ CMD ["./app"]
 ```
 
 **Security Scanning Integration**
+
 ```yaml
 # .github/workflows/docker-security.yml
 name: Docker Security Scan
@@ -1288,7 +1304,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -1296,19 +1312,19 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          
+
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
-          
+
       - name: Run Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
           format: sarif
           output-file: hadolint-results.sarif
-          
+
       - name: Upload Hadolint scan results
         uses: github/codeql-action/upload-sarif@v2
         with:
@@ -1320,6 +1336,7 @@ jobs:
 Optimize container runtime performance:
 
 **Runtime Configuration**
+
 ```dockerfile
 # JVM optimization example
 FROM eclipse-temurin:17-jre-alpine
@@ -1377,13 +1394,13 @@ services:
           cpus: '0.5'
           memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     restart: unless-stopped
-    
+
   redis:
     image: redis:7-alpine
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -1396,7 +1413,7 @@ services:
         target: /data
         tmpfs:
           size: 268435456 # 256MB
-          
+
   nginx:
     image: nginx:alpine
     volumes:
@@ -1467,12 +1484,12 @@ from datetime import datetime
 class ContainerMonitor:
     def __init__(self):
         self.client = docker.from_env()
-        
+
     def collect_metrics(self, container_name):
         """Collect container performance metrics"""
         container = self.client.containers.get(container_name)
         stats = container.stats(stream=False)
-        
+
         metrics = {
             'timestamp': datetime.now().isoformat(),
             'container': container_name,
@@ -1481,27 +1498,27 @@ class ContainerMonitor:
             'network': self._calculate_network_io(stats),
             'disk': self._calculate_disk_io(stats)
         }
-        
+
         return metrics
-    
+
     def _calculate_cpu_percent(self, stats):
         """Calculate CPU usage percentage"""
         cpu_delta = stats['cpu_stats']['cpu_usage']['total_usage'] - \
                    stats['precpu_stats']['cpu_usage']['total_usage']
         system_delta = stats['cpu_stats']['system_cpu_usage'] - \
                       stats['precpu_stats']['system_cpu_usage']
-        
+
         if system_delta > 0 and cpu_delta > 0:
             cpu_percent = (cpu_delta / system_delta) * \
                          len(stats['cpu_stats']['cpu_usage']['percpu_usage']) * 100.0
             return round(cpu_percent, 2)
         return 0.0
-    
+
     def _calculate_memory_usage(self, stats):
         """Calculate memory usage"""
         usage = stats['memory_stats']['usage']
         limit = stats['memory_stats']['limit']
-        
+
         return {
             'usage_bytes': usage,
             'limit_bytes': limit,
@@ -1576,6 +1593,7 @@ def generate_dockerfile_checklist():
 ### Complete Container-First Development Workflow
 
 **Containerized Development Pipeline**
+
 ```bash
 # 1. Generate containerized API scaffolding
 /api-scaffold
@@ -1604,6 +1622,7 @@ horizontal_scaling: true
 ```
 
 **Integrated Container Configuration**
+
 ```python
 # container-config.py - Shared across all commands
 class IntegratedContainerConfig:
@@ -1612,20 +1631,20 @@ class IntegratedContainerConfig:
         self.security_config = self.load_security_config() # From /security-scan
         self.k8s_config = self.load_k8s_config()          # From /k8s-manifest
         self.test_config = self.load_test_config()         # From /test-harness
-        
+
     def generate_optimized_dockerfile(self):
         """Generate Dockerfile optimized for the specific application"""
         framework = self.api_config.get('framework', 'python')
         security_level = self.security_config.get('level', 'standard')
         deployment_target = self.k8s_config.get('platform', 'kubernetes')
-        
+
         if framework == 'fastapi':
             return self.generate_fastapi_dockerfile(security_level, deployment_target)
         elif framework == 'express':
             return self.generate_express_dockerfile(security_level, deployment_target)
         elif framework == 'django':
             return self.generate_django_dockerfile(security_level, deployment_target)
-            
+
     def generate_fastapi_dockerfile(self, security_level, deployment_target):
         """Generate optimized FastAPI Dockerfile"""
         dockerfile_content = {
@@ -1637,7 +1656,7 @@ class IntegratedContainerConfig:
             'health_checks': self.configure_health_checks()
         }
         return dockerfile_content
-    
+
     def select_base_image(self, language, security_level):
         """Select optimal base image based on security and size requirements"""
         base_images = {
@@ -1648,14 +1667,14 @@ class IntegratedContainerConfig:
                 'distroless': 'gcr.io/distroless/python3-debian12'
             }
         }
-        
+
         if security_level == 'strict':
             return base_images[language]['distroless']
         elif security_level == 'enhanced':
             return base_images[language]['secure']
         else:
             return base_images[language]['standard']
-    
+
     def configure_build_stages(self):
         """Configure multi-stage build optimization"""
         return {
@@ -1687,6 +1706,7 @@ class IntegratedContainerConfig:
 ```
 
 **API Container Integration**
+
 ```dockerfile
 # Dockerfile.api - Generated from /api-scaffold + /docker-optimize
 # Multi-stage build optimized for FastAPI applications
@@ -1767,6 +1787,7 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000
 ```
 
 **Database Container Integration**
+
 ```dockerfile
 # Dockerfile.db - Generated for database migrations from /db-migrate
 FROM postgres:15-alpine AS base
@@ -1810,6 +1831,7 @@ EXPOSE 5432
 ```
 
 **Frontend Container Integration**
+
 ```dockerfile
 # Dockerfile.frontend - Generated from /frontend-optimize + /docker-optimize
 # Multi-stage build for React/Vue applications
@@ -1892,6 +1914,7 @@ CMD ["nginx", "-g", "daemon off;"]
 ```
 
 **Kubernetes Container Integration**
+
 ```yaml
 # k8s-optimized-deployment.yaml - From /k8s-manifest + /docker-optimize
 apiVersion: v1
@@ -1900,9 +1923,9 @@ metadata:
   name: container-config
   namespace: production
 data:
-  optimization-level: "production"
-  security-level: "strict"
-  monitoring-enabled: "true"
+  optimization-level: 'production'
+  security-level: 'strict'
+  monitoring-enabled: 'true'
 
 ---
 apiVersion: apps/v1
@@ -1940,100 +1963,100 @@ spec:
         fsGroup: 1001
         seccompProfile:
           type: RuntimeDefault
-      
+
       # Resource optimization from container analysis
       containers:
-      - name: api
-        image: registry.company.com/api:optimized-latest
-        imagePullPolicy: Always
-        
-        # Optimized resource allocation
-        resources:
-          requests:
-            memory: "128Mi"     # Optimized based on actual usage
-            cpu: "100m"         # Optimized based on load testing
-            ephemeral-storage: "1Gi"
-          limits:
-            memory: "512Mi"     # Prevents OOM, allows burst
-            cpu: "500m"         # Allows processing spikes
-            ephemeral-storage: "2Gi"
-        
-        # Container security optimization
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsNonRoot: true
-          runAsUser: 1001
-          capabilities:
-            drop:
-              - ALL
-            add:
-              - NET_BIND_SERVICE
-        
-        # Optimized startup and health checks
-        ports:
-        - containerPort: 8000
-          protocol: TCP
-          
-        # Fast startup probe
-        startupProbe:
-          httpGet:
-            path: /startup
-            port: 8000
-          failureThreshold: 30
-          periodSeconds: 1
-          
-        # Optimized health checks
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-          
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8000
-          initialDelaySeconds: 2
-          periodSeconds: 5
-          timeoutSeconds: 3
-          
-        # Environment variables from container optimization
-        env:
-        - name: OPTIMIZATION_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: container-config
-              key: optimization-level
-        - name: PYTHONUNBUFFERED
-          value: "1"
-        - name: WORKERS
-          value: "4"
-        
-        # Optimized volume mounts
-        volumeMounts:
-        - name: tmp-volume
-          mountPath: /tmp
-        - name: cache-volume
-          mountPath: /app/cache
-        - name: security-reports
-          mountPath: /app/security-reports
-          readOnly: true
-      
+        - name: api
+          image: registry.company.com/api:optimized-latest
+          imagePullPolicy: Always
+
+          # Optimized resource allocation
+          resources:
+            requests:
+              memory: '128Mi' # Optimized based on actual usage
+              cpu: '100m' # Optimized based on load testing
+              ephemeral-storage: '1Gi'
+            limits:
+              memory: '512Mi' # Prevents OOM, allows burst
+              cpu: '500m' # Allows processing spikes
+              ephemeral-storage: '2Gi'
+
+          # Container security optimization
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
+
+          # Optimized startup and health checks
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+
+          # Fast startup probe
+          startupProbe:
+            httpGet:
+              path: /startup
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 1
+
+          # Optimized health checks
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+
+          # Environment variables from container optimization
+          env:
+            - name: OPTIMIZATION_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: container-config
+                  key: optimization-level
+            - name: PYTHONUNBUFFERED
+              value: '1'
+            - name: WORKERS
+              value: '4'
+
+          # Optimized volume mounts
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: cache-volume
+              mountPath: /app/cache
+            - name: security-reports
+              mountPath: /app/security-reports
+              readOnly: true
+
       # Optimized volumes
       volumes:
-      - name: tmp-volume
-        emptyDir:
-          sizeLimit: 100Mi
-      - name: cache-volume
-        emptyDir:
-          sizeLimit: 500Mi
-      - name: security-reports
-        configMap:
-          name: security-reports
+        - name: tmp-volume
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: cache-volume
+          emptyDir:
+            sizeLimit: 500Mi
+        - name: security-reports
+          configMap:
+            name: security-reports
 
 ---
 # Horizontal Pod Autoscaler with container metrics
@@ -2050,31 +2073,31 @@ spec:
   minReplicas: 2
   maxReplicas: 10
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300
       policies:
-      - type: Percent
-        value: 50
-        periodSeconds: 60
+        - type: Percent
+          value: 50
+          periodSeconds: 60
     scaleUp:
       stabilizationWindowSeconds: 60
       policies:
-      - type: Percent
-        value: 100
-        periodSeconds: 15
+        - type: Percent
+          value: 100
+          periodSeconds: 15
 
 ---
 # Pod Disruption Budget for rolling updates
@@ -2091,6 +2114,7 @@ spec:
 ```
 
 **CI/CD Container Integration**
+
 ```yaml
 # .github/workflows/container-pipeline.yml
 name: Optimized Container Pipeline
@@ -2112,136 +2136,137 @@ jobs:
       contents: read
       packages: write
       security-events: write
-    
+
     strategy:
       matrix:
         service: [api, frontend, database]
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    # 1. Build multi-stage container
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        driver-opts: network=host
-    
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    # 2. Build optimized images
-    - name: Build and push container images
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: Dockerfile.${{ matrix.service }}
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
-    
-    # 3. Container security scanning
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-        format: 'sarif'
-        output: 'trivy-results-${{ matrix.service }}.sarif'
-    
-    # 4. Container optimization analysis
-    - name: Analyze container optimization
-      run: |
-        docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
-        grep ${{ matrix.service }} > container-analysis-${{ matrix.service }}.txt
-        
-        # Compare with baseline
-        if [ -f baseline-sizes.txt ]; then
-          echo "Size comparison for ${{ matrix.service }}:" >> size-comparison.txt
-          echo "Previous: $(grep ${{ matrix.service }} baseline-sizes.txt || echo 'N/A')" >> size-comparison.txt
-          echo "Current: $(grep ${{ matrix.service }} container-analysis-${{ matrix.service }}.txt)" >> size-comparison.txt
-        fi
-    
-    # 5. Performance testing
-    - name: Container performance testing
-      run: |
-        # Start container for performance testing
-        docker run -d --name test-${{ matrix.service }} \
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-        
-        # Wait for startup
-        sleep 30
-        
-        # Run basic performance tests
-        if [ "${{ matrix.service }}" = "api" ]; then
-          docker exec test-${{ matrix.service }} \
-            python -c "import requests; print(requests.get('http://localhost:8000/health').status_code)"
-        fi
-        
-        # Cleanup
-        docker stop test-${{ matrix.service }}
-        docker rm test-${{ matrix.service }}
-    
-    # 6. Upload security results
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
-    
-    # 7. Generate optimization report
-    - name: Generate optimization report
-      run: |
-        cat > optimization-report-${{ matrix.service }}.md << EOF
-        # Container Optimization Report - ${{ matrix.service }}
-        
-        ## Build Information
-        - **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-        - **Build Date**: $(date)
-        - **Platforms**: linux/amd64, linux/arm64
-        
-        ## Size Analysis
-        $(cat container-analysis-${{ matrix.service }}.txt)
-        
-        ## Security Scan
-        - **Scanner**: Trivy
-        - **Results**: See Security tab for detailed findings
-        
-        ## Optimizations Applied
-        - Multi-stage build for minimal image size
-        - Security hardening with non-root user
-        - Layer caching for faster builds
-        - Health checks for reliability
-        EOF
-    
-    - name: Upload optimization report
-      uses: actions/upload-artifact@v3
-      with:
-        name: optimization-report-${{ matrix.service }}
-        path: optimization-report-${{ matrix.service }}.md
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. Build multi-stage container
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Build optimized images
+      - name: Build and push container images
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      # 3. Container security scanning
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+
+      # 4. Container optimization analysis
+      - name: Analyze container optimization
+        run: |
+          docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
+          grep ${{ matrix.service }} > container-analysis-${{ matrix.service }}.txt
+
+          # Compare with baseline
+          if [ -f baseline-sizes.txt ]; then
+            echo "Size comparison for ${{ matrix.service }}:" >> size-comparison.txt
+            echo "Previous: $(grep ${{ matrix.service }} baseline-sizes.txt || echo 'N/A')" >> size-comparison.txt
+            echo "Current: $(grep ${{ matrix.service }} container-analysis-${{ matrix.service }}.txt)" >> size-comparison.txt
+          fi
+
+      # 5. Performance testing
+      - name: Container performance testing
+        run: |
+          # Start container for performance testing
+          docker run -d --name test-${{ matrix.service }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
+
+          # Wait for startup
+          sleep 30
+
+          # Run basic performance tests
+          if [ "${{ matrix.service }}" = "api" ]; then
+            docker exec test-${{ matrix.service }} \
+              python -c "import requests; print(requests.get('http://localhost:8000/health').status_code)"
+          fi
+
+          # Cleanup
+          docker stop test-${{ matrix.service }}
+          docker rm test-${{ matrix.service }}
+
+      # 6. Upload security results
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+
+      # 7. Generate optimization report
+      - name: Generate optimization report
+        run: |
+          cat > optimization-report-${{ matrix.service }}.md << EOF
+          # Container Optimization Report - ${{ matrix.service }}
+
+          ## Build Information
+          - **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
+          - **Build Date**: $(date)
+          - **Platforms**: linux/amd64, linux/arm64
+
+          ## Size Analysis
+          $(cat container-analysis-${{ matrix.service }}.txt)
+
+          ## Security Scan
+          - **Scanner**: Trivy
+          - **Results**: See Security tab for detailed findings
+
+          ## Optimizations Applied
+          - Multi-stage build for minimal image size
+          - Security hardening with non-root user
+          - Layer caching for faster builds
+          - Health checks for reliability
+          EOF
+
+      - name: Upload optimization report
+        uses: actions/upload-artifact@v3
+        with:
+          name: optimization-report-${{ matrix.service }}
+          path: optimization-report-${{ matrix.service }}.md
 
   deploy-to-staging:
     needs: build-and-optimize
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
-    
+
     steps:
-    - name: Deploy to staging
-      run: |
-        # Update K8s manifests with new image tags
-        # Apply optimized K8s configurations
-        kubectl set image deployment/optimized-api \
-          api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ github.sha }} \
-          --namespace=staging
+      - name: Deploy to staging
+        run: |
+          # Update K8s manifests with new image tags
+          # Apply optimized K8s configurations
+          kubectl set image deployment/optimized-api \
+            api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ github.sha }} \
+            --namespace=staging
 ```
 
 **Monitoring Integration**
+
 ```python
 # container_monitoring.py - Integrated container monitoring
 import docker
@@ -2251,54 +2276,54 @@ from typing import Dict, Any
 
 class ContainerOptimizationMonitor:
     """Monitor container performance and optimization metrics"""
-    
+
     def __init__(self):
         self.docker_client = docker.from_env()
         self.registry = CollectorRegistry()
-        
+
         # Metrics from container optimization
         self.container_size_gauge = Gauge(
-            'container_image_size_bytes', 
+            'container_image_size_bytes',
             'Container image size in bytes',
             ['service', 'optimization_level'],
             registry=self.registry
         )
-        
+
         self.container_startup_time = Histogram(
             'container_startup_seconds',
             'Container startup time in seconds',
             ['service'],
             registry=self.registry
         )
-        
+
         self.resource_usage_gauge = Gauge(
             'container_resource_usage_ratio',
             'Container resource usage ratio (used/limit)',
             ['service', 'resource_type'],
             registry=self.registry
         )
-    
+
     def monitor_optimization_metrics(self):
         """Monitor container optimization effectiveness"""
         containers = self.docker_client.containers.list()
-        
+
         optimization_metrics = {}
-        
+
         for container in containers:
             service_name = container.labels.get('app', 'unknown')
-            
+
             # Monitor image size efficiency
             image = container.image
             size_mb = self.get_image_size(image.id) / (1024 * 1024)
-            
+
             # Monitor resource efficiency
             stats = container.stats(stream=False)
             memory_usage = self.calculate_memory_efficiency(stats)
             cpu_usage = self.calculate_cpu_efficiency(stats)
-            
+
             # Monitor startup performance
             startup_time = self.get_container_startup_time(container)
-            
+
             optimization_metrics[service_name] = {
                 'image_size_mb': size_mb,
                 'memory_efficiency': memory_usage,
@@ -2308,26 +2333,26 @@ class ContainerOptimizationMonitor:
                     size_mb, memory_usage, cpu_usage, startup_time
                 )
             }
-            
+
             # Update Prometheus metrics
             self.container_size_gauge.labels(
                 service=service_name,
                 optimization_level='production'
             ).set(size_mb)
-            
+
             self.container_startup_time.labels(
                 service=service_name
             ).observe(startup_time)
-        
+
         return optimization_metrics
-    
+
     def calculate_optimization_score(self, size_mb, memory_eff, cpu_eff, startup_time):
         """Calculate overall optimization score (0-100)"""
         size_score = max(0, 100 - (size_mb / 10))  # Penalty for large images
         memory_score = (1 - memory_eff) * 100      # Reward for efficient memory use
         cpu_score = (1 - cpu_eff) * 100           # Reward for efficient CPU use
         startup_score = max(0, 100 - startup_time * 10)  # Penalty for slow startup
-        
+
         return (size_score + memory_score + cpu_score + startup_score) / 4
 ```
 

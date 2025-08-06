@@ -9,10 +9,13 @@ export class MCPClient extends EventEmitter {
   private process: ChildProcess | null = null;
   private connected: boolean = false;
   private requestId: number = 0;
-  private pendingRequests: Map<string | number, {
-    resolve: (value: unknown) => void;
-    reject: (error: Error) => void;
-  }> = new Map();
+  private pendingRequests: Map<
+    string | number,
+    {
+      resolve: (value: unknown) => void;
+      reject: (error: Error) => void;
+    }
+  > = new Map();
 
   constructor(name: string) {
     super();
@@ -21,7 +24,7 @@ export class MCPClient extends EventEmitter {
 
   async connect(process: ChildProcess): Promise<void> {
     this.process = process;
-    
+
     // stdout からのデータを処理
     if (process.stdout) {
       process.stdout.on('data', (data) => {
@@ -56,7 +59,7 @@ export class MCPClient extends EventEmitter {
         version: '0.1.0',
       },
     });
-    
+
     logger.info(`MCPサーバー初期化完了 [${this.name}]:`, response);
   }
 
@@ -64,17 +67,17 @@ export class MCPClient extends EventEmitter {
     try {
       // 改行で分割して各JSONを処理
       const lines = data.split('\n').filter((line) => line.trim());
-      
+
       for (const line of lines) {
         try {
           const parsed = JSON.parse(line);
           const message = jsonrpc.parseObject(parsed);
-          
+
           if (message.type === 'success' || message.type === 'error') {
             // レスポンスの処理
             const id = message.payload.id;
             const pending = id !== null ? this.pendingRequests.get(id) : undefined;
-            
+
             if (pending) {
               if (message.type === 'success') {
                 pending.resolve(message.payload.result);
@@ -107,7 +110,7 @@ export class MCPClient extends EventEmitter {
 
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { resolve, reject });
-      
+
       // タイムアウト設定
       const timeout = setTimeout(() => {
         if (id !== null) this.pendingRequests.delete(id);
@@ -142,7 +145,7 @@ export class MCPClient extends EventEmitter {
 
   async listTools(): Promise<Tool[]> {
     try {
-      const response = await this.sendRequest('tools/list') as { tools: Tool[] };
+      const response = (await this.sendRequest('tools/list')) as { tools: Tool[] };
       return response.tools || [];
     } catch (error) {
       logger.error(`ツールリスト取得エラー [${this.name}]:`, error);
@@ -173,7 +176,7 @@ export class MCPClient extends EventEmitter {
       return result;
     } catch (error) {
       logger.error(`ツール実行エラー [${this.name}/${name}]:`, error);
-      
+
       // エラーメッセージを詳細化
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
@@ -184,7 +187,7 @@ export class MCPClient extends EventEmitter {
           throw new Error(`ツール実行権限がありません: ${name}`);
         }
       }
-      
+
       throw error;
     }
   }
@@ -197,7 +200,7 @@ export class MCPClient extends EventEmitter {
       } catch (error) {
         logger.debug('シャットダウンリクエストエラー:', error);
       }
-      
+
       // プロセスを終了
       this.process.kill('SIGTERM');
       this.process = null;

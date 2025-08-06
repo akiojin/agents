@@ -27,9 +27,10 @@ export class LocalProvider extends LLMProvider {
   }
 
   private async makeRequest(body: LocalAPIRequest): Promise<LocalAPIResponse> {
-    const endpoint = this.providerType === 'local-gptoss' 
-      ? `${this.endpoint}/v1/chat/completions`
-      : `${this.endpoint}/v1/completions`;
+    const endpoint =
+      this.providerType === 'local-gptoss'
+        ? `${this.endpoint}/v1/chat/completions`
+        : `${this.endpoint}/v1/completions`;
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -65,10 +66,11 @@ export class LocalProvider extends LLMProvider {
       }
 
       const response = await this.makeRequest(body);
-      
-      const content = this.providerType === 'local-gptoss'
-        ? response.choices[0]?.message?.content
-        : response.choices[0]?.text;
+
+      const content =
+        this.providerType === 'local-gptoss'
+          ? response.choices[0]?.message?.content
+          : response.choices[0]?.text;
 
       if (!content) {
         throw new Error('応答が空です');
@@ -95,7 +97,7 @@ export class LocalProvider extends LLMProvider {
       }
 
       const response = await this.makeRequest(body);
-      
+
       const content = response.choices[0]?.text || response.choices[0]?.message?.content;
 
       if (!content) {
@@ -120,7 +122,7 @@ export class LocalProvider extends LLMProvider {
         return ['local-model'];
       }
 
-      const data = await response.json() as { data: Array<{ id: string }> };
+      const data = (await response.json()) as { data: Array<{ id: string }> };
       return data.data.map((model) => model.id);
     } catch (error) {
       logger.error('Local provider list models error:', error);

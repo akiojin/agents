@@ -15,21 +15,19 @@ describe('OpenAIProvider', () => {
       chat: {
         completions: {
           create: vi.fn().mockResolvedValue({
-            choices: [{
-              message: {
-                content: 'テスト応答',
+            choices: [
+              {
+                message: {
+                  content: 'テスト応答',
+                },
               },
-            }],
+            ],
           }),
         },
       },
       models: {
         list: vi.fn().mockResolvedValue({
-          data: [
-            { id: 'gpt-4' },
-            { id: 'gpt-3.5-turbo' },
-            { id: 'text-davinci-003' },
-          ],
+          data: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }, { id: 'text-davinci-003' }],
         }),
       },
     };
@@ -91,11 +89,13 @@ describe('OpenAIProvider', () => {
 
     it('空の応答の場合エラーをスローする', async () => {
       mockClient.chat.completions.create.mockResolvedValue({
-        choices: [{
-          message: {
-            content: null,
+        choices: [
+          {
+            message: {
+              content: null,
+            },
           },
-        }],
+        ],
       });
 
       await expect(provider.chat([])).rejects.toThrow('応答が空です');

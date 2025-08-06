@@ -41,12 +41,10 @@ describe('CLI', () => {
 
       // initコマンドのテスト実行
       const program = new Command();
-      program
-        .command('init')
-        .action(async () => {
-          const answers = await inquirer.prompt([]);
-          await loadConfig.save(answers);
-        });
+      program.command('init').action(async () => {
+        const answers = await inquirer.prompt([]);
+        await loadConfig.save(answers);
+      });
 
       await program.parseAsync(['node', 'test', 'init']);
 
@@ -65,12 +63,10 @@ describe('CLI', () => {
       vi.mocked(loadConfig.save).mockResolvedValue(undefined);
 
       const program = new Command();
-      program
-        .command('init')
-        .action(async () => {
-          const answers = await inquirer.prompt([]);
-          await loadConfig.save(answers);
-        });
+      program.command('init').action(async () => {
+        const answers = await inquirer.prompt([]);
+        await loadConfig.save(answers);
+      });
 
       await program.parseAsync(['node', 'test', 'init']);
 
@@ -132,19 +128,17 @@ describe('CLI', () => {
       vi.mocked(MCPManager).mockImplementation(() => mockMCPManager as any);
 
       const program = new Command();
-      program
-        .command('task <description>')
-        .action(async (description) => {
-          const config = await loadConfig();
-          const agent = new AgentCore(config);
-          const mcpManager = new MCPManager(config);
-          
-          if (config.useMCP) {
-            await mcpManager.initialize();
-          }
-          
-          await agent.executeTask({ description, files: [] });
-        });
+      program.command('task <description>').action(async (description) => {
+        const config = await loadConfig();
+        const agent = new AgentCore(config);
+        const mcpManager = new MCPManager(config);
+
+        if (config.useMCP) {
+          await mcpManager.initialize();
+        }
+
+        await agent.executeTask({ description, files: [] });
+      });
 
       await program.parseAsync(['node', 'test', 'task', 'テストタスク']);
 

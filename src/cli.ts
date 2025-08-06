@@ -36,9 +36,16 @@ program
   .description('エージェント設定を初期化')
   .action(async () => {
     const spinner = ora('設定を初期化中...').start();
-    
+
     try {
-      const answers = await inquirer.prompt([
+      interface InitAnswers {
+        provider: string;
+        apiKey?: string;
+        localEndpoint?: string;
+        useMCP: boolean;
+      }
+
+      const answers: InitAnswers = await inquirer.prompt([
         {
           type: 'list',
           name: 'provider',
@@ -49,14 +56,14 @@ program
           type: 'input',
           name: 'apiKey',
           message: 'APIキーを入力（ローカルの場合は空欄）:',
-          when: (answers) => !answers.provider.includes('Local'),
+          when: (answers: InitAnswers) => !answers.provider.includes('Local'),
         },
         {
           type: 'input',
           name: 'localEndpoint',
           message: 'ローカルエンドポイントURL:',
           default: 'http://localhost:8080',
-          when: (answers) => answers.provider.includes('Local'),
+          when: (answers: InitAnswers) => answers.provider.includes('Local'),
         },
         {
           type: 'confirm',
@@ -65,7 +72,7 @@ program
           default: true,
         },
       ]);
-      
+
       // 設定ファイルを生成
       await loadConfig.save(answers as Config);
       spinner.succeed(chalk.green('設定を初期化しました'));
@@ -85,15 +92,15 @@ program
     const config = await loadConfig.load();
     const agent = new AgentCore(config);
     const mcpManager = new MCPManager(config);
-    
+
     if (config.useMCP) {
       await mcpManager.initialize();
       agent.setupMCPTools(mcpManager);
     }
-    
+
     console.log(chalk.cyan('🤖 エージェントとの対話を開始します'));
     console.log(chalk.gray('終了するには /exit を入力してください'));
-    
+
     await startREPL(agent, mcpManager);
   });
 
@@ -108,14 +115,14 @@ program
     const config = await loadConfig.load();
     const agent = new AgentCore(config);
     const mcpManager = new MCPManager(config);
-    
+
     try {
       if (config.useMCP) {
         await mcpManager.initialize();
         agent.setupMCPTools(mcpManager);
       }
-      
-      const result = config.useMCP 
+
+      const result = config.useMCP
         ? await agent.executeTaskWithMCP({
             description,
             files: options.file || [],
@@ -126,7 +133,7 @@ program
             files: options.file || [],
             parallel: options.parallel,
           });
-      
+
       spinner.succeed(chalk.green('タスクが完了しました'));
       console.log(result);
     } catch (error) {
@@ -145,14 +152,14 @@ program
     console.log(chalk.cyan('ファイル監視を開始します...'));
     const config = await loadConfig.load();
     const agent = new AgentCore(config);
-    
+
     // chokidarを使用してファイル監視
     const { watch } = await import('chokidar');
     const watcher = watch(paths.length > 0 ? paths : ['.'], {
       ignored: /node_modules|\.git|dist/,
       persistent: true,
     });
-    
+
     watcher.on('change', async (path) => {
       console.log(chalk.yellow(`変更検出: ${path}`));
       if (options.task) {

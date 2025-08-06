@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import type { Config, ChatMessage, TaskConfig, TaskResult } from '../types/config.js';
 import { logger, PerformanceLogger } from '../utils/logger.js';
-import { LLMProvider } from '../providers/base.js';
+import type { LLMProvider } from '../providers/base.js';
 import { createProvider } from '../providers/factory.js';
 import { TaskExecutor } from './task-executor.js';
 import { MemoryManager } from './memory.js';
@@ -27,7 +27,8 @@ export class AgentCore extends EventEmitter {
     this.provider = createProvider(config);
     this.taskExecutor = new TaskExecutor(config);
     this.memoryManager = new MemoryManager(config.historyPath);
-    this.initialize();
+    // 初期化を非同期で実行（エラーハンドリングを含む）
+    void this.initialize();
   }
 
   private async initialize(): Promise<void> {
@@ -56,7 +57,7 @@ export class AgentCore extends EventEmitter {
 
   async chat(input: string): Promise<string> {
     const perf = new PerformanceLogger('chat');
-    
+
     try {
       // 入力検証
       if (!input || input.trim().length === 0) {
@@ -98,7 +99,7 @@ export class AgentCore extends EventEmitter {
       return response;
     } catch (error) {
       logger.error('Chat error:', error);
-      
+
       // エラーメッセージをユーザーフレンドリーに変換
       let errorMessage = 'エラーが発生しました';
       if (error instanceof Error) {
@@ -112,22 +113,22 @@ export class AgentCore extends EventEmitter {
           errorMessage = `エラー: ${error.message}`;
         }
       }
-      
+
       throw new Error(errorMessage);
     }
   }
 
   async executeTask(config: TaskConfig): Promise<TaskResult> {
     const perf = new PerformanceLogger('executeTask');
-    
+
     try {
       this.emit('task:start', config);
-      
+
       const result = await this.taskExecutor.execute(config, this.provider);
-      
+
       this.emit('task:complete', result);
       perf.end(`Task completed: ${config.description}`);
-      
+
       return result;
     } catch (error) {
       const errorResult: TaskResult = {
@@ -135,21 +136,24 @@ export class AgentCore extends EventEmitter {
         message: `タスク実行エラー: ${error instanceof Error ? error.message : String(error)}`,
         error: error instanceof Error ? error : new Error(String(error)),
       };
-      
+
       this.emit('task:error', errorResult);
       logger.error('Task execution error:', error);
-      
+
       return errorResult;
     }
   }
 
   async saveSession(filename: string): Promise<void> {
-    await this.memoryManager.saveSession({
-      id: `session-${Date.now()}`,
-      startedAt: new Date(),
-      config: this.config,
-      history: this.history,
-    }, filename);
+    await this.memoryManager.saveSession(
+      {
+        id: `session-${Date.now()}`,
+        startedAt: new Date(),
+        config: this.config,
+        history: this.history,
+      },
+      filename,
+    );
   }
 
   async loadSession(filename: string): Promise<void> {
@@ -235,13 +239,13 @@ export class AgentCore extends EventEmitter {
 
       // 結果をまとめて返す
       const result: TaskResult = {
-        success: stepResults.every(r => !((r as any)?.error)),
+        success: stepResults.every((r) => !(r && typeof r === 'object' && 'error' in r)),
         message: config.description,
         data: {
           executionPlan,
           stepResults,
-          summary: this.summarizeResults(stepResults)
-        }
+          summary: this.summarizeResults(stepResults),
+        },
       };
 
       this.emit('task:complete', result);
@@ -266,9 +270,11 @@ export class AgentCore extends EventEmitter {
    * 結果をサマリー化
    */
   private summarizeResults(results: unknown[]): string {
-    const successCount = results.filter(r => !((r as any)?.error)).length;
+    const successCount = results.filter(
+      (r) => !(r && typeof r === 'object' && 'error' in r),
+    ).length;
     const errorCount = results.length - successCount;
-    
+
     return `${results.length}ステップ中 ${successCount}成功、${errorCount}エラー`;
   }
 
@@ -282,9 +288,9 @@ export class AgentCore extends EventEmitter {
 
     try {
       const tools = await this.mcpToolsHelper.getAvailableTools();
-      return tools.map(tool => ({
+      return tools.map((tool) => ({
         name: tool.name,
-        description: tool.description
+        description: tool.description,
       }));
     } catch (error) {
       logger.error('MCPツール一覧取得エラー:', error);

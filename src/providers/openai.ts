@@ -16,7 +16,7 @@ export class OpenAIProvider extends LLMProvider {
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string> {
     try {
       const openaiMessages = messages.map((msg) => ({
-        role: msg.role as 'user' | 'assistant' | 'system',
+        role: msg.role,
         content: msg.content,
       }));
 
@@ -71,9 +71,7 @@ export class OpenAIProvider extends LLMProvider {
   async listModels(): Promise<string[]> {
     try {
       const response = await this.client.models.list();
-      return response.data
-        .filter((model) => model.id.includes('gpt'))
-        .map((model) => model.id);
+      return response.data.filter((model) => model.id.includes('gpt')).map((model) => model.id);
     } catch (error) {
       logger.error('OpenAI list models error:', error);
       throw error;

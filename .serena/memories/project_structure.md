@@ -1,6 +1,7 @@
 # プロジェクト構造
 
 ## ルートディレクトリ
+
 ```
 /agents/.git/worktree/feature-feature-requirements/
 ├── src/                    # ソースコード
@@ -13,6 +14,7 @@
 ```
 
 ## src/ディレクトリ詳細
+
 ```
 src/
 ├── cli/                    # CLIインターフェース
@@ -39,6 +41,7 @@ src/
 ```
 
 ## 重要ファイル
+
 - **package.json**: プロジェクト設定
 - **tsconfig.json**: TypeScript設定
 - **.eslintrc.json**: ESLint設定

@@ -18,41 +18,53 @@ export class MCPToolsHelper {
     const lowerTask = taskDescription.toLowerCase();
 
     // ファイル操作系
-    if (lowerTask.includes('ファイル') || lowerTask.includes('読み') || lowerTask.includes('書き')) {
-      const fileTools = availableTools.filter(t => 
-        t.name.includes('read') || t.name.includes('write') || t.name.includes('file')
+    if (
+      lowerTask.includes('ファイル') ||
+      lowerTask.includes('読み') ||
+      lowerTask.includes('書き')
+    ) {
+      const fileTools = availableTools.filter(
+        (t) => t.name.includes('read') || t.name.includes('write') || t.name.includes('file'),
       );
       selectedTools.push(...fileTools);
     }
 
     // Git操作系
-    if (lowerTask.includes('git') || lowerTask.includes('コミット') || lowerTask.includes('プッシュ')) {
-      const gitTools = availableTools.filter(t => 
-        t.name.includes('git') || t.name.includes('commit')
+    if (
+      lowerTask.includes('git') ||
+      lowerTask.includes('コミット') ||
+      lowerTask.includes('プッシュ')
+    ) {
+      const gitTools = availableTools.filter(
+        (t) => t.name.includes('git') || t.name.includes('commit'),
       );
       selectedTools.push(...gitTools);
     }
 
     // Web検索系
     if (lowerTask.includes('検索') || lowerTask.includes('調べ') || lowerTask.includes('情報')) {
-      const searchTools = availableTools.filter(t => 
-        t.name.includes('search') || t.name.includes('web')
+      const searchTools = availableTools.filter(
+        (t) => t.name.includes('search') || t.name.includes('web'),
       );
       selectedTools.push(...searchTools);
     }
 
     // コード実行系
-    if (lowerTask.includes('実行') || lowerTask.includes('テスト') || lowerTask.includes('ビルド')) {
-      const execTools = availableTools.filter(t => 
-        t.name.includes('shell') || t.name.includes('exec') || t.name.includes('run')
+    if (
+      lowerTask.includes('実行') ||
+      lowerTask.includes('テスト') ||
+      lowerTask.includes('ビルド')
+    ) {
+      const execTools = availableTools.filter(
+        (t) => t.name.includes('shell') || t.name.includes('exec') || t.name.includes('run'),
       );
       selectedTools.push(...execTools);
     }
 
     // データベース系
     if (lowerTask.includes('データ') || lowerTask.includes('db') || lowerTask.includes('sql')) {
-      const dbTools = availableTools.filter(t => 
-        t.name.includes('sqlite') || t.name.includes('db') || t.name.includes('query')
+      const dbTools = availableTools.filter(
+        (t) => t.name.includes('sqlite') || t.name.includes('db') || t.name.includes('query'),
       );
       selectedTools.push(...dbTools);
     }
@@ -78,9 +90,11 @@ export class MCPToolsHelper {
   /**
    * 複数のツールを順次実行
    */
-  async executeToolChain(toolCalls: Array<{ name: string; params: Record<string, unknown> }>): Promise<unknown[]> {
+  async executeToolChain(
+    toolCalls: Array<{ name: string; params: Record<string, unknown> }>,
+  ): Promise<unknown[]> {
     const results: unknown[] = [];
-    
+
     for (const toolCall of toolCalls) {
       try {
         const result = await this.executeTool(toolCall.name, toolCall.params);
@@ -103,9 +117,9 @@ export class MCPToolsHelper {
   }
 
   async writeFile(filePath: string, content: string): Promise<void> {
-    await this.executeTool('filesystem:write_file', { 
-      path: filePath, 
-      content 
+    await this.executeTool('filesystem:write_file', {
+      path: filePath,
+      content,
     });
   }
 
@@ -144,9 +158,9 @@ export class MCPToolsHelper {
    * コード実行の便利メソッド
    */
   async runCommand(command: string, args: string[] = []): Promise<string> {
-    const result = await this.executeTool('shell:run_command', { 
-      command, 
-      args 
+    const result = await this.executeTool('shell:run_command', {
+      command,
+      args,
     });
     return result as string;
   }
@@ -171,7 +185,7 @@ export class MCPToolsHelper {
    */
   async getToolInfo(toolName: string): Promise<Tool | undefined> {
     const tools = await this.getAvailableTools();
-    return tools.find(t => t.name === toolName);
+    return tools.find((t) => t.name === toolName);
   }
 
   /**
@@ -210,7 +224,7 @@ export class MCPTaskPlanner {
       steps.push({
         description: 'ファイル内容を読み取り',
         tool: 'filesystem:read_file',
-        params: { path: this.extractFilePath(taskDescription) }
+        params: { path: this.extractFilePath(taskDescription) },
       });
     }
 
@@ -219,7 +233,7 @@ export class MCPTaskPlanner {
       steps.push({
         description: 'コマンドを実行',
         tool: 'shell:run_command',
-        params: { command: this.extractCommand(taskDescription) }
+        params: { command: this.extractCommand(taskDescription) },
       });
     }
 
@@ -228,13 +242,13 @@ export class MCPTaskPlanner {
       steps.push({
         description: 'Web検索を実行',
         tool: 'brave-search:search',
-        params: { query: this.extractSearchQuery(taskDescription) }
+        params: { query: this.extractSearchQuery(taskDescription) },
       });
     }
 
     return {
       steps,
-      estimatedDuration: steps.length * 5000 // 1ステップあたり5秒の見積もり
+      estimatedDuration: steps.length * 5000, // 1ステップあたり5秒の見積もり
     };
   }
 

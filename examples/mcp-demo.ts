@@ -2,14 +2,14 @@
 
 /**
  * MCPツール統合のデモンストレーションスクリプト
- * 
+ *
  * このスクリプトは、@akiojin/agents のMCPツール統合機能の使用例を示します。
  * 実際のMCPサーバーが必要ですが、モックサーバーでのテストも可能です。
  */
 
 import { AgentCore } from '../src/core/agent.js';
 import { MCPManager } from '../src/mcp/manager.js';
-import { MCPToolsHelper, MCPTaskPlanner } from '../src/mcp/tools.js';
+// import { MCPToolsHelper, MCPTaskPlanner } from '../src/mcp/tools.js';
 import type { Config } from '../src/types/config.js';
 import chalk from 'chalk';
 
@@ -22,6 +22,8 @@ const demoConfig: Config = {
   maxParallel: 3,
   logLevel: 'info',
   historyPath: './demo-history',
+  timeout: 300,
+  cachePath: './demo-cache',
   mcpServers: [
     // デモ用のファイルシステムサーバー
     {
@@ -29,19 +31,19 @@ const demoConfig: Config = {
       command: 'npx',
       args: ['@modelcontextprotocol/server-filesystem', './'],
       env: {
-        MCP_LOG_LEVEL: 'info'
-      }
+        MCP_LOG_LEVEL: 'info',
+      },
     },
-    // デモ用のシェルコマンドサーバー  
+    // デモ用のシェルコマンドサーバー
     {
       name: 'shell',
       command: 'npx',
       args: ['@modelcontextprotocol/server-shell'],
       env: {
-        MCP_LOG_LEVEL: 'info'
-      }
-    }
-  ]
+        MCP_LOG_LEVEL: 'info',
+      },
+    },
+  ],
 };
 
 async function demonstrateMCPIntegration() {
@@ -57,7 +59,7 @@ async function demonstrateMCPIntegration() {
     // MCPサーバーを起動
     console.log(chalk.yellow('🔧 MCPサーバーを起動中...'));
     await mcpManager.initialize();
-    
+
     // エージェントにMCPツールを設定
     agent.setupMCPTools(mcpManager);
 
@@ -66,7 +68,7 @@ async function demonstrateMCPIntegration() {
 
     // 利用可能なツールを表示
     await demonstrateToolListing(agent);
-    
+
     // MCPサーバーステータスを表示
     await demonstrateServerStatus(agent);
 
@@ -84,7 +86,6 @@ async function demonstrateMCPIntegration() {
 
     // クリーンアップ
     await mcpManager.shutdown();
-
   } catch (error) {
     console.error(chalk.red('❌ デモ実行中にエラーが発生しました:'), error);
     process.exit(1);
@@ -93,10 +94,10 @@ async function demonstrateMCPIntegration() {
 
 async function demonstrateToolListing(agent: AgentCore) {
   console.log(chalk.cyan('🔍 利用可能なMCPツール:'));
-  
+
   try {
     const tools = await agent.getAvailableMCPTools();
-    
+
     if (tools.length === 0) {
       console.log(chalk.yellow('  利用可能なツールがありません'));
       return;
@@ -106,20 +107,20 @@ async function demonstrateToolListing(agent: AgentCore) {
       console.log(`  ${index + 1}. ${chalk.green(tool.name)}`);
       console.log(`     ${chalk.gray(tool.description)}`);
     });
-    
+
     console.log(chalk.blue(`📊 合計: ${tools.length}個のツール`));
   } catch (error) {
     console.error(chalk.red('  ツール一覧の取得に失敗:'), error);
   }
-  
+
   console.log();
 }
 
 async function demonstrateServerStatus(agent: AgentCore) {
   console.log(chalk.cyan('🌐 MCPサーバーステータス:'));
-  
+
   const status = agent.getMCPServerStatus();
-  
+
   if (!status) {
     console.log(chalk.red('  MCPツールが初期化されていません'));
     return;
@@ -130,7 +131,7 @@ async function demonstrateServerStatus(agent: AgentCore) {
     const statusText = connected ? chalk.green('接続済み') : chalk.red('切断');
     console.log(`  ${statusIcon} ${name}: ${statusText}`);
   }
-  
+
   console.log();
 }
 
@@ -141,7 +142,7 @@ async function demonstrateFileOperations(agent: AgentCore) {
     // MCPツールを使用してpackage.jsonを読み取り
     const result = await agent.executeTaskWithMCP({
       description: 'package.jsonファイルの内容を確認する',
-      files: ['package.json']
+      files: ['package.json'],
     });
 
     if (result.success) {
@@ -153,7 +154,7 @@ async function demonstrateFileOperations(agent: AgentCore) {
   } catch (error) {
     console.log(chalk.red('  ❌ ファイル操作エラー:'), error);
   }
-  
+
   console.log();
 }
 
@@ -163,12 +164,12 @@ async function demonstrateTaskPlanning(agent: AgentCore) {
   const sampleTasks = [
     'TypeScriptの型チェックを実行する',
     'プロジェクトのREADMEファイルを確認する',
-    'Bunを使ってテストを実行する'
+    'Bunを使ってテストを実行する',
   ];
 
   for (const taskDesc of sampleTasks) {
     console.log(chalk.yellow(`  🎯 タスク: "${taskDesc}"`));
-    
+
     try {
       // MCPTaskPlannerを直接使用してプランを作成
       const mcpStatus = agent.getMCPServerStatus();
@@ -180,12 +181,11 @@ async function demonstrateTaskPlanning(agent: AgentCore) {
       // 実際の実行プランを作成（MCPTaskPlannerを直接使用）
       console.log(chalk.green('    📝 実行プラン作成成功'));
       console.log(chalk.gray('    (実際のプラン詳細は executeTaskWithMCP で確認できます)'));
-      
     } catch (error) {
       console.log(chalk.red('    ❌ プラン作成エラー:'), error);
     }
   }
-  
+
   console.log();
 }
 
@@ -195,15 +195,15 @@ async function demonstrateTaskExecution(agent: AgentCore) {
   try {
     // 簡単なタスクを実行
     console.log(chalk.yellow('  🚀 実行中: "現在のディレクトリの内容を確認"'));
-    
+
     const result = await agent.executeTaskWithMCP({
       description: '現在のディレクトリの内容を確認してファイル一覧を取得する',
-      files: ['.']
+      files: ['.'],
     });
 
     if (result.success) {
       console.log(chalk.green('  ✅ タスク実行成功'));
-      
+
       const data = result.data as any;
       if (data?.summary) {
         console.log(chalk.blue(`  📊 実行サマリー: ${data.summary}`));
@@ -217,11 +217,10 @@ async function demonstrateTaskExecution(agent: AgentCore) {
         console.log(chalk.red('  詳細:'), result.error.message);
       }
     }
-
   } catch (error) {
     console.log(chalk.red('  ❌ タスク実行エラー:'), error);
   }
-  
+
   console.log();
 }
 
@@ -246,11 +245,11 @@ if (import.meta.main) {
   console.clear();
   showUsage();
   console.log(chalk.gray('━'.repeat(50)));
-  
+
   // デモ実行の確認
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
     process.exit(0);
   }
-  
+
   await demonstrateMCPIntegration();
 }

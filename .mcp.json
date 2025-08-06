@@ -11,26 +11,18 @@
     "google-search": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "-y",
-        "mcp-gemini-google-search"
-      ],
+      "args": ["-y", "mcp-gemini-google-search"],
       "env": {}
     },
     "markitdown": {
       "type": "stdio",
       "command": "uvx",
-      "args": [
-        "markitdown-mcp"
-      ]
+      "args": ["markitdown-mcp"]
     },
     "textlint": {
       "type": "stdio",
       "command": "npx",
-      "args": [
-        "textlint",
-        "--mcp"
-      ],
+      "args": ["textlint", "--mcp"],
       "env": {}
     },
     "serena": {

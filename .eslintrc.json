@@ -49,12 +49,5 @@
     "prefer-const": "error",
     "no-var": "error"
   },
-  "ignorePatterns": [
-    "dist",
-    "node_modules",
-    "*.config.js",
-    "*.config.ts",
-    "*.test.ts",
-    "*.spec.ts"
-  ]
+  "ignorePatterns": ["dist", "node_modules", "*.config.js", "*.config.ts", "*.test.ts", "*.spec.ts"]
 }

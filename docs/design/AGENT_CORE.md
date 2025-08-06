@@ -54,13 +54,13 @@
 ```typescript
 // エージェントの設定
 interface AgentConfig {
-  maxIterations: number;        // 最大反復回数
-  timeout: number;              // タイムアウト（ミリ秒）
-  parallelTasks: number;        // 並列実行可能タスク数
+  maxIterations: number; // 最大反復回数
+  timeout: number; // タイムアウト（ミリ秒）
+  parallelTasks: number; // 並列実行可能タスク数
   memoryProvider: MemoryProvider; // メモリプロバイダー（Serena）
-  llmProvider: LLMProvider;    // LLMプロバイダー
-  mcpManager: MCPManager;       // MCPマネージャー
-  debugMode: boolean;           // デバッグモード
+  llmProvider: LLMProvider; // LLMプロバイダー
+  mcpManager: MCPManager; // MCPマネージャー
+  debugMode: boolean; // デバッグモード
 }
 
 // エージェントコアクラス
@@ -69,52 +69,52 @@ class AgentCore {
   private history: ExecutionHistory;
   private taskQueue: TaskQueue;
   private memoryManager: MemoryManager;
-  
+
   constructor(private config: AgentConfig) {
     this.state = new AgentState();
     this.history = new ExecutionHistory();
     this.taskQueue = new TaskQueue(config.parallelTasks);
     this.memoryManager = new MemoryManager(config.memoryProvider);
   }
-  
+
   // メインエントリーポイント
   async execute(userTask: string): Promise<ExecutionResult> {
     // タスクの初期化
     const task = await this.analyzeTask(userTask);
     this.state.setCurrentTask(task);
-    
+
     // ReActループの実行
     const result = await this.runReActLoop(task);
-    
+
     // 結果の合成と返却
     return this.synthesizeResult(result);
   }
-  
+
   // ReActループ
   private async runReActLoop(task: Task): Promise<LoopResult> {
     let iteration = 0;
     const startTime = Date.now();
-    
+
     while (!this.isComplete(task) && iteration < this.config.maxIterations) {
       // タイムアウトチェック
       if (Date.now() - startTime > this.config.timeout) {
         throw new AgentError('TIMEOUT', 'Task execution timeout');
       }
-      
+
       // ReActステップの実行
       const step = await this.executeReActStep(task, iteration);
       this.history.addStep(step);
-      
+
       // 状態の更新
       await this.updateState(step);
-      
+
       iteration++;
     }
-    
+
     return {
       task,
       steps: this.history.getSteps(),
-      success: this.isComplete(task)
+      success: this.isComplete(task),
     };
   }
 }
@@ -136,18 +136,18 @@ interface ReActStep {
 
 // 思考プロセス
 interface Thought {
-  reasoning: string;           // 推論内容
-  plan: string[];              // 実行計画
-  confidence: number;          // 確信度（0-1）
-  alternatives: string[];      // 代替案
+  reasoning: string; // 推論内容
+  plan: string[]; // 実行計画
+  confidence: number; // 確信度（0-1）
+  alternatives: string[]; // 代替案
 }
 
 // アクション
 interface Action {
   type: ActionType;
-  tool: string;                // 使用するMCPツール
-  params: any;                 // パラメータ
-  parallel?: Action[];         // 並列実行するアクション
+  tool: string; // 使用するMCPツール
+  params: any; // パラメータ
+  parallel?: Action[]; // 並列実行するアクション
 }
 
 // 観察結果
@@ -155,36 +155,32 @@ interface Observation {
   success: boolean;
   result: any;
   error?: Error;
-  sideEffects: SideEffect[];  // 副作用の記録
+  sideEffects: SideEffect[]; // 副作用の記録
 }
 
 // 振り返り
 interface Reflection {
-  progress: number;            // 進捗率（0-1）
-  learnings: string[];         // 学習事項
-  adjustments: string[];       // 計画の調整
-  nextSteps: string[];         // 次のステップ
+  progress: number; // 進捗率（0-1）
+  learnings: string[]; // 学習事項
+  adjustments: string[]; // 計画の調整
+  nextSteps: string[]; // 次のステップ
 }
 
 class ReActExecutor {
   // ReActステップの実行
-  async executeStep(
-    task: Task,
-    iteration: number,
-    context: ExecutionContext
-  ): Promise<ReActStep> {
+  async executeStep(task: Task, iteration: number, context: ExecutionContext): Promise<ReActStep> {
     // 1. 推論フェーズ
     const thought = await this.reason(task, context);
-    
+
     // 2. 行動決定フェーズ
     const action = await this.decideAction(thought, context);
-    
+
     // 3. 実行フェーズ
     const observation = await this.act(action, context);
-    
+
     // 4. 振り返りフェーズ
     const reflection = await this.reflect(thought, action, observation, context);
-    
+
     return {
       iteration,
       thought,
@@ -192,41 +188,41 @@ class ReActExecutor {
       observation,
       reflection,
       timestamp: new Date(),
-      metadata: this.collectMetadata(context)
+      metadata: this.collectMetadata(context),
     };
   }
-  
+
   // 推論フェーズ
   private async reason(task: Task, context: ExecutionContext): Promise<Thought> {
     // コンテキストの収集
     const relevantContext = await this.gatherContext(task, context);
-    
+
     // LLMによる推論
     const prompt = this.buildReasoningPrompt(task, relevantContext);
     const response = await context.llm.complete(prompt);
-    
+
     return this.parseThought(response);
   }
-  
+
   // アクション決定
   private async decideAction(thought: Thought, context: ExecutionContext): Promise<Action> {
     // 利用可能なツールの取得
     const availableTools = await context.mcp.listTools();
-    
+
     // 最適なアクションの選択
     const prompt = this.buildActionPrompt(thought, availableTools);
     const response = await context.llm.complete(prompt);
-    
+
     const action = this.parseAction(response);
-    
+
     // 並列実行可能なアクションの識別
     if (this.canParallelize(action)) {
       action.parallel = await this.identifyParallelActions(thought, context);
     }
-    
+
     return action;
   }
-  
+
   // アクション実行
   private async act(action: Action, context: ExecutionContext): Promise<Observation> {
     try {
@@ -235,36 +231,36 @@ class ReActExecutor {
         const results = await this.executeParallel([action, ...action.parallel], context);
         return this.mergeObservations(results);
       }
-      
+
       // 単一アクションの実行
       const result = await context.mcp.executeTool(action.tool, action.params);
-      
+
       return {
         success: result.success,
         result: result.data,
         error: result.error,
-        sideEffects: this.detectSideEffects(action, result)
+        sideEffects: this.detectSideEffects(action, result),
       };
     } catch (error) {
       return {
         success: false,
         result: null,
         error: error as Error,
-        sideEffects: []
+        sideEffects: [],
       };
     }
   }
-  
+
   // 振り返り
   private async reflect(
     thought: Thought,
     action: Action,
     observation: Observation,
-    context: ExecutionContext
+    context: ExecutionContext,
   ): Promise<Reflection> {
     const prompt = this.buildReflectionPrompt(thought, action, observation);
     const response = await context.llm.complete(prompt);
-    
+
     return this.parseReflection(response);
   }
 }
@@ -282,7 +278,7 @@ enum TaskState {
   VALIDATING = 'VALIDATING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
 }
 
 // タスククラス
@@ -291,12 +287,12 @@ class Task {
   description: string;
   state: TaskState;
   subtasks: Task[];
-  dependencies: string[];  // 他タスクへの依存
+  dependencies: string[]; // 他タスクへの依存
   priority: number;
   context: TaskContext;
   result?: any;
   error?: Error;
-  
+
   constructor(description: string) {
     this.id = generateId();
     this.description = description;
@@ -306,7 +302,7 @@ class Task {
     this.priority = 0;
     this.context = new TaskContext();
   }
-  
+
   // ステート遷移
   transition(newState: TaskState): void {
     if (!this.canTransition(this.state, newState)) {
@@ -314,23 +310,25 @@ class Task {
     }
     this.state = newState;
   }
-  
+
   // サブタスクへの分解
   decompose(subtasks: string[]): void {
-    this.subtasks = subtasks.map(desc => new Task(desc));
+    this.subtasks = subtasks.map((desc) => new Task(desc));
   }
-  
+
   // 完了判定
   isComplete(): boolean {
-    return this.state === TaskState.COMPLETED ||
-           (this.subtasks.length > 0 && this.subtasks.every(t => t.isComplete()));
+    return (
+      this.state === TaskState.COMPLETED ||
+      (this.subtasks.length > 0 && this.subtasks.every((t) => t.isComplete()))
+    );
   }
 }
 
 // ステートマシン
 class StateMachine {
   private transitions: Map<string, Set<string>>;
-  
+
   constructor() {
     this.transitions = new Map([
       [TaskState.PENDING, new Set([TaskState.ANALYZING, TaskState.CANCELLED])],
@@ -340,32 +338,32 @@ class StateMachine {
       [TaskState.VALIDATING, new Set([TaskState.COMPLETED, TaskState.EXECUTING, TaskState.FAILED])],
       [TaskState.COMPLETED, new Set()],
       [TaskState.FAILED, new Set([TaskState.ANALYZING])], // リトライ可能
-      [TaskState.CANCELLED, new Set()]
+      [TaskState.CANCELLED, new Set()],
     ]);
   }
-  
+
   canTransition(from: TaskState, to: TaskState): boolean {
     return this.transitions.get(from)?.has(to) ?? false;
   }
-  
+
   // 状態遷移の実行
   async transition(task: Task, newState: TaskState, context: ExecutionContext): Promise<void> {
     const oldState = task.state;
     task.transition(newState);
-    
+
     // 状態遷移時のフック
     await this.onTransition(task, oldState, newState, context);
   }
-  
+
   private async onTransition(
     task: Task,
     from: TaskState,
     to: TaskState,
-    context: ExecutionContext
+    context: ExecutionContext,
   ): Promise<void> {
     // ログ記録
     context.logger.info(`Task ${task.id} transitioned: ${from} -> ${to}`);
-    
+
     // 状態別の処理
     switch (to) {
       case TaskState.ANALYZING:
@@ -397,44 +395,42 @@ class TaskQueue {
   private executing: Map<string, Task>;
   private completed: Map<string, Task>;
   private dependencyGraph: DependencyGraph;
-  
+
   constructor(private maxParallel: number) {
     this.queue = new PriorityQueue((a, b) => b.priority - a.priority);
     this.executing = new Map();
     this.completed = new Map();
     this.dependencyGraph = new DependencyGraph();
   }
-  
+
   // タスクの追加
   enqueue(task: Task): void {
     this.queue.push(task);
     this.dependencyGraph.addNode(task.id, task.dependencies);
   }
-  
+
   // 並列実行
   async processQueue(executor: TaskExecutor): Promise<void> {
     while (this.queue.size() > 0 || this.executing.size > 0) {
       // 実行可能なタスクを取得
       const executableTasks = this.getExecutableTasks();
-      
+
       // 並列実行
-      const promises = executableTasks.map(task => 
-        this.executeTask(task, executor)
-      );
-      
+      const promises = executableTasks.map((task) => this.executeTask(task, executor));
+
       // 完了を待つ
       await Promise.race(promises);
     }
   }
-  
+
   // 実行可能なタスクの取得
   private getExecutableTasks(): Task[] {
     const tasks: Task[] = [];
     const availableSlots = this.maxParallel - this.executing.size;
-    
+
     while (tasks.length < availableSlots && this.queue.size() > 0) {
       const task = this.queue.peek();
-      
+
       // 依存関係チェック
       if (this.canExecute(task)) {
         tasks.push(this.queue.pop()!);
@@ -442,19 +438,19 @@ class TaskQueue {
         break; // 依存関係が解決されていない
       }
     }
-    
+
     return tasks;
   }
-  
+
   // タスク実行可能性チェック
   private canExecute(task: Task): boolean {
-    return task.dependencies.every(dep => this.completed.has(dep));
+    return task.dependencies.every((dep) => this.completed.has(dep));
   }
-  
+
   // タスクの実行
   private async executeTask(task: Task, executor: TaskExecutor): Promise<void> {
     this.executing.set(task.id, task);
-    
+
     try {
       const result = await executor.execute(task);
       task.result = result;
@@ -463,7 +459,7 @@ class TaskQueue {
     } catch (error) {
       task.error = error as Error;
       task.state = TaskState.FAILED;
-      
+
       // リトライロジック
       if (this.shouldRetry(task)) {
         task.state = TaskState.PENDING;
@@ -478,48 +474,48 @@ class TaskQueue {
 // 依存関係グラフ
 class DependencyGraph {
   private graph: Map<string, Set<string>>;
-  
+
   constructor() {
     this.graph = new Map();
   }
-  
+
   addNode(node: string, dependencies: string[]): void {
     this.graph.set(node, new Set(dependencies));
   }
-  
+
   // トポロジカルソート
   topologicalSort(): string[] {
     const visited = new Set<string>();
     const result: string[] = [];
-    
+
     const visit = (node: string) => {
       if (visited.has(node)) return;
       visited.add(node);
-      
+
       const deps = this.graph.get(node) || new Set();
       for (const dep of deps) {
         visit(dep);
       }
-      
+
       result.push(node);
     };
-    
+
     for (const node of this.graph.keys()) {
       visit(node);
     }
-    
+
     return result;
   }
-  
+
   // 循環依存の検出
   hasCycle(): boolean {
     const visited = new Set<string>();
     const recursionStack = new Set<string>();
-    
+
     const hasCycleDFS = (node: string): boolean => {
       visited.add(node);
       recursionStack.add(node);
-      
+
       const deps = this.graph.get(node) || new Set();
       for (const dep of deps) {
         if (!visited.has(dep)) {
@@ -528,17 +524,17 @@ class DependencyGraph {
           return true;
         }
       }
-      
+
       recursionStack.delete(node);
       return false;
     };
-    
+
     for (const node of this.graph.keys()) {
       if (!visited.has(node)) {
         if (hasCycleDFS(node)) return true;
       }
     }
-    
+
     return false;
   }
 }
@@ -553,78 +549,73 @@ class MemoryManager {
   private longTermMemory: LongTermMemory;
   private workingMemory: WorkingMemory;
   private serena: SerenaMCPTool;
-  
+
   constructor(serena: SerenaMCPTool) {
     this.serena = serena;
     this.shortTermMemory = new ShortTermMemory();
     this.longTermMemory = new LongTermMemory(serena);
     this.workingMemory = new WorkingMemory();
   }
-  
+
   // コンテキストの取得
   async getRelevantContext(task: Task): Promise<Context> {
     // Serenaからプロジェクト情報を取得
     const projectContext = await this.serena.methods.readMemory('project_context');
-    
+
     // タスクに関連するシンボルを検索
     const relevantSymbols = await this.serena.methods.findSymbol({
       name: this.extractKeywords(task.description),
-      includeBody: false
+      includeBody: false,
     });
-    
+
     // 参照関係の取得
     const references = await Promise.all(
-      relevantSymbols.map(s => 
-        this.serena.methods.findReferencingSymbols(s.name)
-      )
+      relevantSymbols.map((s) => this.serena.methods.findReferencingSymbols(s.name)),
     );
-    
+
     // ワーキングメモリの更新
     this.workingMemory.update({
       task: task.description,
       symbols: relevantSymbols,
       references: references.flat(),
-      projectContext
+      projectContext,
     });
-    
+
     return this.workingMemory.getContext();
   }
-  
+
   // 学習内容の保存
   async saveLearnedKnowledge(step: ReActStep): Promise<void> {
     // 短期記憶に保存
     this.shortTermMemory.add(step);
-    
+
     // 重要な学習は長期記憶へ
     if (this.isImportantLearning(step)) {
       await this.longTermMemory.store(step);
-      
+
       // Serenaのプロジェクトメモリにも保存
-      await this.serena.methods.writeMemory(
-        `learning_${step.iteration}`,
-        {
-          thought: step.thought,
-          reflection: step.reflection,
-          timestamp: step.timestamp
-        }
-      );
+      await this.serena.methods.writeMemory(`learning_${step.iteration}`, {
+        thought: step.thought,
+        reflection: step.reflection,
+        timestamp: step.timestamp,
+      });
     }
   }
-  
+
   // エピソード記憶の形成
   async formEpisodicMemory(task: Task, steps: ReActStep[]): Promise<void> {
     const episode = {
       task: task.description,
-      steps: steps.map(s => ({
+      steps: steps.map((s) => ({
         thought: s.thought.reasoning,
         action: s.action.type,
         result: s.observation.success,
-        learning: s.reflection.learnings
+        learning: s.reflection.learnings,
       })),
       outcome: task.state === TaskState.COMPLETED ? 'success' : 'failure',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     await this.serena.methods.writeMemory(`episode_${task.id}`, episode);
   }
 }
@@ -633,15 +624,15 @@ class MemoryManager {
 class ShortTermMemory {
   private buffer: CircularBuffer<ReActStep>;
   private capacity = 100;
-  
+
   constructor() {
     this.buffer = new CircularBuffer(this.capacity);
   }
-  
+
   add(step: ReActStep): void {
     this.buffer.push(step);
   }
-  
+
   getRecent(n: number): ReActStep[] {
     return this.buffer.toArray().slice(-n);
   }
@@ -650,23 +641,23 @@ class ShortTermMemory {
 // 長期記憶
 class LongTermMemory {
   constructor(private serena: SerenaMCPTool) {}
-  
+
   async store(step: ReActStep): Promise<void> {
     // パターンの抽出
     const pattern = this.extractPattern(step);
-    
+
     // 既存パターンとの照合
-    const existingPatterns = await this.serena.methods.readMemory('patterns') || [];
-    
+    const existingPatterns = (await this.serena.methods.readMemory('patterns')) || [];
+
     // 新規パターンの場合は保存
     if (!this.patternExists(pattern, existingPatterns)) {
       existingPatterns.push(pattern);
       await this.serena.methods.writeMemory('patterns', existingPatterns);
     }
   }
-  
+
   async retrieve(query: string): Promise<any[]> {
-    const patterns = await this.serena.methods.readMemory('patterns') || [];
+    const patterns = (await this.serena.methods.readMemory('patterns')) || [];
     return this.findSimilarPatterns(query, patterns);
   }
 }
@@ -677,15 +668,15 @@ class LongTermMemory {
 ```typescript
 // エラー分類
 enum ErrorType {
-  RECOVERABLE = 'RECOVERABLE',      // 回復可能
-  PARTIAL = 'PARTIAL',              // 部分的に回復可能
-  FATAL = 'FATAL'                   // 致命的
+  RECOVERABLE = 'RECOVERABLE', // 回復可能
+  PARTIAL = 'PARTIAL', // 部分的に回復可能
+  FATAL = 'FATAL', // 致命的
 }
 
 // エラーハンドラー
 class ErrorHandler {
   private strategies: Map<string, RecoveryStrategy>;
-  
+
   constructor() {
     this.strategies = new Map([
       ['TOOL_NOT_FOUND', new ToolNotFoundStrategy()],
@@ -693,31 +684,31 @@ class ErrorHandler {
       ['TIMEOUT', new TimeoutStrategy()],
       ['DEPENDENCY_FAILED', new DependencyFailedStrategy()],
       ['SYNTAX_ERROR', new SyntaxErrorStrategy()],
-      ['SEMANTIC_ERROR', new SemanticErrorStrategy()]
+      ['SEMANTIC_ERROR', new SemanticErrorStrategy()],
     ]);
   }
-  
+
   // エラーの処理
   async handle(error: AgentError, context: ExecutionContext): Promise<RecoveryResult> {
     // エラーの分類
     const errorType = this.classifyError(error);
-    
+
     // 回復戦略の選択
     const strategy = this.strategies.get(error.code) || new DefaultStrategy();
-    
+
     // 回復の試行
     const result = await strategy.recover(error, context);
-    
+
     // ログ記録
     context.logger.error('Error occurred', {
       error: error.message,
       type: errorType,
-      recovered: result.success
+      recovered: result.success,
     });
-    
+
     return result;
   }
-  
+
   // エラーの分類
   private classifyError(error: AgentError): ErrorType {
     if (this.isRecoverable(error)) {
@@ -740,40 +731,37 @@ class ExecutionFailedStrategy implements RecoveryStrategy {
   async recover(error: AgentError, context: ExecutionContext): Promise<RecoveryResult> {
     // エラーの詳細分析
     const analysis = await this.analyzeError(error, context);
-    
+
     // 代替アプローチの生成
     if (analysis.hasAlternative) {
       const alternativeAction = await this.generateAlternative(analysis, context);
-      
+
       // 代替アプローチの実行
       try {
         const result = await context.mcp.executeTool(
           alternativeAction.tool,
-          alternativeAction.params
+          alternativeAction.params,
         );
-        
+
         return {
           success: true,
           action: alternativeAction,
-          result
+          result,
         };
       } catch (retryError) {
         // 代替も失敗
         return {
           success: false,
-          error: retryError
+          error: retryError,
         };
       }
     }
-    
+
     // 部分的な成功を試みる
     return this.attemptPartialRecovery(error, context);
   }
-  
-  private async analyzeError(
-    error: AgentError,
-    context: ExecutionContext
-  ): Promise<ErrorAnalysis> {
+
+  private async analyzeError(error: AgentError, context: ExecutionContext): Promise<ErrorAnalysis> {
     // LLMによるエラー分析
     const prompt = `
       エラーが発生しました: ${error.message}
@@ -781,7 +769,7 @@ class ExecutionFailedStrategy implements RecoveryStrategy {
       
       このエラーの原因と代替アプローチを分析してください。
     `;
-    
+
     const response = await context.llm.complete(prompt);
     return this.parseAnalysis(response);
   }
@@ -888,30 +876,30 @@ const REFLECTION_PROMPT = `
 class ContextOptimizer {
   private cache: LRUCache<string, Context>;
   private compressionRatio = 0.3;
-  
+
   // コンテキストの圧縮
   async compress(context: Context): Promise<CompressedContext> {
     // 重要度によるフィルタリング
     const important = this.filterImportant(context);
-    
+
     // 冗長性の除去
     const deduplicated = this.removeDuplication(important);
-    
+
     // 要約
     const summarized = await this.summarize(deduplicated);
-    
+
     return {
       original: context,
       compressed: summarized,
-      ratio: this.calculateRatio(context, summarized)
+      ratio: this.calculateRatio(context, summarized),
     };
   }
-  
+
   // 動的コンテキスト管理
   async getDynamicContext(task: Task, maxTokens: number): Promise<Context> {
     // タスクに最も関連する情報を優先
     const relevance = await this.calculateRelevance(task);
-    
+
     // トークン制限内でコンテキストを構築
     return this.buildOptimalContext(relevance, maxTokens);
   }
@@ -926,31 +914,28 @@ class ExecutionOptimizer {
   optimizeBatch(tasks: Task[]): TaskBatch[] {
     // 依存関係の分析
     const graph = this.buildDependencyGraph(tasks);
-    
+
     // 並列実行可能なグループの識別
     const layers = graph.topologicalLayers();
-    
+
     // 各レイヤーをバッチ化
-    return layers.map(layer => new TaskBatch(layer));
+    return layers.map((layer) => new TaskBatch(layer));
   }
-  
+
   // キャッシュ戦略
-  async executeWithCache(
-    action: Action,
-    context: ExecutionContext
-  ): Promise<Observation> {
+  async executeWithCache(action: Action, context: ExecutionContext): Promise<Observation> {
     const cacheKey = this.generateCacheKey(action);
-    
+
     // キャッシュチェック
     const cached = await this.cache.get(cacheKey);
     if (cached && this.isCacheValid(cached)) {
       return cached;
     }
-    
+
     // 実行とキャッシュ
     const result = await this.execute(action, context);
     await this.cache.set(cacheKey, result);
-    
+
     return result;
   }
 }
@@ -963,30 +948,30 @@ class ExecutionOptimizer {
 ```typescript
 class ExecutionTracer {
   private traces: Trace[] = [];
-  
+
   // トレースの記録
   trace(event: TraceEvent): void {
     this.traces.push({
       timestamp: Date.now(),
       event,
       stack: this.captureStack(),
-      context: this.captureContext()
+      context: this.captureContext(),
     });
   }
-  
+
   // 実行パスの可視化
   visualize(): string {
-    return this.traces.map(t => 
-      `[${t.timestamp}] ${t.event.type}: ${t.event.description}`
-    ).join('\n');
+    return this.traces
+      .map((t) => `[${t.timestamp}] ${t.event.type}: ${t.event.description}`)
+      .join('\n');
   }
-  
+
   // パフォーマンス分析
   analyzePerformance(): PerformanceReport {
     return {
       totalDuration: this.calculateTotalDuration(),
       bottlenecks: this.identifyBottlenecks(),
-      parallelEfficiency: this.calculateParallelEfficiency()
+      parallelEfficiency: this.calculateParallelEfficiency(),
     };
   }
 }
@@ -998,12 +983,12 @@ class ExecutionTracer {
 class DebugManager {
   private debugLevel: DebugLevel;
   private breakpoints: Set<string>;
-  
+
   // ブレークポイント設定
   setBreakpoint(location: string): void {
     this.breakpoints.add(location);
   }
-  
+
   // ステップ実行
   async stepThrough(step: ReActStep): Promise<void> {
     if (this.shouldBreak(step)) {
@@ -1011,14 +996,14 @@ class DebugManager {
       await this.waitForContinue();
     }
   }
-  
+
   // 状態のダンプ
   dumpState(context: ExecutionContext): StateSnapshot {
     return {
       memory: context.memory.snapshot(),
       queue: context.queue.snapshot(),
       variables: context.variables.snapshot(),
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 }
@@ -1034,18 +1019,18 @@ describe('AgentCore', () => {
     it('should complete simple task', async () => {
       const agent = new AgentCore(mockConfig);
       const result = await agent.execute('Create a hello world file');
-      
+
       expect(result.success).toBe(true);
       expect(result.steps.length).toBeGreaterThan(0);
       expect(result.files).toContain('hello.txt');
     });
-    
+
     it('should handle errors gracefully', async () => {
       const agent = new AgentCore(mockConfig);
       mockMCP.executeTool.mockRejectedValue(new Error('Tool failed'));
-      
+
       const result = await agent.execute('Invalid task');
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
       expect(result.recovery).toBeDefined();
@@ -1060,14 +1045,14 @@ describe('AgentCore', () => {
 describe('Agent Integration', () => {
   it('should build complete application', async () => {
     const agent = new AgentCore(realConfig);
-    
+
     const result = await agent.execute(`
       Todoアプリケーションを作成してください。
       - React フロントエンド
       - Express バックエンド
       - SQLiteデータベース
     `);
-    
+
     expect(result.success).toBe(true);
     expect(fs.existsSync('frontend/src/App.tsx')).toBe(true);
     expect(fs.existsSync('backend/server.js')).toBe(true);
