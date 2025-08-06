@@ -69,8 +69,7 @@ RUN bun install
 RUN bun run build:all
 
 # グローバルにインストール（binが有効になる）
-RUN bun link
-RUN bun link @akiojin/agents --global
+RUN npm install -g .
 
 # エントリーポイントスクリプトをコピー
 COPY scripts/entrypoint.sh /entrypoint.sh
