@@ -1,0 +1,170 @@
+# 依存関係
+node_modules/
+vendor/
+bower_components/
+
+# ビルド出力
+dist/
+build/
+out/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE・エディタ
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS生成ファイル
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ログファイル
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 環境変数
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# ローカル設定
+.settings.local.json
+*.local.json
+*.local.yml
+*.local.yaml
+.claude/settings.local.json
+
+# テスト関連
+coverage/
+.nyc_output/
+*.lcov
+.coverage
+htmlcov/
+
+# キャッシュ
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist/
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.vscode-test/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# C/C++
+*.o
+*.obj
+*.elf
+*.gch
+*.pch
+*.lib
+*.a
+*.la
+*.lo
+*.def
+*.exp
+
+# Ruby
+*.gem
+*.rbc
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/spec/examples.txt
+/test/tmp/
+/test/version_tmp/
+/tmp/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
+/Godeps/
+
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# データベース
+*.sqlite
+*.sqlite3
+*.db
+
+# バックアップファイル
+*.bak
+*.backup
+*.old
+
+# 一時ファイル
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# プライベート・機密情報
+secrets/
+private/
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Dockerボリューム（ローカル開発用）
+.docker/volumes/
+
+# その他
+*.orig
+.history/
+.phpunit.result.cache
