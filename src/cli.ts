@@ -35,14 +35,17 @@ program
   .command('init')
   .description('エージェント設定を初期化')
   .action(async () => {
-    const spinner = ora('設定を初期化中...').start();
-
     try {
       interface InitAnswers {
         provider: string;
         apiKey?: string;
         localEndpoint?: string;
         useMCP: boolean;
+      }
+
+      // TTY確認
+      if (!process.stdin.isTTY) {
+        throw new Error('対話型セットアップにはTTY環境が必要です。docker exec -it を使用してください。');
       }
 
       const answers: InitAnswers = await inquirer.prompt([
@@ -74,35 +77,16 @@ program
       ]);
 
       // 設定ファイルを生成
+      const spinner = ora('設定ファイルを作成中...').start();
       await loadConfig.save(answers as Config);
       spinner.succeed(chalk.green('設定を初期化しました'));
     } catch (error) {
-      spinner.fail(chalk.red('初期化に失敗しました'));
+      console.log(chalk.red('初期化に失敗しました'));
       logger.error('Init failed:', error);
       process.exit(1);
     }
   });
 
-// chatコマンド
-program
-  .command('chat')
-  .description('対話モードを開始')
-  .option('-s, --session <id>', 'セッションIDを指定')
-  .action(async (_options) => {
-    const config = await loadConfig.load();
-    const agent = new AgentCore(config);
-    const mcpManager = new MCPManager(config);
-
-    if (config.useMCP) {
-      await mcpManager.initialize();
-      agent.setupMCPTools(mcpManager);
-    }
-
-    console.log(chalk.cyan('🤖 エージェントとの対話を開始します'));
-    console.log(chalk.gray('終了するには /exit を入力してください'));
-
-    await startREPL(agent, mcpManager);
-  });
 
 // taskコマンド
 program
@@ -198,7 +182,19 @@ try {
   process.exit(1);
 }
 
-// 引数なしの場合はヘルプを表示
+// 引数なしの場合は対話モードを開始
 if (process.argv.length === 2) {
-  program.help();
+  const config = await loadConfig.load();
+  const agent = new AgentCore(config);
+  const mcpManager = new MCPManager(config);
+
+  if (config.useMCP) {
+    await mcpManager.initialize();
+    agent.setupMCPTools(mcpManager);
+  }
+
+  console.log(chalk.cyan('🤖 エージェントとの対話を開始します'));
+  console.log(chalk.gray('終了するには /exit を入力してください'));
+
+  await startREPL(agent, mcpManager);
 }
