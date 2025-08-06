@@ -53,20 +53,25 @@ program
           type: 'list',
           name: 'provider',
           message: 'LLMプロバイダーを選択:',
-          choices: ['OpenAI', 'Anthropic', 'Local (GPT-OSS)', 'Local (LM Studio)'],
+          choices: [
+            { name: 'OpenAI', value: 'openai' },
+            { name: 'Anthropic', value: 'anthropic' },
+            { name: 'Local (GPT-OSS)', value: 'local-gptoss' },
+            { name: 'Local (LM Studio)', value: 'local-lmstudio' },
+          ],
         },
         {
           type: 'input',
           name: 'apiKey',
           message: 'APIキーを入力（ローカルの場合は空欄）:',
-          when: (answers: InitAnswers) => !answers.provider.includes('Local'),
+          when: (answers: InitAnswers) => !answers.provider.startsWith('local-'),
         },
         {
           type: 'input',
           name: 'localEndpoint',
           message: 'ローカルエンドポイントURL:',
           default: 'http://localhost:8080',
-          when: (answers: InitAnswers) => answers.provider.includes('Local'),
+          when: (answers: InitAnswers) => answers.provider.startsWith('local-'),
         },
         {
           type: 'confirm',
