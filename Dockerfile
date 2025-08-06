@@ -27,6 +27,11 @@ RUN apt-get update && apt-get install -y  --no-install-recommends \
 # npmを最新バージョンに更新
 RUN npm install -g npm@latest
 
+# Bunのインストール
+RUN curl -fsSL https://bun.sh/install | bash
+ENV BUN_INSTALL="/root/.bun"
+ENV PATH="$BUN_INSTALL/bin:$PATH"
+
 # pnpmとClaude Codeのインストール（最新バージョン）
 RUN npm install -g pnpm@latest @anthropic-ai/claude-code@latest
 
