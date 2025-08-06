@@ -32,16 +32,12 @@ RUN curl -fsSL https://bun.sh/install | bash
 ENV BUN_INSTALL="/root/.bun"
 ENV PATH="$BUN_INSTALL/bin:$PATH"
 
-# pnpmとClaude Codeのインストール（最新バージョン）
-RUN npm install -g pnpm@latest @anthropic-ai/claude-code@latest
-
-# pnpmの環境変数設定
-ENV PNPM_HOME=/pnpm
-ENV PATH="$PNPM_HOME:$PATH"
+# Claude Codeのインストール（最新バージョン）
+RUN bun add -g @anthropic-ai/claude-code@latest
 
 # グローバルNode.jsツールのインストール（必要に応じて追加）
- RUN pnpm add -g \
-     @google/gemini-cli@latest \
+RUN bun add -g \
+     @google/gemini-cli@latest
 #     @aws-amplify/cli@latest \
 #     eslint@latest \
 #     prettier@latest
@@ -60,8 +56,8 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | g
 # ログディレクトリの作成
 RUN mkdir -p /147-Xyla/.logs
 
-# pnpmのグローバルストアを設定（コンテナ内でキャッシュ）
-RUN pnpm config set store-dir /pnpm-store
+# Bunのグローバルインストールディレクトリを設定
+RUN bun config set install.globalDir /bun-global
 
 # エントリーポイントスクリプトをコピー
 COPY scripts/entrypoint.sh /entrypoint.sh

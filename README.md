@@ -14,11 +14,14 @@
 ## インストール
 
 ```bash
-# Bunを使用したグローバルインストール
-bun install -g @akiojin/agents
+# Bunを使用したグローバルインストール（推奨）
+bun add -g @akiojin/agents
 
-# または npx/bunx で直接実行
+# または bunx で直接実行
 bunx @akiojin/agents
+
+# npmを使用する場合
+npm install -g @akiojin/agents
 ```
 
 ## 使い方
@@ -131,6 +134,26 @@ mcpServers:
 
 プロジェクトへの貢献を歓迎します！
 
+### 開発環境のセットアップ
+
+```bash
+# リポジトリのクローン
+git clone https://github.com/akiojin/agents.git
+cd agents
+
+# 依存関係のインストール（Bun推奨）
+bun install
+
+# 開発モードで実行
+bun run dev
+
+# ビルド
+bun run build
+
+# テスト
+bun test
+```
+
 ### 開発フロー
 
 Git Flow に従って開発を行います：
@@ -151,8 +174,7 @@ Git Flow に従って開発を行います：
 
 ## 必要要件
 
-- Bun v1.0以上
-- Node.js v18以上（互換性のため）
+- Bun v1.0以上（推奨）または Node.js v18以上
 - Git
 
 ## ライセンス
