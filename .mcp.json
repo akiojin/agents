@@ -1,27 +1,5 @@
 {
   "mcpServers": {
-    "UnityMCP": {
-      "command": "npx",
-      "args": [
-        "unity-editor-mcp"
-      ]
-    },
-    "Notion": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@notionhq/notion-mcp-server"
-      ]
-    },
-    "azure": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@azure/mcp@latest",
-        "server",
-        "start"
-      ]
-    },
     "microsoft.docs.mcp": {
       "type": "http",
       "url": "https://learn.microsoft.com/api/mcp"
@@ -29,15 +7,6 @@
     "context7": {
       "type": "sse",
       "url": "https://mcp.context7.com/sse"
-    },
-    "awslabs.aws-documentation": {
-      "command": "uvx",
-      "args": [
-        "awslabs.aws-documentation-mcp-server@latest"
-      ],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
     },
     "google-search": {
       "type": "stdio",
