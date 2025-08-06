@@ -13,6 +13,8 @@ import { MCPManager } from '../src/mcp/manager.js';
 import type { Config } from '../src/types/config.js';
 import chalk from 'chalk';
 
+/* eslint-disable no-console, @typescript-eslint/explicit-function-return-type, @typescript-eslint/require-await, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
+
 // デモ用の設定
 const demoConfig: Config = {
   provider: 'openai',

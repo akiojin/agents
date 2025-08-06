@@ -160,14 +160,16 @@ program
       persistent: true,
     });
 
-    watcher.on('change', async (path) => {
-      console.log(chalk.yellow(`変更検出: ${path}`));
-      if (options.task) {
-        await agent.executeTask({
-          description: options.task,
-          files: [path],
-        });
-      }
+    watcher.on('change', (path) => {
+      void (async () => {
+        console.log(chalk.yellow(`変更検出: ${path}`));
+        if (options.task) {
+          await agent.executeTask({
+            description: options.task,
+            files: [path],
+          });
+        }
+      })();
     });
   });
 

@@ -9,7 +9,7 @@ export class MemoryManager {
 
   constructor(historyPath: string) {
     this.historyPath = historyPath;
-    this.ensureDirectoryExists();
+    void this.ensureDirectoryExists();
   }
 
   private async ensureDirectoryExists(): Promise<void> {

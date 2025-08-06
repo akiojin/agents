@@ -150,7 +150,8 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   };
 
   // 入力処理
-  rl.on('line', async (input) => {
+  rl.on('line', (input) => {
+    void (async () => {
     const trimmedInput = input.trim();
 
     // 空行はスキップ
@@ -182,6 +183,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
     }
 
     rl.prompt();
+    })();
   });
 
   rl.on('close', () => {
