@@ -4,10 +4,125 @@ import { TaskExecutor } from '../../src/core/task-executor.js';
 import { MemoryManager } from '../../src/core/memory.js';
 import type { Config } from '../../src/types/config.js';
 
-// TODO: Bun環境でのvitest mockサポートが改善されるまで一時的に無効化
-describe.skip('AgentCore (Disabled due to vi.mock issues in Bun)', () => {
-  it('AgentCore tests will be re-enabled once vi.mock works properly in Bun environment', () => {
-    expect(true).toBe(true);
+describe('AgentCore', () => {
+  const mockConfig: Config = {
+    provider: 'local-lmstudio',
+    model: 'test-model',
+    apiKey: 'test-key',
+    baseURL: 'http://localhost:1234',
+    localEndpoint: 'http://localhost:1234',
+    historyPath: './test-history',
+    logLevel: 'info',
+    maxConcurrency: 2,
+  };
+
+  it('should handle empty input gracefully', async () => {
+    const agent = new AgentCore(mockConfig);
+    
+    // 空文字列のテスト
+    try {
+      await agent.chat('');
+      expect.fail('空の入力でもエラーが発生しませんでした');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain('入力が空です');
+    }
+  });
+
+  it('should handle very long input gracefully', async () => {
+    const agent = new AgentCore(mockConfig);
+    
+    // 非常に長い入力のテスト（32,000文字を超える）
+    const longInput = 'a'.repeat(32001);
+    
+    try {
+      await agent.chat(longInput);
+      expect.fail('長すぎる入力でもエラーが発生しませんでした');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain('入力が長すぎます');
+    }
+  });
+
+  it('should return current model correctly', () => {
+    const agent = new AgentCore(mockConfig);
+    expect(agent.getCurrentModel()).toBe('test-model');
+  });
+
+  it('should update model correctly', () => {
+    const agent = new AgentCore(mockConfig);
+    const newModel = 'new-test-model';
+    
+    agent.setModel(newModel);
+    expect(agent.getCurrentModel()).toBe(newModel);
+  });
+
+  it('should clear history correctly', () => {
+    const agent = new AgentCore(mockConfig);
+    
+    // 初期状態では履歴は空
+    expect(agent.getHistory()).toHaveLength(0);
+    
+    // 履歴をクリア
+    agent.clearHistory();
+    expect(agent.getHistory()).toHaveLength(0);
+  });
+
+  it('should toggle parallel mode correctly', () => {
+    const agent = new AgentCore(mockConfig);
+    
+    // デフォルトはfalse
+    const firstToggle = agent.toggleParallelMode();
+    expect(firstToggle).toBe(true);
+    
+    // もう一度トグルするとfalseに戻る
+    const secondToggle = agent.toggleParallelMode();
+    expect(secondToggle).toBe(false);
+  });
+
+  it('should get default model for different providers', () => {
+    const openAIConfig: Config = { ...mockConfig, provider: 'openai', model: undefined as any };
+    const anthropicConfig: Config = { ...mockConfig, provider: 'anthropic', model: undefined as any };
+
+    const openAIAgent = new AgentCore(openAIConfig);
+    const anthropicAgent = new AgentCore(anthropicConfig);
+
+    expect(openAIAgent.getCurrentModel()).toContain('gpt');
+    expect(anthropicAgent.getCurrentModel()).toContain('claude');
+    
+    // 未知のプロバイダーはエラーになるのでテストから除外
+  });
+
+  it('should handle task execution with error result', async () => {
+    const agent = new AgentCore(mockConfig);
+    
+    const taskConfig = {
+      description: 'テストタスク',
+      steps: ['ステップ1'],
+      timeout: 1000,
+    };
+
+    const result = await agent.executeTask(taskConfig);
+    
+    // エラー結果でも正しい構造を持つことを確認
+    expect(result).toHaveProperty('success');
+    expect(result).toHaveProperty('message');
+    expect(typeof result.success).toBe('boolean');
+    expect(typeof result.message).toBe('string');
+  });
+
+  it('should return empty tools list when MCP not initialized', async () => {
+    const agent = new AgentCore(mockConfig);
+    
+    const tools = await agent.getAvailableMCPTools();
+    expect(tools).toEqual([]);
+  });
+
+  it('should return null for MCP server status when not initialized', () => {
+    const agent = new AgentCore(mockConfig);
+    
+    const status = agent.getMCPServerStatus();
+    expect(status).toBeNull();
   });
 });
 

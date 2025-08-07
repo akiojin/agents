@@ -12,7 +12,9 @@ export class TaskExecutor extends EventEmitter {
   constructor(config: Config) {
     super();
     // this._config = config;
-    this.limit = pLimit(config.maxParallel);
+    // maxConcurrencyまたはmaxParallelをチェックし、デフォルト値を設定
+    const concurrency = config.maxConcurrency || config.maxParallel || 3;
+    this.limit = pLimit(concurrency);
   }
 
   async execute(taskConfig: TaskConfig, provider: LLMProvider): Promise<TaskResult> {
