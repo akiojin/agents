@@ -64,6 +64,7 @@ htmlcov/
 # キャッシュ
 .cache/
 .parcel-cache/
+.serena/cache/
 .next/
 .nuxt/
 .vuepress/dist/
