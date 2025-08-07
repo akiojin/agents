@@ -79,7 +79,7 @@ export class AgentCore extends EventEmitter {
       // Optimize memory on startup
       await this.optimizeMemory();
       
-      logger.info('Agent core initialized');
+      // logger.info('Agent core initialized');
     } catch (error) {
       logger.error('InitializeError:', error);
 
@@ -319,7 +319,7 @@ export class AgentCore extends EventEmitter {
       }
 
       globalProgressReporter.completeTask(true);
-      perf.end(`Chat completed (attempts: ${result.attemptCount}, time: ${result.totalTime}ms)`);
+      // perf.end(`Chat completed (attempts: ${result.attemptCount}, time: ${result.totalTime}ms)`);
       return trimmedResponse;
     } catch (error) {
       logger.error('Chat error:', error);
