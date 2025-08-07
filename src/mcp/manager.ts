@@ -24,11 +24,11 @@ export class MCPManager extends EventEmitter {
   constructor(config: import('../types/config.js').Config) {
     super();
     this.config = config;
-    
+
     // MCP設定を抽出（統一設定または従来設定から）
     this.mcpConfig = {
       timeout: 30000, // デフォルト30秒
-      maxRetries: 2,  // デフォルト2回
+      maxRetries: 2, // デフォルト2回
       enabled: config.useMCP ?? true,
     };
   }
@@ -53,7 +53,7 @@ export class MCPManager extends EventEmitter {
     };
 
     const manager = new MCPManager(legacyConfig);
-    
+
     // 統一設定からMCP設定を設定
     manager.mcpConfig = {
       timeout: config.mcp.timeout,
@@ -97,7 +97,7 @@ export class MCPManager extends EventEmitter {
       timeout: this.mcpConfig.timeout,
       maxRetries: this.mcpConfig.maxRetries,
     });
-    
+
     await client.connect(childProcess);
     this.servers.set(serverConfig.name, client);
 

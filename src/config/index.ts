@@ -3,7 +3,8 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import yaml from 'yaml';
 import { z } from 'zod';
-import { Config, DEFAULT_CONFIG, ENV_MAPPING } from './types.js';
+import type { Config } from './types.js';
+import { DEFAULT_CONFIG, ENV_MAPPING } from './types.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -20,12 +21,16 @@ const ConfigSchema = z.object({
     maxTokens: z.number().positive().optional(),
   }),
   mcp: z.object({
-    servers: z.array(z.object({
-      name: z.string(),
-      command: z.string(),
-      args: z.array(z.string()).optional(),
-      env: z.record(z.string()).optional(),
-    })).default([]),
+    servers: z
+      .array(
+        z.object({
+          name: z.string(),
+          command: z.string(),
+          args: z.array(z.string()).optional(),
+          env: z.record(z.string()).optional(),
+        }),
+      )
+      .default([]),
     timeout: z.number().positive().default(30000),
     enabled: z.boolean().default(true),
     maxRetries: z.number().min(0).default(2),
@@ -96,7 +101,7 @@ export class ConfigManager {
 
       // 4. 設定の検証
       this.config = ConfigSchema.parse(config);
-      
+
       logger.debug('設定を読み込みました:', this.config);
       return this.config;
     } catch (error) {
@@ -110,13 +115,10 @@ export class ConfigManager {
    * 設定の保存
    */
   public async save(config: Partial<Config>): Promise<void> {
-    const mergedConfig = this.deepMerge(
-      this.deepClone(DEFAULT_CONFIG),
-      config
-    );
-    
+    const mergedConfig = this.deepMerge(this.deepClone(DEFAULT_CONFIG), config);
+
     const validated = ConfigSchema.parse(mergedConfig);
-    
+
     const yamlContent = yaml.stringify(validated, {
       indent: 2,
       lineWidth: 80,
@@ -124,7 +126,7 @@ export class ConfigManager {
 
     await writeFile(this.configPath, yamlContent, 'utf-8');
     this.config = validated;
-    
+
     logger.info('設定を保存しました:', this.configPath);
   }
 
@@ -190,11 +192,11 @@ export class ConfigManager {
     if (/^\d+$/.test(value)) {
       return parseInt(value, 10);
     }
-    
+
     // ブール値の変換
     if (value.toLowerCase() === 'true') return true;
     if (value.toLowerCase() === 'false') return false;
-    
+
     return value;
   }
 
@@ -204,7 +206,7 @@ export class ConfigManager {
   private setNestedValue(obj: any, path: string, value: any): void {
     const keys = path.split('.');
     let current = obj;
-    
+
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
       if (!(key in current)) {
@@ -212,7 +214,7 @@ export class ConfigManager {
       }
       current = current[key];
     }
-    
+
     current[keys[keys.length - 1]] = value;
   }
 
@@ -228,7 +230,7 @@ export class ConfigManager {
    */
   private deepMerge(target: any, source: any): any {
     const result = { ...target };
-    
+
     for (const key in source) {
       if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
         result[key] = this.deepMerge(target[key] || {}, source[key]);
@@ -236,7 +238,7 @@ export class ConfigManager {
         result[key] = source[key];
       }
     }
-    
+
     return result;
   }
 }

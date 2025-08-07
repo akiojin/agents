@@ -175,7 +175,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       // タスク実行
       const spinner = ora('考え中...').start();
       try {
-        const response = await agent.chat(trimmedInput);
+        const response = await agent.chatWithTaskDecomposition(trimmedInput);
         spinner.stop();
         console.log(chalk.green('エージェント:'), response);
       } catch (error) {

@@ -1,0 +1,24 @@
+llm:
+  provider: local-lmstudio
+  timeout: 30000
+  maxRetries: 3
+  temperature: 0.7
+  maxTokens: 2000
+
+mcp:
+  enabled: false
+  servers: []
+  timeout: 30000
+  maxRetries: 3
+
+app:
+  maxParallel: 5
+  timeout: 300000
+  logLevel: info
+
+paths:
+  cache: ./.agents/cache
+  history: ./.agents/history
+  logs: ./.agents/logs
+
+localEndpoint: http://127.0.0.1:1234

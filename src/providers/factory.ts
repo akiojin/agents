@@ -47,7 +47,9 @@ export function createProvider(config: Config): LLMProvider {
 /**
  * 統一設定システム用のファクトリー関数
  */
-export function createProviderFromUnifiedConfig(config: import('../config/types.js').Config): LLMProvider {
+export function createProviderFromUnifiedConfig(
+  config: import('../config/types.js').Config,
+): LLMProvider {
   const providerOptions = {
     timeout: config.llm.timeout,
     maxRetries: config.llm.maxRetries,

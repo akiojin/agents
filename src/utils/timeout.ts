@@ -8,17 +8,17 @@
 export function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number = 30000,
-  timeoutMessage?: string
+  timeoutMessage?: string,
 ): Promise<T> {
   const defaultMessage = `リクエストが${timeoutMs / 1000}秒でタイムアウトしました`;
-  
+
   return Promise.race([
     promise,
     new Promise<never>((_, reject) => {
       setTimeout(() => {
         reject(new Error(timeoutMessage || defaultMessage));
       }, timeoutMs);
-    })
+    }),
   ]);
 }
 

@@ -23,12 +23,16 @@ export abstract class LLMProvider {
     maxTokens?: number;
   };
 
-  constructor(apiKey?: string, endpoint?: string, options?: {
-    timeout?: number;
-    maxRetries?: number;
-    temperature?: number;
-    maxTokens?: number;
-  }) {
+  constructor(
+    apiKey?: string,
+    endpoint?: string,
+    options?: {
+      timeout?: number;
+      maxRetries?: number;
+      temperature?: number;
+      maxTokens?: number;
+    },
+  ) {
     this.apiKey = apiKey;
     this.endpoint = endpoint;
     this.providerOptions = {

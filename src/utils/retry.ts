@@ -45,7 +45,7 @@ const defaultShouldRetry = (error: Error): boolean => {
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<RetryResult<T>> {
   const {
     maxRetries = 3,
@@ -94,9 +94,7 @@ export async function withRetry<T>(
         }
 
         // 遅延時間を計算（指数バックオフの場合）
-        const currentDelay = exponentialBackoff 
-          ? delay * Math.pow(2, attemptCount - 1)
-          : delay;
+        const currentDelay = exponentialBackoff ? delay * Math.pow(2, attemptCount - 1) : delay;
 
         logger.debug(`${currentDelay}ms 待機後にリトライします...`);
         await sleep(currentDelay);
@@ -116,7 +114,7 @@ export async function withRetry<T>(
  * 指定された時間待機する
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -139,10 +137,7 @@ export class RetryHandler {
   /**
    * 関数をデフォルト設定でリトライ実行
    */
-  async execute<T>(
-    fn: () => Promise<T>,
-    options: RetryOptions = {}
-  ): Promise<RetryResult<T>> {
+  async execute<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<RetryResult<T>> {
     return withRetry(fn, { ...this.defaultOptions, ...options });
   }
 

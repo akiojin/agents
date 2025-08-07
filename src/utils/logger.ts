@@ -6,7 +6,7 @@ export enum LogLevel {
   ERROR = 0,
   WARN = 1,
   INFO = 2,
-  DEBUG = 3
+  DEBUG = 3,
 }
 
 export class SimpleLogger {
@@ -14,16 +14,10 @@ export class SimpleLogger {
   private silent: boolean;
   private logDir: string;
 
-  constructor(options?: {
-    logLevel?: string;
-    silent?: boolean;
-    logDir?: string;
-  }) {
+  constructor(options?: { logLevel?: string; silent?: boolean; logDir?: string }) {
     // 設定の優先順位: オプション > 環境変数 > デフォルト値
-    this.level = this.parseLogLevel(
-      options?.logLevel || process.env.AGENTS_LOG_LEVEL || 'info'
-    );
-    this.silent = options?.silent ?? (process.env.AGENTS_SILENT === 'true') ?? false;
+    this.level = this.parseLogLevel(options?.logLevel || process.env.AGENTS_LOG_LEVEL || 'info');
+    this.silent = options?.silent ?? process.env.AGENTS_SILENT === 'true' ?? false;
     this.logDir = options?.logDir || process.env.AGENTS_LOG_DIR || './logs';
     this.ensureLogDir();
   }
@@ -41,11 +35,16 @@ export class SimpleLogger {
 
   private parseLogLevel(level: string): LogLevel {
     switch (level.toLowerCase()) {
-      case 'error': return LogLevel.ERROR;
-      case 'warn': return LogLevel.WARN;
-      case 'info': return LogLevel.INFO;
-      case 'debug': return LogLevel.DEBUG;
-      default: return LogLevel.INFO;
+      case 'error':
+        return LogLevel.ERROR;
+      case 'warn':
+        return LogLevel.WARN;
+      case 'info':
+        return LogLevel.INFO;
+      case 'debug':
+        return LogLevel.DEBUG;
+      default:
+        return LogLevel.INFO;
     }
   }
 
@@ -59,13 +58,13 @@ export class SimpleLogger {
     const timestamp = new Date().toISOString();
     const levelName = LogLevel[level];
     let formattedMessage = `[${levelName}] ${timestamp} ${message}`;
-    
+
     if (data && typeof data === 'object') {
       formattedMessage += ` ${JSON.stringify(data)}`;
     } else if (data) {
       formattedMessage += ` ${data}`;
     }
-    
+
     return formattedMessage;
   }
 
@@ -101,7 +100,7 @@ export class SimpleLogger {
     }
 
     const formattedMessage = this.formatMessage(level, message, dataOrError);
-    
+
     // コンソール出力
     if (!this.silent) {
       const colorizedMessage = this.colorizeMessage(level, formattedMessage);
@@ -143,11 +142,7 @@ export class SimpleLogger {
   /**
    * 設定を更新する
    */
-  updateConfig(options: {
-    logLevel?: string;
-    silent?: boolean;
-    logDir?: string;
-  }): void {
+  updateConfig(options: { logLevel?: string; silent?: boolean; logDir?: string }): void {
     if (options.logLevel) {
       this.level = this.parseLogLevel(options.logLevel);
     }
@@ -216,7 +211,11 @@ export class PerformanceLogger {
 
   end(message?: string): void {
     const duration = performance.now() - this.startTime;
-    logger.info(`Performance: ${this.taskName} completed in ${duration.toFixed(2)}ms`, 
-      message ? { message, duration: `${duration.toFixed(2)}ms` } : { duration: `${duration.toFixed(2)}ms` });
+    logger.info(
+      `Performance: ${this.taskName} completed in ${duration.toFixed(2)}ms`,
+      message
+        ? { message, duration: `${duration.toFixed(2)}ms` }
+        : { duration: `${duration.toFixed(2)}ms` },
+    );
   }
 }
