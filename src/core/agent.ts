@@ -26,6 +26,15 @@ export class AgentCore extends EventEmitter {
   private currentModel: string;
   private parallelMode: boolean = false;
   private verboseMode: boolean = false;
+  
+  // メモリ管理関連の設定
+  private readonly MAX_HISTORY_SIZE = 100; // 最大履歴サイズ
+  private readonly MEMORY_CHECK_INTERVAL = 10; // N回のチャット毎にメモリチェック
+  private chatCount: number = 0; // チャット回数カウンター
+  
+  // リソース管理用
+  private timers: Set<NodeJS.Timeout> = new Set();
+  private eventListeners: WeakMap<object, Function[]> = new WeakMap();
 
   constructor(config: Config) {
     super();
@@ -36,8 +45,12 @@ export class AgentCore extends EventEmitter {
     this.memoryManager = new MemoryManager(config.paths.history);
     this.taskDecomposer = new SimpleTaskDecomposer();
     this.parallelExecutor = new ParallelExecutor(config.app.maxParallel || 3);
+    
     // 初期化を非同期で実行（エラーハンドリングを含む）
     void this.initialize();
+    
+    // プロセス終了時のクリーンアップ処理を登録
+    this.setupCleanupHandlers();
   }
 
   /**
@@ -63,6 +76,10 @@ export class AgentCore extends EventEmitter {
     try {
       // 履歴を読み込む
       this.history = await this.memoryManager.loadHistory();
+      
+      // 初回起動時にメモリ最適化
+      await this.optimizeMemory();
+      
       logger.info('エージェントコアを初期化しました');
     } catch (error) {
       logger.error('初期化エラー:', error);
@@ -73,6 +90,104 @@ export class AgentCore extends EventEmitter {
 
       // 初期化エラーは致命的ではないので例外を投げない
     }
+  }
+
+  /**
+   * クリーンアップハンドラーの設定
+   */
+  private setupCleanupHandlers(): void {
+    const cleanup = () => {
+      this.cleanup();
+    };
+
+    // プロセス終了時のクリーンアップ
+    process.on('exit', cleanup);
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught exception:', error);
+      cleanup();
+      process.exit(1);
+    });
+  }
+
+  /**
+   * リソースのクリーンアップ
+   */
+  public cleanup(): void {
+    try {
+      // タイマーのクリア
+      this.timers.forEach(timer => clearTimeout(timer));
+      this.timers.clear();
+
+      // イベントリスナーの解除
+      this.removeAllListeners();
+
+      logger.info('リソースのクリーンアップが完了しました');
+    } catch (error) {
+      logger.error('クリーンアップエラー:', error);
+    }
+  }
+
+  /**
+   * メモリ最適化処理
+   */
+  private async optimizeMemory(): Promise<void> {
+    try {
+      // 履歴のサイズ制限
+      if (this.history.length > this.MAX_HISTORY_SIZE) {
+        const oldSize = this.history.length;
+        this.history = this.history.slice(-this.MAX_HISTORY_SIZE);
+        await this.memoryManager.saveHistory(this.history);
+        logger.info(`履歴を最適化しました: ${oldSize}件 → ${this.history.length}件`);
+      }
+
+      // MemoryManagerの履歴も最適化
+      await this.memoryManager.pruneHistory(this.MAX_HISTORY_SIZE);
+
+      // ガベージコレクションの実行（可能であれば）
+      if (global.gc) {
+        global.gc();
+        logger.debug('ガベージコレクションを実行しました');
+      }
+    } catch (error) {
+      logger.error('メモリ最適化エラー:', error);
+    }
+  }
+
+  /**
+   * メモリ使用量の監視
+   */
+  private monitorMemoryUsage(): void {
+    const memUsage = process.memoryUsage();
+    const mbUsage = {
+      rss: Math.round(memUsage.rss / 1024 / 1024),
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+      external: Math.round(memUsage.external / 1024 / 1024),
+    };
+
+    logger.debug('メモリ使用量:', mbUsage);
+
+    // メモリ使用量が高い場合の警告
+    if (mbUsage.heapUsed > 500) { // 500MB以上の場合
+      logger.warn(`メモリ使用量が高くなっています: ${mbUsage.heapUsed}MB`);
+      // 自動最適化を実行
+      void this.optimizeMemory();
+    }
+  }
+
+  /**
+   * タイマーの登録（自動クリーンアップ対応）
+   */
+  private registerTimer(callback: () => void, delay: number): NodeJS.Timeout {
+    const timer = setTimeout(() => {
+      this.timers.delete(timer);
+      callback();
+    }, delay);
+    
+    this.timers.add(timer);
+    return timer;
   }
 
   private getDefaultModel(): string {
@@ -108,6 +223,13 @@ export class AgentCore extends EventEmitter {
       if (trimmedInput.length > 32000) {
         globalProgressReporter.completeTask(false);
         throw new Error('入力が長すぎます（最大32,000文字）');
+      }
+
+      // メモリ使用量チェック（定期的）
+      this.chatCount++;
+      if (this.chatCount % this.MEMORY_CHECK_INTERVAL === 0) {
+        this.monitorMemoryUsage();
+        await this.optimizeMemory();
       }
 
       // ユーザーメッセージを履歴に追加
@@ -369,6 +491,10 @@ export class AgentCore extends EventEmitter {
   async loadSession(filename: string): Promise<void> {
     const session = await this.memoryManager.loadSession(filename);
     this.history = session.history;
+    
+    // ロード後にメモリ最適化
+    await this.optimizeMemory();
+    
     logger.info(`セッションを読み込みました: ${filename}`);
   }
 
