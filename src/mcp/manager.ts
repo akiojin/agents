@@ -11,18 +11,61 @@ export interface Tool {
 }
 
 export class MCPManager extends EventEmitter {
-  private config: Config;
+  private config: import('../types/config.js').Config;
   private servers: Map<string, MCPClient> = new Map();
   private processes: Map<string, ChildProcess> = new Map();
   private tools: Map<string, Tool> = new Map();
+  private mcpConfig: {
+    timeout: number;
+    maxRetries: number;
+    enabled: boolean;
+  };
 
-  constructor(config: Config) {
+  constructor(config: import('../types/config.js').Config) {
     super();
     this.config = config;
+    
+    // MCP設定を抽出（統一設定または従来設定から）
+    this.mcpConfig = {
+      timeout: 30000, // デフォルト30秒
+      maxRetries: 2,  // デフォルト2回
+      enabled: config.useMCP ?? true,
+    };
+  }
+
+  /**
+   * 新しい統一設定システムを使用するコンストラクタ
+   */
+  static fromUnifiedConfig(config: import('../config/types.js').Config): MCPManager {
+    // 統一設定を従来設定に変換
+    const legacyConfig: import('../types/config.js').Config = {
+      provider: config.llm.provider,
+      apiKey: config.llm.apiKey,
+      model: config.llm.model,
+      localEndpoint: config.localEndpoint,
+      useMCP: config.mcp.enabled,
+      mcpServers: config.mcp.servers,
+      maxParallel: config.app.maxParallel,
+      timeout: config.app.timeout,
+      logLevel: config.app.logLevel,
+      cachePath: config.paths.cache,
+      historyPath: config.paths.history,
+    };
+
+    const manager = new MCPManager(legacyConfig);
+    
+    // 統一設定からMCP設定を設定
+    manager.mcpConfig = {
+      timeout: config.mcp.timeout,
+      maxRetries: config.mcp.maxRetries,
+      enabled: config.mcp.enabled,
+    };
+
+    return manager;
   }
 
   async initialize(): Promise<void> {
-    if (!this.config.useMCP || !this.config.mcpServers) {
+    if (!this.mcpConfig.enabled || !this.config.mcpServers) {
       logger.info('MCPは無効化されています');
       return;
     }
@@ -49,8 +92,12 @@ export class MCPManager extends EventEmitter {
 
     this.processes.set(serverConfig.name, childProcess);
 
-    // MCPクライアントを作成
-    const client = new MCPClient(serverConfig.name);
+    // MCPクライアントを作成（統一設定を使用）
+    const client = new MCPClient(serverConfig.name, {
+      timeout: this.mcpConfig.timeout,
+      maxRetries: this.mcpConfig.maxRetries,
+    });
+    
     await client.connect(childProcess);
     this.servers.set(serverConfig.name, client);
 
@@ -144,5 +191,20 @@ export class MCPManager extends EventEmitter {
       status.set(name, client.isConnected());
     }
     return status;
+  }
+
+  /**
+   * MCP設定の取得
+   */
+  getMCPConfig() {
+    return { ...this.mcpConfig };
+  }
+
+  /**
+   * MCP設定の更新
+   */
+  updateMCPConfig(newConfig: Partial<typeof this.mcpConfig>): void {
+    this.mcpConfig = { ...this.mcpConfig, ...newConfig };
+    logger.info('MCP設定を更新しました:', this.mcpConfig);
   }
 }

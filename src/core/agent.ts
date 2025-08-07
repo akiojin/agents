@@ -1,8 +1,9 @@
 import EventEmitter from 'events';
-import type { Config, ChatMessage, TaskConfig, TaskResult } from '../types/config.js';
+import type { Config } from '../config/types.js';
+import type { ChatMessage, TaskConfig, TaskResult } from '../types/config.js';
 import { logger, PerformanceLogger, LogLevel } from '../utils/logger.js';
 import type { LLMProvider } from '../providers/base.js';
-import { createProvider } from '../providers/factory.js';
+import { createProviderFromUnifiedConfig } from '../providers/factory.js';
 import { TaskExecutor } from './task-executor.js';
 import { MemoryManager } from './memory.js';
 import { MCPToolsHelper, MCPTaskPlanner } from '../mcp/tools.js';
@@ -23,12 +24,31 @@ export class AgentCore extends EventEmitter {
   constructor(config: Config) {
     super();
     this.config = config;
-    this.currentModel = config.model || this.getDefaultModel();
-    this.provider = createProvider(config);
-    this.taskExecutor = new TaskExecutor(config);
-    this.memoryManager = new MemoryManager(config.historyPath);
+    this.currentModel = config.llm.model || this.getDefaultModel();
+    this.provider = createProviderFromUnifiedConfig(config);
+    this.taskExecutor = new TaskExecutor(this.convertToLegacyConfig(config));
+    this.memoryManager = new MemoryManager(config.paths.history);
     // 初期化を非同期で実行（エラーハンドリングを含む）
     void this.initialize();
+  }
+
+  /**
+   * 新しいConfig型を既存のLegacy Config型に変換
+   */
+  private convertToLegacyConfig(config: Config): import('../types/config.js').Config {
+    return {
+      provider: config.llm.provider,
+      apiKey: config.llm.apiKey,
+      model: config.llm.model,
+      localEndpoint: config.localEndpoint,
+      useMCP: config.mcp.enabled,
+      mcpServers: config.mcp.servers,
+      maxParallel: config.app.maxParallel,
+      timeout: config.app.timeout,
+      logLevel: config.app.logLevel,
+      cachePath: config.paths.cache,
+      historyPath: config.paths.history,
+    };
   }
 
   private async initialize(): Promise<void> {
@@ -48,7 +68,7 @@ export class AgentCore extends EventEmitter {
   }
 
   private getDefaultModel(): string {
-    switch (this.config.provider) {
+    switch (this.config.llm.provider) {
       case 'openai':
         return 'gpt-4-turbo-preview';
       case 'anthropic':
@@ -92,14 +112,14 @@ export class AgentCore extends EventEmitter {
       let response: string;
       let lastError: Error | null = null;
       let retryCount = 0;
-      const maxRetries = 3;
+      const maxRetries = this.config.llm.maxRetries;
 
       while (retryCount < maxRetries) {
         try {
           response = await this.provider.chat(this.history, {
             model: this.currentModel,
-            temperature: 0.7,
-            maxTokens: 2000,
+            temperature: this.config.llm.temperature || 0.7,
+            maxTokens: this.config.llm.maxTokens || 2000,
           });
           break; // 成功した場合はループを抜ける
         } catch (error) {
@@ -182,7 +202,7 @@ export class AgentCore extends EventEmitter {
       const errorDetails = {
         originalError: error instanceof Error ? error.message : String(error),
         model: this.currentModel,
-        provider: this.config.provider,
+        provider: this.config.llm.provider,
         canRetry,
         timestamp: new Date().toISOString(),
       };
@@ -229,7 +249,7 @@ export class AgentCore extends EventEmitter {
       {
         id: `session-${Date.now()}`,
         startedAt: new Date(),
-        config: this.config,
+        config: this.convertToLegacyConfig(this.config),
         history: this.history,
       },
       filename,
@@ -272,8 +292,8 @@ export class AgentCore extends EventEmitter {
       logger.setLevel(LogLevel.DEBUG);
       logger.info('Verbose mode enabled');
     } else {
-      // デフォルトレベルに戻す（通常はINFO）
-      const defaultLevel = this.parseLogLevel(this.config.logLevel || 'info');
+      // デフォルトレベルに戻す
+      const defaultLevel = this.parseLogLevel(this.config.app.logLevel);
       logger.setLevel(defaultLevel);
       logger.info('Verbose mode disabled');
     }
@@ -428,8 +448,7 @@ export class AgentCore extends EventEmitter {
         .filter(r => !r.success)
         .map(r => `- ${r.description}: ${r.error}`)
         .join('\n');
-      summaryParts.push(`失敗したステップ:
-${failedSteps}`);
+      summaryParts.push(`失敗したステップ:\n${failedSteps}`);
     }
 
     return summaryParts.join('\n');

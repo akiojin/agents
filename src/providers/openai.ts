@@ -7,8 +7,13 @@ export class OpenAIProvider extends LLMProvider {
   private client: OpenAI;
   private defaultModel: string;
 
-  constructor(apiKey: string, model?: string) {
-    super(apiKey);
+  constructor(apiKey: string, model?: string, options?: {
+    timeout?: number;
+    maxRetries?: number;
+    temperature?: number;
+    maxTokens?: number;
+  }) {
+    super(apiKey, undefined, options);
     this.client = new OpenAI({ apiKey });
     this.defaultModel = model || 'gpt-4-turbo-preview';
   }
@@ -38,8 +43,8 @@ export class OpenAIProvider extends LLMProvider {
       const requestConfig = {
         model: options?.model || this.defaultModel,
         messages: openaiMessages,
-        temperature: Math.min(Math.max(options?.temperature || 0.7, 0), 2),
-        max_tokens: Math.min(Math.max(options?.maxTokens || 2000, 1), 8192),
+        temperature: Math.min(Math.max(options?.temperature || this.providerOptions.temperature || 0.7, 0), 2),
+        max_tokens: Math.min(Math.max(options?.maxTokens || this.providerOptions.maxTokens || 2000, 1), 8192),
         stream: false as const,
       };
 
@@ -49,7 +54,17 @@ export class OpenAIProvider extends LLMProvider {
         maxTokens: requestConfig.max_tokens,
       });
 
-      const response = await this.client.chat.completions.create(requestConfig);
+      // タイムアウト設定（オプション、プロバイダー設定、またはデフォルト値の順）
+      const timeoutMs = options?.timeout || this.providerOptions.timeout;
+      const apiPromise = this.client.chat.completions.create(requestConfig);
+      
+      // Promise.raceでタイムアウトを実装
+      const response = await Promise.race([
+        apiPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error(`OpenAI APIリクエストが${timeoutMs / 1000}秒でタイムアウトしました`)), timeoutMs)
+        )
+      ]);
 
       // レスポンス検証
       if (!response) {
@@ -120,7 +135,7 @@ export class OpenAIProvider extends LLMProvider {
       if (error instanceof Error) {
         if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
           throw new Error('OpenAI APIへの接続に失敗しました。ネットワーク接続を確認してください。');
-        } else if (error.message.includes('timeout')) {
+        } else if (error.message.includes('timeout') || error.message.includes('タイムアウト')) {
           throw new Error('OpenAI APIリクエストがタイムアウトしました。しばらく待ってからお試しください。');
         }
       }
@@ -149,14 +164,24 @@ export class OpenAIProvider extends LLMProvider {
       const requestConfig = {
         model: options.model || this.defaultModel,
         messages: [{ role: 'user' as const, content: trimmedPrompt }],
-        temperature: Math.min(Math.max(options.temperature || 0.7, 0), 2),
-        max_tokens: Math.min(Math.max(options.maxTokens || 2000, 1), 8192),
+        temperature: Math.min(Math.max(options.temperature || this.providerOptions.temperature || 0.7, 0), 2),
+        max_tokens: Math.min(Math.max(options.maxTokens || this.providerOptions.maxTokens || 2000, 1), 8192),
         stream: false as const,
       };
 
       logger.debug(`OpenAI completion API リクエスト開始: ${requestConfig.model}`);
 
-      const response = await this.client.chat.completions.create(requestConfig);
+      // タイムアウト設定（オプション、プロバイダー設定、またはデフォルト値の順）
+      const timeoutMs = options.timeout || this.providerOptions.timeout;
+      const apiPromise = this.client.chat.completions.create(requestConfig);
+      
+      // Promise.raceでタイムアウトを実装
+      const response = await Promise.race([
+        apiPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error(`OpenAI completion APIリクエストが${timeoutMs / 1000}秒でタイムアウトしました`)), timeoutMs)
+        )
+      ]);
 
       // レスポンス検証（chatメソッドと同様）
       if (!response || !('choices' in response)) {
@@ -212,8 +237,8 @@ export class OpenAIProvider extends LLMProvider {
       if (error instanceof Error) {
         if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
           throw new Error('OpenAI APIへの接続に失敗しました。ネットワーク接続を確認してください。');
-        } else if (error.message.includes('timeout')) {
-          throw new Error('OpenAI APIリクエストがタイムアウトしました。しばらく待ってからお試しください。');
+        } else if (error.message.includes('timeout') || error.message.includes('タイムアウト')) {
+          throw new Error('OpenAI completion APIリクエストがタイムアウトしました。しばらく待ってからお試しください。');
         }
       }
 
@@ -235,9 +260,9 @@ export class OpenAIProvider extends LLMProvider {
     try {
       logger.debug('OpenAI接続検証開始');
       
-      // タイムアウト付きでモデルリストを取得
+      // タイムアウト付きでモデルリストを取得（プロバイダー設定を使用）
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Connection validation timeout')), 10000)
+        setTimeout(() => reject(new Error('Connection validation timeout')), this.providerOptions.timeout)
       );
       
       const modelsPromise = this.client.models.list();

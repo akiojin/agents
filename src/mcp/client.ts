@@ -16,10 +16,14 @@ export class MCPClient extends EventEmitter {
       reject: (error: Error) => void;
     }
   > = new Map();
+  private timeout: number;
+  private maxRetries: number;
 
-  constructor(name: string) {
+  constructor(name: string, options: { timeout?: number; maxRetries?: number } = {}) {
     super();
     this.name = name;
+    this.timeout = options.timeout || 30000; // デフォルト30秒
+    this.maxRetries = options.maxRetries || 2; // デフォルト2回リトライ
   }
 
   async connect(process: ChildProcess): Promise<void> {
@@ -152,11 +156,11 @@ export class MCPClient extends EventEmitter {
         // リクエストを記録
         this.pendingRequests.set(id, { resolve, reject });
 
-        // タイムアウト設定
+        // タイムアウト設定（設定値を使用）
         const timeout = setTimeout(() => {
           if (id !== null) this.pendingRequests.delete(id);
-          reject(new Error(`リクエストタイムアウト [${this.name}/${method}]: 30秒を超えました`));
-        }, 30000);
+          reject(new Error(`リクエストタイムアウト [${this.name}/${method}]: ${this.timeout}ミリ秒を超えました`));
+        }, this.timeout);
 
         // リクエスト送信
         this.process!.stdin!.write(json, (error) => {
@@ -274,7 +278,7 @@ export class MCPClient extends EventEmitter {
 
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
-          errorMessage = `ツール実行タイムアウト: ${name} (30秒を超えました)`;
+          errorMessage = `ツール実行タイムアウト: ${name} (${this.timeout}ミリ秒を超えました)`;
         } else if (error.message.includes('not found') || error.message.includes('unknown')) {
           errorMessage = `ツールが見つかりません: ${name}`;
         } else if (error.message.includes('permission') || error.message.includes('unauthorized')) {
@@ -391,5 +395,13 @@ export class MCPClient extends EventEmitter {
 
   getName(): string {
     return this.name;
+  }
+
+  getTimeout(): number {
+    return this.timeout;
+  }
+
+  getMaxRetries(): number {
+    return this.maxRetries;
   }
 }

@@ -14,11 +14,29 @@ export class SimpleLogger {
   private silent: boolean;
   private logDir: string;
 
-  constructor() {
-    this.level = this.parseLogLevel(process.env.AGENTS_LOG_LEVEL || 'info');
-    this.silent = process.env.AGENTS_SILENT === 'true';
-    this.logDir = process.env.AGENTS_LOG_DIR || './logs';
+  constructor(options?: {
+    logLevel?: string;
+    silent?: boolean;
+    logDir?: string;
+  }) {
+    // 設定の優先順位: オプション > 環境変数 > デフォルト値
+    this.level = this.parseLogLevel(
+      options?.logLevel || process.env.AGENTS_LOG_LEVEL || 'info'
+    );
+    this.silent = options?.silent ?? (process.env.AGENTS_SILENT === 'true') ?? false;
+    this.logDir = options?.logDir || process.env.AGENTS_LOG_DIR || './logs';
     this.ensureLogDir();
+  }
+
+  /**
+   * 統一設定から SimpleLogger インスタンスを作成
+   */
+  static fromUnifiedConfig(config: import('../config/types.js').Config): SimpleLogger {
+    return new SimpleLogger({
+      logLevel: config.app.logLevel,
+      silent: config.app.silent,
+      logDir: config.app.logDir,
+    });
   }
 
   private parseLogLevel(level: string): LogLevel {
@@ -120,6 +138,39 @@ export class SimpleLogger {
 
   getLevel(): LogLevel {
     return this.level;
+  }
+
+  /**
+   * 設定を更新する
+   */
+  updateConfig(options: {
+    logLevel?: string;
+    silent?: boolean;
+    logDir?: string;
+  }): void {
+    if (options.logLevel) {
+      this.level = this.parseLogLevel(options.logLevel);
+    }
+    if (options.silent !== undefined) {
+      this.silent = options.silent;
+    }
+    if (options.logDir) {
+      const oldLogDir = this.logDir;
+      this.logDir = options.logDir;
+      this.ensureLogDir();
+      this.info(`Log directory changed from ${oldLogDir} to ${this.logDir}`);
+    }
+  }
+
+  /**
+   * 現在の設定を取得
+   */
+  getConfig() {
+    return {
+      logLevel: LogLevel[this.level].toLowerCase(),
+      silent: this.silent,
+      logDir: this.logDir,
+    };
   }
 }
 

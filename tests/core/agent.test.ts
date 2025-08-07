@@ -2,18 +2,37 @@ import { describe, it, expect } from 'vitest';
 import { AgentCore } from '../../src/core/agent.js';
 import { TaskExecutor } from '../../src/core/task-executor.js';
 import { MemoryManager } from '../../src/core/memory.js';
-import type { Config } from '../../src/types/config.js';
+import type { Config } from '../../src/config/types.js';
 
 describe('AgentCore', () => {
   const mockConfig: Config = {
-    provider: 'local-lmstudio',
-    model: 'test-model',
-    apiKey: 'test-key',
-    baseURL: 'http://localhost:1234',
-    localEndpoint: 'http://localhost:1234',
-    historyPath: './test-history',
-    logLevel: 'info',
-    maxConcurrency: 2,
+    llm: {
+      provider: 'local-lmstudio',
+      model: 'test-model',
+      apiKey: 'test-key',
+      timeout: 30000,
+      maxRetries: 3,
+      temperature: 0.7,
+      maxTokens: 2000,
+    },
+    mcp: {
+      servers: [],
+      timeout: 30000,
+      enabled: false,
+      maxRetries: 3,
+    },
+    app: {
+      logLevel: 'info',
+      logDir: './logs',
+      maxParallel: 2,
+      silent: false,
+      timeout: 300000,
+    },
+    paths: {
+      cache: './cache',
+      history: './test-history',
+      config: '.agents.yaml',
+    },
   };
 
   it('should handle empty input gracefully', async () => {
@@ -81,8 +100,14 @@ describe('AgentCore', () => {
   });
 
   it('should get default model for different providers', () => {
-    const openAIConfig: Config = { ...mockConfig, provider: 'openai', model: undefined as any };
-    const anthropicConfig: Config = { ...mockConfig, provider: 'anthropic', model: undefined as any };
+    const openAIConfig: Config = { 
+      ...mockConfig, 
+      llm: { ...mockConfig.llm, provider: 'openai' as const, model: undefined as any } 
+    };
+    const anthropicConfig: Config = { 
+      ...mockConfig, 
+      llm: { ...mockConfig.llm, provider: 'anthropic' as const, model: undefined as any } 
+    };
 
     const openAIAgent = new AgentCore(openAIConfig);
     const anthropicAgent = new AgentCore(anthropicConfig);

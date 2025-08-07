@@ -21,8 +21,13 @@ interface LocalAPIResponse {
 export class LocalProvider extends LLMProvider {
   private providerType: 'local-gptoss' | 'local-lmstudio';
 
-  constructor(endpoint: string, providerType: 'local-gptoss' | 'local-lmstudio') {
-    super(undefined, endpoint);
+  constructor(endpoint: string, providerType: 'local-gptoss' | 'local-lmstudio', options?: {
+    timeout?: number;
+    maxRetries?: number;
+    temperature?: number;
+    maxTokens?: number;
+  }) {
+    super(undefined, endpoint, options);
     this.providerType = providerType;
   }
 
@@ -41,7 +46,7 @@ export class LocalProvider extends LLMProvider {
       const controller = new AbortController();
       const timeout = setTimeout(() => {
         controller.abort();
-      }, 60000); // 60秒タイムアウト
+      }, this.providerOptions.timeout); // プロバイダー設定からタイムアウト値を取得
 
       try {
         const response = await fetch(endpoint, {
@@ -112,7 +117,7 @@ export class LocalProvider extends LLMProvider {
         
         if (fetchError instanceof Error) {
           if (fetchError.name === 'AbortError') {
-            throw new Error('ローカルAPIリクエストがタイムアウトしました（60秒）');
+            throw new Error(`ローカルAPIリクエストがタイムアウトしました（${this.providerOptions.timeout / 1000}秒）`);
           } else if (fetchError.message.includes('ECONNREFUSED')) {
             throw new Error(`ローカルサーバー（${this.endpoint}）に接続できません。サーバーが起動しているか確認してください。`);
           } else if (fetchError.message.includes('ENOTFOUND')) {
@@ -155,8 +160,8 @@ export class LocalProvider extends LLMProvider {
 
       const body: LocalAPIRequest = {
         messages: localMessages,
-        temperature: Math.min(Math.max(options?.temperature || 0.7, 0), 2),
-        max_tokens: Math.min(Math.max(options?.maxTokens || 2000, 1), 8192),
+        temperature: Math.min(Math.max(options?.temperature || this.providerOptions.temperature || 0.7, 0), 2),
+        max_tokens: Math.min(Math.max(options?.maxTokens || this.providerOptions.maxTokens || 2000, 1), 8192),
         stream: options?.stream || false,
       };
 
@@ -216,8 +221,8 @@ export class LocalProvider extends LLMProvider {
     try {
       const body: LocalAPIRequest = {
         prompt: options.prompt,
-        temperature: options.temperature || 0.7,
-        max_tokens: options.maxTokens || 2000,
+        temperature: options.temperature || this.providerOptions.temperature || 0.7,
+        max_tokens: options.maxTokens || this.providerOptions.maxTokens || 2000,
         stream: options.stream || false,
       };
 
@@ -267,7 +272,7 @@ export class LocalProvider extends LLMProvider {
       // まずヘルスチェックエンドポイントを試す
       try {
         const healthController = new AbortController();
-        setTimeout(() => healthController.abort(), 5000);
+        setTimeout(() => healthController.abort(), Math.min(this.providerOptions.timeout, 10000)); // 最大10秒に制限
 
         const healthResponse = await fetch(`${this.endpoint}/health`, {
           method: 'GET',
@@ -288,7 +293,7 @@ export class LocalProvider extends LLMProvider {
       // ヘルスエンドポイントが利用できない場合はモデルエンドポイントを試す
       try {
         const modelsController = new AbortController();
-        setTimeout(() => modelsController.abort(), 5000);
+        setTimeout(() => modelsController.abort(), Math.min(this.providerOptions.timeout, 10000)); // 最大10秒に制限
 
         const modelsResponse = await fetch(`${this.endpoint}/v1/models`, {
           method: 'GET',
@@ -312,7 +317,7 @@ export class LocalProvider extends LLMProvider {
       // 最後の手段として基本的な接続テストを実行
       try {
         const baseController = new AbortController();
-        setTimeout(() => baseController.abort(), 3000);
+        setTimeout(() => baseController.abort(), Math.min(this.providerOptions.timeout, 5000)); // 最大5秒に制限
 
         const baseResponse = await fetch(this.endpoint, {
           method: 'HEAD',

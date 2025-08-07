@@ -7,8 +7,13 @@ export class AnthropicProvider extends LLMProvider {
   private client: Anthropic;
   private defaultModel: string;
 
-  constructor(apiKey: string, model?: string) {
-    super(apiKey);
+  constructor(apiKey: string, model?: string, options?: {
+    timeout?: number;
+    maxRetries?: number;
+    temperature?: number;
+    maxTokens?: number;
+  }) {
+    super(apiKey, undefined, options);
     this.client = new Anthropic({ apiKey });
     this.defaultModel = model || 'claude-3-opus-20240229';
   }
@@ -52,8 +57,8 @@ export class AnthropicProvider extends LLMProvider {
         model: options?.model || this.defaultModel,
         messages: anthropicMessages,
         system: systemMessage?.content?.trim(),
-        max_tokens: Math.min(Math.max(options?.maxTokens || 2000, 1), 8192),
-        temperature: Math.min(Math.max(options?.temperature || 0.7, 0), 1),
+        max_tokens: Math.min(Math.max(options?.maxTokens || this.providerOptions.maxTokens || 2000, 1), 8192),
+        temperature: Math.min(Math.max(options?.temperature || this.providerOptions.temperature || 0.7, 0), 1),
       };
 
       logger.debug(`Anthropic APIリクエスト開始: ${requestConfig.model}`, {
@@ -63,7 +68,17 @@ export class AnthropicProvider extends LLMProvider {
         maxTokens: requestConfig.max_tokens,
       });
 
-      const response = await this.client.messages.create(requestConfig);
+      // タイムアウト設定（オプション、プロバイダー設定、またはデフォルト値の順）
+      const timeoutMs = options?.timeout || this.providerOptions.timeout;
+      const apiPromise = this.client.messages.create(requestConfig);
+      
+      // Promise.raceでタイムアウトを実装
+      const response = await Promise.race([
+        apiPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error(`Anthropic APIリクエストが${timeoutMs / 1000}秒でタイムアウトしました`)), timeoutMs)
+        )
+      ]);
 
       // レスポンス検証
       if (!response) {
@@ -126,7 +141,7 @@ export class AnthropicProvider extends LLMProvider {
       if (error instanceof Error) {
         if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
           throw new Error('Anthropic APIへの接続に失敗しました。ネットワーク接続を確認してください。');
-        } else if (error.message.includes('timeout')) {
+        } else if (error.message.includes('timeout') || error.message.includes('タイムアウト')) {
           throw new Error('Anthropic APIリクエストがタイムアウトしました。しばらく待ってからお試しください。');
         } else if (error.message.includes('サポートされていない')) {
           throw error; // カスタムエラーはそのまま
@@ -139,12 +154,24 @@ export class AnthropicProvider extends LLMProvider {
 
   async complete(options: CompletionOptions): Promise<string> {
     try {
-      const response = await this.client.messages.create({
+      const requestConfig = {
         model: options.model || this.defaultModel,
-        messages: [{ role: 'user', content: options.prompt }],
-        max_tokens: options.maxTokens || 2000,
-        temperature: options.temperature || 0.7,
-      });
+        messages: [{ role: 'user' as const, content: options.prompt }],
+        max_tokens: options.maxTokens || this.providerOptions.maxTokens || 2000,
+        temperature: options.temperature || this.providerOptions.temperature || 0.7,
+      };
+
+      // タイムアウト設定（オプション、プロバイダー設定、またはデフォルト値の順）
+      const timeoutMs = options.timeout || this.providerOptions.timeout;
+      const apiPromise = this.client.messages.create(requestConfig);
+      
+      // Promise.raceでタイムアウトを実装
+      const response = await Promise.race([
+        apiPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error(`Anthropic completionリクエストが${timeoutMs / 1000}秒でタイムアウトしました`)), timeoutMs)
+        )
+      ]);
 
       const content = response.content[0];
       if (!content || content.type !== 'text') {
@@ -154,6 +181,12 @@ export class AnthropicProvider extends LLMProvider {
       return content.text;
     } catch (error) {
       logger.error('Anthropic completion error:', error);
+      
+      // タイムアウトエラーのハンドリング
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('タイムアウト'))) {
+        throw new Error('Anthropic completionリクエストがタイムアウトしました。しばらく待ってからお試しください。');
+      }
+      
       throw error;
     }
   }
@@ -174,9 +207,9 @@ export class AnthropicProvider extends LLMProvider {
     try {
       logger.debug('Anthropic接続検証開始');
       
-      // タイムアウト付きで最小限のリクエストを実行
+      // タイムアウト付きで最小限のリクエストを実行（プロバイダー設定を使用）
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Connection validation timeout')), 15000)
+        setTimeout(() => reject(new Error('Connection validation timeout')), this.providerOptions.timeout)
       );
       
       const testPromise = this.client.messages.create({

@@ -5,11 +5,11 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 import { createRequire } from 'module';
 import { startREPL } from './cli/repl.js';
-import { loadConfig } from './utils/config.js';
+import { ConfigManager } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { AgentCore } from './core/agent.js';
 import { MCPManager } from './mcp/manager.js';
-import type { Config } from './types/config.js';
+import type { Config } from './config/types.js';
 
 const require = createRequire(import.meta.url);
 const packageJson = require('../package.json') as { version: string };
@@ -37,7 +37,7 @@ program
   .action(async () => {
     try {
       interface InitAnswers {
-        provider: string;
+        provider: 'openai' | 'anthropic' | 'local-gptoss' | 'local-lmstudio';
         apiKey?: string;
         localEndpoint?: string;
         useMCP: boolean;
@@ -70,7 +70,7 @@ program
           type: 'input',
           name: 'localEndpoint',
           message: 'ローカルエンドポイントURL:',
-          default: 'http://localhost:8080',
+          default: 'http://127.0.0.1:1234',
           when: (answers: InitAnswers) => answers.provider.startsWith('local-'),
         },
         {
@@ -81,9 +81,33 @@ program
         },
       ]);
 
-      // 設定ファイルを生成
+      // 統一設定を作成
       const spinner = ora('設定ファイルを作成中...').start();
-      await loadConfig.save(answers as Config);
+      const configManager = ConfigManager.getInstance();
+      
+      // InitAnswersを統一Configに変換
+      const unifiedConfig: Partial<Config> = {
+        llm: {
+          provider: answers.provider,
+          apiKey: answers.apiKey,
+          timeout: 30000,
+          maxRetries: 3,
+        },
+        mcp: {
+          servers: [],
+          timeout: 30000,
+          enabled: answers.useMCP,
+          maxRetries: 3,
+        }
+      };
+      
+      // ローカルプロバイダーの場合はエンドポイントを追加
+      if (answers.localEndpoint && answers.provider.startsWith('local-')) {
+        // エンドポイント情報は環境変数に設定することを推奨
+        process.env.AGENTS_LOCAL_ENDPOINT = answers.localEndpoint;
+      }
+      
+      await configManager.saveConfig(unifiedConfig);
       spinner.succeed(chalk.green('設定を初期化しました'));
     } catch (error) {
       console.log(chalk.red('初期化に失敗しました'));
@@ -101,7 +125,8 @@ program
   .option('-p, --parallel', '並列実行を有効化', false)
   .action(async (description: string, options) => {
     const spinner = ora('タスクを実行中...').start();
-    const config = await loadConfig.load();
+    const configManager = ConfigManager.getInstance();
+    const config = await configManager.load();
     const agent = new AgentCore(config);
     const mcpManager = new MCPManager(config);
 
@@ -139,7 +164,8 @@ program
   .option('-t, --task <task>', '実行するタスク')
   .action(async (paths: string[], options) => {
     console.log(chalk.cyan('ファイル監視を開始します...'));
-    const config = await loadConfig.load();
+    const configManager = ConfigManager.getInstance();
+    const config = await configManager.load();
     const agent = new AgentCore(config);
 
     // chokidarを使用してファイル監視
@@ -167,12 +193,15 @@ program
   .command('status')
   .description('エージェントステータスを表示')
   .action(async () => {
-    const config = await loadConfig.load();
+    const configManager = ConfigManager.getInstance();
+    const config = await configManager.load();
     console.log(chalk.cyan('エージェントステータス:'));
-    console.log(chalk.gray('  プロバイダー:'), config.provider);
-    console.log(chalk.gray('  モデル:'), config.model || 'デフォルト');
-    console.log(chalk.gray('  MCP:'), config.useMCP ? '有効' : '無効');
-    console.log(chalk.gray('  並列タスク数:'), config.maxParallel || 5);
+    console.log(chalk.gray('  プロバイダー:'), config.llm.provider);
+    console.log(chalk.gray('  モデル:'), config.llm.model || 'デフォルト');
+    console.log(chalk.gray('  MCP:'), config.mcp.enabled ? '有効' : '無効');
+    console.log(chalk.gray('  並列タスク数:'), config.app.maxParallel);
+    console.log(chalk.gray('  タイムアウト:'), `${config.app.timeout / 1000}秒`);
+    console.log(chalk.gray('  ログレベル:'), config.app.logLevel);
   });
 
 // エラーハンドリング
