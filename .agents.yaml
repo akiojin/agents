@@ -14,7 +14,7 @@ mcp:
 app:
   maxParallel: 5
   timeout: 300000
-  logLevel: info
+  logLevel: error
 
 paths:
   cache: ./.agents/cache
