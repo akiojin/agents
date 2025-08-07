@@ -1,11 +1,16 @@
 import type { MCPManager, Tool } from './manager.js';
 import { logger } from '../utils/logger.js';
+import { ParallelExecutor, ParallelTask } from '../core/parallel-executor.js';
 
 /**
  * MCPツールの自動選択と実行を行うヘルパークラス
  */
 export class MCPToolsHelper {
-  constructor(private mcpManager: MCPManager) {}
+  private parallelExecutor: ParallelExecutor;
+
+  constructor(private mcpManager: MCPManager) {
+    this.parallelExecutor = new ParallelExecutor(5); // デフォルトで最大5並列
+  }
 
   /**
    * タスクに応じて適切なツールを自動選択
@@ -106,6 +111,180 @@ export class MCPToolsHelper {
     }
 
     return results;
+  }
+
+  /**
+   * 複数のツールを並列実行
+   */
+  async executeToolsInParallel(
+    toolCalls: Array<{ name: string; params: Record<string, unknown>; description?: string }>,
+    onProgress?: (completed: number, total: number, currentTool?: string) => void
+  ): Promise<Array<{ success: boolean; result?: unknown; error?: string; toolName: string; duration: number }>> {
+    // ツール呼び出しをParallelTaskに変換
+    const parallelTasks: ParallelTask<unknown>[] = toolCalls.map((toolCall, index) => ({
+      id: `tool-${index}-${toolCall.name}`,
+      description: toolCall.description || `Execute ${toolCall.name}`,
+      priority: 5,
+      task: () => this.executeTool(toolCall.name, toolCall.params),
+    }));
+
+    // 独立したツールを識別して並列実行
+    const independentTools = this.identifyIndependentTools(parallelTasks, toolCalls);
+    const dependentTools = parallelTasks.filter(t => 
+      !independentTools.some(it => it.id === t.id)
+    );
+
+    const results: Array<{ success: boolean; result?: unknown; error?: string; toolName: string; duration: number }> = [];
+
+    // 独立したツールを並列実行
+    if (independentTools.length > 0) {
+      logger.info(`${independentTools.length}個のツールを並列実行中...`);
+      
+      const parallelResults = await this.parallelExecutor.executeParallelWithDetails(
+        independentTools,
+        onProgress
+      );
+
+      const parallelFormattedResults = parallelResults.map((pr) => {
+        // ParallelTaskのIDからツール名を抽出
+        const toolName = pr.taskId?.split('-').slice(2).join('-') || 'unknown';
+        return {
+          success: pr.success,
+          result: pr.data,
+          error: pr.error?.message,
+          toolName,
+          duration: pr.duration,
+        };
+      });
+
+      results.push(...parallelFormattedResults);
+    }
+
+    // 依存関係のあるツールを順次実行
+    if (dependentTools.length > 0) {
+      logger.info(`${dependentTools.length}個のツールを順次実行中...`);
+      
+      for (const dependentTask of dependentTools) {
+        const startTime = Date.now();
+        try {
+          const result = await dependentTask.task();
+          const duration = Date.now() - startTime;
+          
+          results.push({
+            success: true,
+            result,
+            toolName: dependentTask.id?.split('-').slice(2).join('-') || 'unknown',
+            duration,
+          });
+
+          onProgress?.(results.length, toolCalls.length, dependentTask.description);
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          
+          results.push({
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+            toolName: dependentTask.id?.split('-').slice(2).join('-') || 'unknown',
+            duration,
+          });
+
+          onProgress?.(results.length, toolCalls.length, `${dependentTask.description} (Error)`);
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * 独立したツールを識別
+   */
+  private identifyIndependentTools(
+    tasks: ParallelTask<unknown>[],
+    originalToolCalls: Array<{ name: string; params: Record<string, unknown> }>
+  ): ParallelTask<unknown>[] {
+    const independentTasks: ParallelTask<unknown>[] = [];
+    const usedResources = new Set<string>();
+
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+      const toolCall = originalToolCalls[i];
+      
+      if (!toolCall) continue; // undefinedチェック
+      
+      // ツールの種類と操作対象を分析
+      const resources = this.extractResourcesFromToolCall(toolCall);
+      const hasConflict = resources.some(resource => usedResources.has(resource));
+
+      // リソース競合がなく、読み取り専用操作の場合は並列実行可能
+      if (!hasConflict && this.isReadOnlyOperation(toolCall.name)) {
+        independentTasks.push(task);
+        resources.forEach(resource => usedResources.add(resource));
+      }
+      // 書き込み操作でも、異なるリソースなら並列実行可能
+      else if (!hasConflict) {
+        independentTasks.push(task);
+        resources.forEach(resource => usedResources.add(resource));
+      }
+    }
+
+    // 最低でも1つのタスクは独立として扱う
+    if (independentTasks.length === 0 && tasks.length > 0) {
+      independentTasks.push(tasks[0]);
+    }
+
+    logger.debug(`${tasks.length}個中${independentTasks.length}個のツールが並列実行可能として識別されました`);
+    return independentTasks;
+  }
+
+  /**
+   * ツール呼び出しから操作対象リソースを抽出
+   */
+  private extractResourcesFromToolCall(toolCall: { name: string; params: Record<string, unknown> }): string[] {
+    const resources: string[] = [];
+    
+    // ファイルシステム関連
+    if (toolCall.name.includes('filesystem') || toolCall.name.includes('file')) {
+      const path = toolCall.params.path as string;
+      if (path) {
+        resources.push(`file:${path}`);
+      }
+    }
+
+    // Git関連（同一リポジトリを操作）
+    if (toolCall.name.includes('git')) {
+      resources.push('git:repository');
+    }
+
+    // データベース関連
+    if (toolCall.name.includes('sqlite') || toolCall.name.includes('db')) {
+      resources.push('database:main');
+    }
+
+    // ネットワーク関連は通常独立
+    if (toolCall.name.includes('search') || toolCall.name.includes('web')) {
+      resources.push(`network:${toolCall.name}`);
+    }
+
+    return resources;
+  }
+
+  /**
+   * 読み取り専用操作かを判定
+   */
+  private isReadOnlyOperation(toolName: string): boolean {
+    const readOnlyPatterns = [
+      'read',
+      'get',
+      'list',
+      'search',
+      'status',
+      'info',
+      'show',
+      'view',
+    ];
+
+    return readOnlyPatterns.some(pattern => toolName.toLowerCase().includes(pattern));
   }
 
   /**

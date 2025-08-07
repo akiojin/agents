@@ -11,6 +11,7 @@ import { MCPToolsHelper, MCPTaskPlanner } from '../mcp/tools.js';
 import type { MCPManager } from '../mcp/manager.js';
 
 import { SimpleTaskDecomposer } from './task-decomposer.js';
+import { ParallelExecutor } from './parallel-executor.js';
 
 export class AgentCore extends EventEmitter {
   private config: Config;
@@ -20,6 +21,7 @@ export class AgentCore extends EventEmitter {
   private mcpToolsHelper?: MCPToolsHelper;
   private mcpTaskPlanner?: MCPTaskPlanner;
   private taskDecomposer: SimpleTaskDecomposer;
+  private parallelExecutor: ParallelExecutor;
   private history: ChatMessage[] = [];
   private currentModel: string;
   private parallelMode: boolean = false;
@@ -33,6 +35,7 @@ export class AgentCore extends EventEmitter {
     this.taskExecutor = new TaskExecutor(this.convertToLegacyConfig(config));
     this.memoryManager = new MemoryManager(config.paths.history);
     this.taskDecomposer = new SimpleTaskDecomposer();
+    this.parallelExecutor = new ParallelExecutor(config.app.maxParallel || 3);
     // 初期化を非同期で実行（エラーハンドリングを含む）
     void this.initialize();
   }
@@ -290,21 +293,17 @@ export class AgentCore extends EventEmitter {
             logger.info(`  ${index + 1}. ${subtask}`);
           });
 
-          // 各サブタスクを順次実行
-          const results: string[] = [];
-          for (let i = 0; i < subtasks.length; i++) {
-            const subtask = subtasks[i];
-            logger.info(`\n🔄 サブタスク ${i + 1}/${subtasks.length} を実行中: ${subtask}`);
-            
-            try {
-              const subtaskResult = await this.chat(subtask);
-              results.push(`サブタスク ${i + 1}: ${subtaskResult}`);
-              logger.info(`✅ サブタスク ${i + 1} 完了`);
-            } catch (error) {
-              const errorMsg = `サブタスク ${i + 1} でエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`;
-              results.push(errorMsg);
-              logger.error(`❌ ${errorMsg}`);
-            }
+          // 並列実行可能かどうか判定
+          const canRunParallel = this.parallelMode && this.canRunSubtasksInParallel(subtasks);
+          
+          let results: string[];
+          
+          if (canRunParallel) {
+            logger.info('🚀 サブタスクを並列実行します');
+            results = await this.executeSubtasksInParallel(subtasks);
+          } else {
+            logger.info('🔄 サブタスクを順次実行します');
+            results = await this.executeSubtasksSequentially(subtasks);
           }
 
           // 結果を統合
@@ -571,5 +570,136 @@ export class AgentCore extends EventEmitter {
     }
 
     return summaryParts.join('\n');
+  }
+
+  /**
+   * サブタスクが並列実行可能かを判定
+   */
+  private canRunSubtasksInParallel(subtasks: string[]): boolean {
+    // シンプルな並列実行判定ルール
+    const conflictKeywords = [
+      '同じファイル',
+      '順番',
+      '順次',
+      '前のタスク',
+      '依存',
+      '結果を使用',
+      '結果を利用',
+      'の後で',
+      'に基づいて',
+    ];
+
+    // タスク間で競合するキーワードがあるかチェック
+    const hasConflict = subtasks.some((subtask) =>
+      conflictKeywords.some((keyword) => subtask.includes(keyword))
+    );
+
+    if (hasConflict) {
+      logger.debug('サブタスクに依存関係が検出されました。順次実行を選択します。');
+      return false;
+    }
+
+    // ファイルパスの競合をチェック
+    const usedFiles = new Set<string>();
+    for (const subtask of subtasks) {
+      const files = this.extractFilesFromSubtask(subtask);
+      const hasFileConflict = files.some(file => usedFiles.has(file));
+      
+      if (hasFileConflict) {
+        logger.debug('サブタスク間でファイルの競合が検出されました。順次実行を選択します。');
+        return false;
+      }
+      
+      files.forEach(file => usedFiles.add(file));
+    }
+
+    return true;
+  }
+
+  /**
+   * サブタスクから関連ファイルを抽出
+   */
+  private extractFilesFromSubtask(subtask: string): string[] {
+    const files: string[] = [];
+    
+    // ファイルパスのパターンを検索
+    const filePatterns = [
+      /[\w-]+\.[\w]+/g, // file.ext形式
+      /src\/[\w\/.-]+/g, // src/から始まるパス
+      /\.\/[\w\/.-]+/g, // 相対パス
+      /\/[\w\/.-]+/g, // 絶対パス
+    ];
+    
+    for (const pattern of filePatterns) {
+      const matches = subtask.match(pattern);
+      if (matches) {
+        files.push(...matches);
+      }
+    }
+    
+    return [...new Set(files)]; // 重複除去
+  }
+
+  /**
+   * サブタスクを並列実行
+   */
+  private async executeSubtasksInParallel(subtasks: string[]): Promise<string[]> {
+    const { globalProgressReporter } = await import('../ui/progress.js');
+
+    // サブタスクをParallelTaskに変換
+    const parallelTasks = subtasks.map((subtask, index) => ({
+      id: `subtask-${index}`,
+      description: subtask,
+      priority: 5,
+      task: async () => {
+        logger.info(`🔄 サブタスク ${index + 1} 開始: ${subtask}`);
+        try {
+          const result = await this.chat(subtask);
+          logger.info(`✅ サブタスク ${index + 1} 完了`);
+          return `サブタスク ${index + 1}: ${result}`;
+        } catch (error) {
+          const errorMsg = `サブタスク ${index + 1} でエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`;
+          logger.error(`❌ ${errorMsg}`);
+          return errorMsg;
+        }
+      },
+    }));
+
+    // 並列実行
+    const parallelResults = await this.parallelExecutor.executeParallelWithDetails(
+      parallelTasks,
+      (completed, total, currentTask) => {
+        globalProgressReporter.showInfo(`並列実行進捗: ${completed}/${total} - ${currentTask}`);
+      }
+    );
+
+    // 結果を文字列配列に変換
+    return parallelResults.map(pr => 
+      pr.success ? pr.data as string : `エラー: ${pr.error?.message || 'Unknown error'}`
+    );
+  }
+
+  /**
+   * サブタスクを順次実行
+   */
+  private async executeSubtasksSequentially(subtasks: string[]): Promise<string[]> {
+    const results: string[] = [];
+    
+    for (let i = 0; i < subtasks.length; i++) {
+      const subtask = subtasks[i];
+      logger.info(`\n🔄 サブタスク ${i + 1}/${subtasks.length} を実行中: ${subtask}`);
+      
+      try {
+        const subtaskResult = await this.chat(subtask);
+        results.push(`サブタスク ${i + 1}: ${subtaskResult}`);
+        logger.info(`✅ サブタスク ${i + 1} 完了`);
+      } catch (error) {
+        const errorMsg = `サブタスク ${i + 1} でエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`;
+        results.push(errorMsg);
+        logger.error(`❌ ${errorMsg}`);
+      }
+    }
+
+    return results;
   }
 }

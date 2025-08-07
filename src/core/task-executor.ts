@@ -3,11 +3,13 @@ import pLimit from 'p-limit';
 import type { Config, TaskConfig, TaskResult } from '../types/config.js';
 import type { LLMProvider } from '../providers/base.js';
 import { logger } from '../utils/logger.js';
+import { ParallelExecutor, ParallelTask } from './parallel-executor.js';
 
 export class TaskExecutor extends EventEmitter {
   // private _config: Config;
   private parallelMode: boolean = false;
   private limit: ReturnType<typeof pLimit>;
+  private parallelExecutor: ParallelExecutor;
 
   constructor(config: Config) {
     super();
@@ -15,6 +17,7 @@ export class TaskExecutor extends EventEmitter {
     // maxConcurrencyまたはmaxParallelをチェックし、デフォルト値を設定
     const concurrency = config.maxConcurrency || config.maxParallel || 3;
     this.limit = pLimit(concurrency);
+    this.parallelExecutor = new ParallelExecutor(concurrency);
   }
 
   async execute(taskConfig: TaskConfig, provider: LLMProvider): Promise<TaskResult> {
@@ -118,9 +121,56 @@ export class TaskExecutor extends EventEmitter {
   }
 
   private async executeParallel(tasks: TaskConfig[], provider: LLMProvider): Promise<TaskResult[]> {
-    const promises = tasks.map((task) => this.limit(() => this.executeSingleTask(task, provider)));
+    const { globalProgressReporter } = await import('../ui/progress.js');
 
-    return Promise.all(promises);
+    // TaskConfigをParallelTaskに変換
+    const parallelTasks: ParallelTask<TaskResult>[] = tasks.map((task, index) => ({
+      id: `task-${index}`,
+      description: task.description,
+      priority: task.priority || 5,
+      timeout: task.timeout,
+      task: () => this.executeSingleTask(task, provider),
+    }));
+
+    // 独立したタスクを識別
+    const independentTasks = this.identifyIndependentTasks(parallelTasks);
+    const dependentTasks = parallelTasks.filter(t => !independentTasks.some(it => it.id === t.id));
+
+    let results: TaskResult[] = [];
+
+    // 独立したタスクを並列実行
+    if (independentTasks.length > 0) {
+      globalProgressReporter.showInfo(`${independentTasks.length}個の独立タスクを並列実行中...`);
+      
+      const parallelResults = await this.parallelExecutor.executeParallelWithDetails(
+        independentTasks,
+        (completed, total, currentTask) => {
+          globalProgressReporter.showInfo(`並列実行進捗: ${completed}/${total} - ${currentTask}`);
+        }
+      );
+
+      results = parallelResults.map(pr => pr.success ? {
+        success: true,
+        message: pr.taskId || 'Unknown task',
+        data: pr.data,
+        duration: pr.duration
+      } : {
+        success: false,
+        message: `タスクエラー: ${pr.taskId}`,
+        error: pr.error,
+        duration: pr.duration
+      });
+    }
+
+    // 依存関係のあるタスクを順次実行
+    if (dependentTasks.length > 0) {
+      globalProgressReporter.showInfo(`${dependentTasks.length}個の依存タスクを順次実行中...`);
+      
+      const sequentialResults = await this.executeSequentialTasks(dependentTasks, provider);
+      results.push(...sequentialResults);
+    }
+
+    return results;
   }
 
   private async executeSingleTask(task: TaskConfig, provider: LLMProvider): Promise<TaskResult> {
@@ -186,5 +236,119 @@ export class TaskExecutor extends EventEmitter {
   setParallelMode(enabled: boolean): void {
     this.parallelMode = enabled;
     logger.info(`並列実行モード: ${enabled ? '有効' : '無効'}`);
+  }
+
+  /**
+   * 独立したタスクを識別する
+   * ファイルの重複や依存関係を分析して並列実行可能なタスクを特定
+   */
+  private identifyIndependentTasks(tasks: ParallelTask<TaskResult>[]): ParallelTask<TaskResult>[] {
+    // シンプルな独立性判定ルール
+    const independentTasks: ParallelTask<TaskResult>[] = [];
+    const usedFiles = new Set<string>();
+    
+    for (const task of tasks) {
+      // タスクの説明から関連ファイルを推測
+      const taskFiles = this.extractFilesFromTask(task);
+      
+      // ファイルの競合がないかチェック
+      const hasConflict = taskFiles.some(file => usedFiles.has(file));
+      
+      if (!hasConflict) {
+        independentTasks.push(task);
+        taskFiles.forEach(file => usedFiles.add(file));
+      }
+    }
+    
+    // 最低でも1つのタスクは独立として扱う
+    if (independentTasks.length === 0 && tasks.length > 0) {
+      independentTasks.push(tasks[0]);
+    }
+    
+    logger.debug(`${tasks.length}個中${independentTasks.length}個のタスクが独立として識別されました`);
+    return independentTasks;
+  }
+
+  /**
+   * タスクから関連ファイルを抽出
+   */
+  private extractFilesFromTask(task: ParallelTask<TaskResult>): string[] {
+    const files: string[] = [];
+    const description = task.description || '';
+    
+    // ファイルパスのパターンを検索
+    const filePatterns = [
+      /[\w-]+\.[\w]+/g, // file.ext形式
+      /src\/[\w\/.-]+/g, // src/から始まるパス
+      /\.\/[\w\/.-]+/g, // 相対パス
+      /\/[\w\/.-]+/g, // 絶対パス
+    ];
+    
+    for (const pattern of filePatterns) {
+      const matches = description.match(pattern);
+      if (matches) {
+        files.push(...matches);
+      }
+    }
+    
+    return [...new Set(files)]; // 重複除去
+  }
+
+  /**
+   * 依存関係のあるタスクを順次実行
+   */
+  private async executeSequentialTasks(
+    tasks: ParallelTask<TaskResult>[],
+    provider: LLMProvider
+  ): Promise<TaskResult[]> {
+    const results: TaskResult[] = [];
+    const { globalProgressReporter } = await import('../ui/progress.js');
+
+    for (let i = 0; i < tasks.length; i++) {
+      const parallelTask = tasks[i];
+      
+      globalProgressReporter.showInfo(`[${i + 1}/${tasks.length}] ${parallelTask.description}`);
+      
+      try {
+        const result = await parallelTask.task();
+        results.push(result);
+
+        if (result.success) {
+          globalProgressReporter.showInfo(`✅ タスク${i + 1}完了: ${parallelTask.description}`);
+        } else {
+          globalProgressReporter.showError(`❌ タスク${i + 1}失敗: ${parallelTask.description}`);
+          // 依存タスクでエラーが発生した場合は中断
+          break;
+        }
+      } catch (error) {
+        const errorResult: TaskResult = {
+          success: false,
+          message: `タスク実行エラー: ${parallelTask.description}`,
+          error: error instanceof Error ? error : new Error(String(error)),
+        };
+        results.push(errorResult);
+        globalProgressReporter.showError(`❌ タスク${i + 1}エラー: ${parallelTask.description}`);
+        break;
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * 並列度を更新（ParallelExecutorにも反映）
+   */
+  updateConcurrency(newConcurrency: number): void {
+    const concurrency = Math.max(1, newConcurrency);
+    this.limit = pLimit(concurrency);
+    this.parallelExecutor.setMaxConcurrency(concurrency);
+    logger.info(`並列度を更新しました: ${concurrency}`);
+  }
+
+  /**
+   * 現在の並列度を取得
+   */
+  getCurrentConcurrency(): number {
+    return this.parallelExecutor.getMaxConcurrency();
   }
 }
