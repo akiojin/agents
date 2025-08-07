@@ -119,11 +119,11 @@ program
 
       await configManager.save(unifiedConfig);
       globalProgressReporter.completeTask(true);
-      console.log(chalk.green('✅ ConfigをInitializedone'));
+      console.log(chalk.green('✅ Config initialized'));
     } catch (error) {
       globalProgressReporter.completeTask(false);
       globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
-      console.log(chalk.red('❌ InitializeにFaileddone'));
+      console.log(chalk.red('❌ Initialization failed'));
       logger.error('Init failed:', error);
       process.exit(1);
     }
@@ -175,7 +175,7 @@ program
             parallel: options.parallel,
           });
 
-      console.log(chalk.green('✅ TaskがCompleteddone'));
+      console.log(chalk.green('✅ Task completed'));
       console.log(result);
     } catch (error) {
       globalProgressReporter.completeTask(false);

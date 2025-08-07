@@ -158,7 +158,7 @@ export class OpenAIProvider extends LLMProvider {
             throw new Error('OpenAI APIのquotaを超えてing。アカウントをCheckしてplease。');
           case 'model_not_found':
             throw new Error(
-              `specifiedModel "${requestConfig?.model || this.defaultModel}" not found。`,
+              `specified model "${requestConfig?.model || this.defaultModel}" not found。`,
             );
           case 'invalid_request_error':
             throw new Error('無効なRequestです。ParametersをCheckしてplease。');

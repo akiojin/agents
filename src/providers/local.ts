@@ -117,11 +117,11 @@ export class LocalProvider extends LLMProvider {
           
           if (fetchError instanceof Error) {
             if (fetchError.name === 'AbortError') {
-              throw new Error(`Local API requestがtimed out（${this.providerOptions.timeout / 1000}seconds）`);
+              throw new Error(`Local API request timed out (${this.providerOptions.timeout / 1000} seconds)`);
             } else if (fetchError.message.includes('ECONNREFUSED')) {
-              throw new Error(`LocalServer（${this.endpoint}）cannot connect to。Please check if server is running。`);
+              throw new Error(`Cannot connect to local server (${this.endpoint}). Please check if server is running.`);
             } else if (fetchError.message.includes('ENOTFOUND')) {
-              throw new Error(`LocalServerのアドレス（${this.endpoint}）not found。Please check settings。`);
+              throw new Error(`Local server address (${this.endpoint}) not found. Please check settings.`);
             }
           }
           
@@ -138,11 +138,11 @@ export class LocalProvider extends LLMProvider {
     );
 
     if (!result.success) {
-      logger.error('Local API requestError after retries:', result.error);
+      logger.error('Local API request error after retries:', result.error);
       throw result.error!;
     }
 
-    logger.debug('Local API requestCompleted', {
+    logger.debug('Local API request completed', {
       attemptCount: result.attemptCount,
       totalTime: result.totalTime,
     });
@@ -200,15 +200,15 @@ export class LocalProvider extends LLMProvider {
         // よりDetailsなErrorInfo
         const choice = response.choices[0];
         if (choice?.finish_reason === 'length') {
-          throw new Error('Responseが最大トークン数に達done。max_tokensを増やしてplease。');
+          throw new Error('Response reached maximum token limit. Please increase max_tokens.');
         } else {
-          throw new Error('LocalAPIreturned empty response');
+          throw new Error('Local API returned empty response');
         }
       }
 
       const trimmedContent = content.trim();
       if (trimmedContent.length === 0) {
-        throw new Error('LocalAPIreturned empty content');
+        throw new Error('Local API returned empty content');
       }
 
       logger.debug(`LocalProvider chat completed: ${trimmedContent.length}characters`);
@@ -219,10 +219,10 @@ export class LocalProvider extends LLMProvider {
       
       // Improved error messages
       if (error instanceof Error) {
-        if (error.message.includes('Connectionできnot') || error.message.includes('ECONNREFUSED')) {
-          throw new Error(`LocalServer（${this.endpoint}）Failed to connect to。Please check if server is running。`);
+        if (error.message.includes('Cannot connect') || error.message.includes('ECONNREFUSED')) {
+          throw new Error(`Failed to connect to local server (${this.endpoint}). Please check if server is running.`);
         } else if (error.message.includes('Timeout')) {
-          throw new Error('LocalServerへのRequestがtimed out。Please check server load。');
+          throw new Error('Request to local server timed out. Please check server load.');
         }
       }
       
@@ -249,7 +249,7 @@ export class LocalProvider extends LLMProvider {
         body.model = options.model;
       }
 
-      logger.debug('LocalProvider completion Started', {
+      logger.debug('LocalProvider completion started', {
         promptLength: options.prompt.length,
         model: body.model,
         endpoint: this.endpoint,
@@ -263,7 +263,7 @@ export class LocalProvider extends LLMProvider {
         throw new Error('Response is empty');
       }
 
-      logger.debug(`LocalProvider completion Completed: ${content.length}characters`);
+      logger.debug(`LocalProvider completion completed: ${content.length} characters`);
       return content;
     } catch (error) {
       logger.error('Local provider completion error:', error);
@@ -276,7 +276,7 @@ export class LocalProvider extends LLMProvider {
       // specifiedエンドポイントのModelリスト
       const endpoint = `${this.endpoint}/v1/models`;
       
-      logger.debug('LocalProvider ModelリストGetStarted:', endpoint);
+      logger.debug('LocalProvider getting model list:', endpoint);
       
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000); // 10secondsTimeout
@@ -293,14 +293,14 @@ export class LocalProvider extends LLMProvider {
       clearTimeout(timeout);
 
       if (!response.ok) {
-        logger.warn(`ModelリストのGetにFailed: ${response.status} ${response.statusText}`);
+        logger.warn(`Failed to get model list: ${response.status} ${response.statusText}`);
         return ['local-model'];
       }
 
       const data = (await response.json()) as { data: Array<{ id: string }> };
       const models = data.data?.map((model) => model.id) || ['local-model'];
       
-      logger.debug('LocalProvider ModelリストGetCompleted:', models);
+      logger.debug('LocalProvider model list retrieved:', models);
       return models;
     } catch (error) {
       logger.error('Local provider list models error:', error);
@@ -311,7 +311,7 @@ export class LocalProvider extends LLMProvider {
 
   async validateConnection(): Promise<boolean> {
     try {
-      logger.debug(`LocalProviderConnectionValidationStarted: ${this.endpoint}`);
+      logger.debug(`LocalProvider connection validation started: ${this.endpoint}`);
       
       // まずModelエンドポイントでConnectionCheck
       try {
@@ -328,13 +328,13 @@ export class LocalProvider extends LLMProvider {
         });
 
         if (modelsResponse.ok) {
-          logger.debug('LocalServerConnectionValidationSuccess（/v1/models）');
+          logger.debug('Local server connection validation success (/v1/models)');
           return true;
         }
         
-        logger.debug(`ModelエンドポイントResponse: ${modelsResponse.status} ${modelsResponse.statusText}`);
+        logger.debug(`Model endpoint response: ${modelsResponse.status} ${modelsResponse.statusText}`);
       } catch (modelsError) {
-        logger.debug('ModelエンドポイントConnectionFailed:', modelsError);
+        logger.debug('Model endpoint connection failed:', modelsError);
       }
 
       // 次にChat completions エンドポイントで軽量テスト
@@ -360,13 +360,13 @@ export class LocalProvider extends LLMProvider {
 
         // 200-299の範囲、または400番台（ConfigErrorだがConnectionはSuccess）
         if (testResponse.status < 500) {
-          logger.debug(`LocalServerConnectionValidationSuccess（/v1/chat/completions）: ${testResponse.status}`);
+          logger.debug(`Local server connection validation success (/v1/chat/completions): ${testResponse.status}`);
           return true;
         }
         
-        logger.debug(`Chat completions テスト: ${testResponse.status} ${testResponse.statusText}`);
+        logger.debug(`Chat completions test: ${testResponse.status} ${testResponse.statusText}`);
       } catch (testError) {
-        logger.debug('Chat completions テストFailed:', testError);
+        logger.debug('Chat completions test failed:', testError);
       }
 
       // 最後の手段として基本的なConnectionテストをExecute
@@ -381,14 +381,14 @@ export class LocalProvider extends LLMProvider {
 
         // ステータスコードが500未満ならConnectionはSuccessしている
         if (baseResponse.status < 500) {
-          logger.debug(`LocalServer基本ConnectionCheck: ${baseResponse.status}`);
+          logger.debug(`Local server basic connection check: ${baseResponse.status}`);
           return true;
         }
       } catch (baseError) {
-        logger.debug('基本ConnectionテストもFailed:', baseError);
+        logger.debug('Basic connection test also failed:', baseError);
       }
 
-      logger.error(`LocalProviderConnectionValidationFailed: ${this.endpoint}`);
+      logger.error(`LocalProvider connection validation failed: ${this.endpoint}`);
       return false;
 
     } catch (error) {
@@ -396,16 +396,16 @@ export class LocalProvider extends LLMProvider {
       
       // ErrorログにDetailsInfoを記録
       if (error instanceof Error) {
-        logger.error('ConnectionValidationErrorDetails:', {
+        logger.error('Connection validation error details:', {
           message: error.message,
           endpoint: this.endpoint,
           providerType: this.providerType,
         });
         
         if (error.message.includes('ECONNREFUSED')) {
-          logger.error(`Server（${this.endpoint}）が起動していない可能性があります`);
+          logger.error(`Server (${this.endpoint}) may not be running`);
         } else if (error.message.includes('ENOTFOUND')) {
-          logger.error(`Serverアドレス（${this.endpoint}）が無効な可能性があります`);
+          logger.error(`Server address (${this.endpoint}) may be invalid`);
         }
       }
       

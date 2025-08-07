@@ -79,13 +79,13 @@ export class AgentCore extends EventEmitter {
       // 初回起動時にメモリOptimize
       await this.optimizeMemory();
       
-      logger.info('AgentコアをInitializedone');
+      logger.info('Agent core initialized');
     } catch (error) {
       logger.error('InitializeError:', error);
 
       // InitializeErrorでも基本的な機能は利用可能にする
       this.history = [];
-      logger.warn('HistoryのLoadにFaileddoneが、Starting as new sessionします');
+      logger.warn('Failed to load history, starting as new session');
 
       // InitializeErrorは致命的ではないので例外を投げない
     }
@@ -122,7 +122,7 @@ export class AgentCore extends EventEmitter {
       // イベントリスナーの解除
       this.removeAllListeners();
 
-      logger.info('リソースのCleanupがCompleteddone');
+      logger.info('Resource cleanup completed');
     } catch (error) {
       logger.error('CleanupError:', error);
     }
@@ -138,7 +138,7 @@ export class AgentCore extends EventEmitter {
         const oldSize = this.history.length;
         this.history = this.history.slice(-this.MAX_HISTORY_SIZE);
         await this.memoryManager.saveHistory(this.history);
-        logger.info(`HistoryをOptimizedone: ${oldSize}items → ${this.history.length}items`);
+        logger.info(`History optimized: ${oldSize} items → ${this.history.length} items`);
       }
 
       // MemoryManagerのHistoryもOptimize
@@ -147,7 +147,7 @@ export class AgentCore extends EventEmitter {
       // ガベージコレクションのExecute（可能であれば）
       if (global.gc) {
         global.gc();
-        logger.debug('ガベージコレクションをExecutedone');
+        logger.debug('Garbage collection executed');
       }
     } catch (error) {
       logger.error('メモリOptimizeError:', error);
@@ -170,7 +170,7 @@ export class AgentCore extends EventEmitter {
 
     // メモリ使用量が高い場合のWarning
     if (mbUsage.heapUsed > 500) { // 500MB以上の場合
-      logger.warn(`メモリ使用量がis highing: ${mbUsage.heapUsed}MB`);
+      logger.warn(`Memory usage is high: ${mbUsage.heapUsed}MB`);
       // 自動OptimizeをExecute
       void this.optimizeMemory();
     }
@@ -209,7 +209,7 @@ export class AgentCore extends EventEmitter {
 
     try {
       // プログレス表示Started
-      globalProgressReporter.startTask('ChatProcessing', ['入力Validation', 'LLM呼び出し', 'ResponseProcessing', 'HistorySave']);
+      globalProgressReporter.startTask('Chat processing', ['Input validation', 'LLM call', 'Response processing', 'History save']);
 
       // 入力Validation
       globalProgressReporter.updateSubtask(0);
@@ -221,7 +221,7 @@ export class AgentCore extends EventEmitter {
       const trimmedInput = input.trim();
       if (trimmedInput.length > 32000) {
         globalProgressReporter.completeTask(false);
-        throw new Error('入力がis too long（最大32,000characters）');
+        throw new Error('Input is too long (maximum 32,000 characters)');
       }
 
       // メモリ使用量チェック（定期的）
@@ -242,7 +242,7 @@ export class AgentCore extends EventEmitter {
       // ProviderConnectionCheck
       if (!this.provider) {
         globalProgressReporter.completeTask(false);
-        throw new Error('LLMProviderがInitializenot initialized');
+        throw new Error('LLM Provider not initialized');
       }
 
       // LLM呼び出し
@@ -293,7 +293,7 @@ export class AgentCore extends EventEmitter {
       // 応答Validation
       if (!response || response.trim().length === 0) {
         globalProgressReporter.completeTask(false);
-        throw new Error('LLMからのResponse is empty');
+        throw new Error('Response from LLM is empty');
       }
 
       const trimmedResponse = response.trim();
@@ -313,8 +313,8 @@ export class AgentCore extends EventEmitter {
       try {
         await this.memoryManager.saveHistory(this.history);
       } catch (saveError) {
-        logger.warn('HistorySaveにFaileddone:', saveError);
-        globalProgressReporter.showWarning('HistorySaveにFaileddoneが、会話は継続します');
+        logger.warn('Failed to save history:', saveError);
+        globalProgressReporter.showWarning('Failed to save history, but conversation continues');
         // HistorySaveFailedは致命的ではない
       }
 
@@ -326,7 +326,7 @@ export class AgentCore extends EventEmitter {
       globalProgressReporter.completeTask(false);
 
       // ErrorMessageをUserフレンドリーにConvert
-      let errorMessage = 'Erroroccurreddone';
+      let errorMessage = 'Error occurred';
       let canRetry = false;
 
       if (error instanceof Error) {
@@ -337,25 +337,25 @@ export class AgentCore extends EventEmitter {
           errorMsg.includes('unauthorized') ||
           errorMsg.includes('authentication')
         ) {
-          errorMessage = 'APIキーが無効または期限切れです。Please check settings。';
+          errorMessage = 'API key is invalid or expired. Please check settings.';
         } else if (
           errorMsg.includes('quota') ||
           errorMsg.includes('billing') ||
           errorMsg.includes('payment')
         ) {
           errorMessage =
-            'APIのquotaまたはbillingにhas issues。account statusをCheckしてplease。';
+            'API quota or billing issues. Please check account status.';
         } else if (errorMsg.includes('timeout')) {
-          errorMessage = 'Requestがtimed out。Try againplease。';
+          errorMessage = 'Request timed out. Please try again.';
           canRetry = true;
         } else if (errorMsg.includes('rate limit') || errorMsg.includes('too many requests')) {
-          errorMessage = 'Rate limitに達done。Please waitplease。';
+          errorMessage = 'Rate limit reached. Please wait.';
           canRetry = true;
         } else if (errorMsg.includes('network') || errorMsg.includes('connection')) {
-          errorMessage = 'ネットワークErroroccurreddone。ConnectionをCheckしてplease。';
+          errorMessage = 'Network error occurred. Please check connection.';
           canRetry = true;
         } else if (errorMsg.includes('model') && errorMsg.includes('not found')) {
-          errorMessage = `specifiedModel "${this.currentModel}" が利用できnot。`;
+          errorMessage = `Specified model "${this.currentModel}" is not available.`;
         } else if (errorMsg.includes('input') || errorMsg.includes('長すぎ')) {
           errorMessage = error.message;
         } else {
@@ -373,7 +373,7 @@ export class AgentCore extends EventEmitter {
         timestamp: new Date().toISOString(),
       };
 
-      logger.error('DetailsなChatErrorInfo:', errorDetails);
+      logger.error('Detailed chat error info:', errorDetails);
 
       // Errorをラップして追加Infoを含める
       const wrappedError = new Error(errorMessage);
@@ -464,7 +464,7 @@ export class AgentCore extends EventEmitter {
     } catch (error) {
       const errorResult: TaskResult = {
         success: false,
-        message: `TaskExecuteError: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Task execution error: ${error instanceof Error ? error.message : String(error)}`,
         error: error instanceof Error ? error : new Error(String(error)),
       };
 
@@ -503,7 +503,7 @@ export class AgentCore extends EventEmitter {
 
   clearHistory(): void {
     this.history = [];
-    logger.info('Historyをcleareddone');
+    logger.info('History cleared');
   }
 
   getCurrentModel(): string {
@@ -512,7 +512,7 @@ export class AgentCore extends EventEmitter {
 
   setModel(model: string): void {
     this.currentModel = model;
-    logger.info(`Modelchangeddone: ${model}`);
+    logger.info(`Model changed: ${model}`);
   }
 
   toggleParallelMode(): boolean {
@@ -556,7 +556,7 @@ export class AgentCore extends EventEmitter {
   setupMCPTools(mcpManager: MCPManager): void {
     this.mcpToolsHelper = new MCPToolsHelper(mcpManager);
     this.mcpTaskPlanner = new MCPTaskPlanner(this.mcpToolsHelper);
-    logger.info('MCPToolがInitializeさed');
+    logger.info('MCP tools initialized');
   }
 
   /**
@@ -564,7 +564,7 @@ export class AgentCore extends EventEmitter {
    */
   async executeTaskWithMCP(config: TaskConfig): Promise<TaskResult> {
     if (!this.mcpToolsHelper || !this.mcpTaskPlanner) {
-      logger.warn('MCPToolがInitializenot initialized。通常のTaskExecuteswitching to');
+      logger.warn('MCP tools not initialized. Switching to normal task execution');
       return this.executeTask(config);
     }
 
@@ -575,18 +575,18 @@ export class AgentCore extends EventEmitter {
 
       // TaskExecuteプランを作成
       const executionPlan = await this.mcpTaskPlanner.createExecutionPlan(config.description);
-      logger.info(`Executeプラン作成Completed: ${executionPlan.steps.length}Step`, executionPlan);
+      logger.info(`Execution plan created: ${executionPlan.steps.length} steps`, executionPlan);
 
       // 各StepをExecute
       const stepResults: unknown[] = [];
       for (const step of executionPlan.steps) {
         try {
-          logger.info(`StepExecute中: ${step.description}`);
+          logger.info(`Executing step: ${step.description}`);
           const stepResult = await this.mcpToolsHelper.executeTool(step.tool, step.params);
           stepResults.push(stepResult);
-          logger.info(`StepCompleted: ${step.description}`);
+          logger.info(`Step completed: ${step.description}`);
         } catch (error) {
-          logger.error(`StepError: ${step.description}`, error);
+          logger.error(`Step error: ${step.description}`, error);
           stepResults.push({ error: error instanceof Error ? error.message : String(error) });
         }
       }
@@ -609,7 +609,7 @@ export class AgentCore extends EventEmitter {
     } catch (error) {
       const errorResult: TaskResult = {
         success: false,
-        message: `MCPTaskExecuteError: ${error instanceof Error ? error.message : String(error)}`,
+        message: `MCP task execution error: ${error instanceof Error ? error.message : String(error)}`,
         error: error instanceof Error ? error : new Error(String(error)),
       };
 
@@ -629,7 +629,7 @@ export class AgentCore extends EventEmitter {
     ).length;
     const errorCount = results.length - successCount;
 
-    return `${results.length}Step中 ${successCount}Success、${errorCount}Error`;
+    return `${successCount} of ${results.length} steps succeeded, ${errorCount} errors`;
   }
 
   /**
@@ -647,7 +647,7 @@ export class AgentCore extends EventEmitter {
         description: tool.description,
       }));
     } catch (error) {
-      logger.error('MCPTool一覧GetError:', error);
+      logger.error('Error getting MCP tool list:', error);
       return [];
     }
   }
@@ -681,7 +681,7 @@ export class AgentCore extends EventEmitter {
     const totalDuration = stepResults.reduce((sum, r) => sum + (r.duration || 0), 0);
 
     const summaryParts = [
-      `${totalSteps}Step中 ${successCount}Success、${errorCount}Error`,
+      `${successCount} of ${totalSteps} steps succeeded, ${errorCount} errors`,
       `Execute時間: ${totalDuration}ms`,
     ];
 
