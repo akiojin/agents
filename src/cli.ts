@@ -234,18 +234,6 @@ program
     console.log(chalk.gray('  ログレベル:'), config.app.logLevel);
   });
 
-// エラーハンドリング
-program.exitOverride();
-
-try {
-  await program.parseAsync(process.argv);
-} catch (error) {
-  if (error instanceof Error) {
-    console.error(chalk.red('エラー:'), error.message);
-  }
-  process.exit(1);
-}
-
 // 引数なしの場合は対話モードを開始
 if (process.argv.length === 2) {
   const { globalProgressReporter } = await import('./ui/progress.js');
@@ -265,7 +253,7 @@ if (process.argv.length === 2) {
 
     // MCP初期化
     globalProgressReporter.updateSubtask(2);
-    if (config.useMCP) {
+    if (config.mcp?.enabled) {
       await mcpManager.initialize();
       agent.setupMCPTools(mcpManager);
       globalProgressReporter.showInfo('MCPツールが有効化されました');
@@ -283,6 +271,20 @@ if (process.argv.length === 2) {
     globalProgressReporter.completeTask(false);
     globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
     console.error(chalk.red('対話モードの開始に失敗しました:'), error);
+    process.exit(1);
+  }
+} else {
+  // 引数ありの場合は通常のコマンド処理
+  try {
+    await program.parseAsync(process.argv);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('outputHelp')) {
+      // ヘルプ表示の場合は正常終了
+      process.exit(0);
+    }
+    if (error instanceof Error) {
+      console.error(chalk.red('エラー:'), error.message);
+    }
     process.exit(1);
   }
 }
