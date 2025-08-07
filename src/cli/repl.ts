@@ -183,14 +183,18 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       }
 
       // TaskExecute
-      process.stdout.write(chalk.gray('Thinking...'));
+      const spinner = ora({
+        text: 'Thinking',
+        spinner: 'dots',
+        color: 'gray'
+      }).start();
+      
       try {
         const response = await agent.chatWithTaskDecomposition(trimmedInput);
-        // Clear the "Thinking..." line and show response
-        process.stdout.write('\r' + ' '.repeat(20) + '\r');
-        console.log(response);
+        spinner.stop();
+        console.log('\n' + response + '\n');
       } catch (error) {
-        process.stdout.write('\r' + ' '.repeat(20) + '\r');
+        spinner.stop();
         console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
       }
 
