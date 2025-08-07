@@ -24,16 +24,16 @@ export class OpenAIProvider extends LLMProvider {
   }
 
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string> {
-    // 入力検証
+    // 入力Validation
     if (!messages || messages.length === 0) {
-      throw new Error('メッセージが指定されていません');
+      throw new Error('No messages specified');
     }
 
-    // メッセージの形式検証と変換
+    // Messageの形式ValidationとConvert
     const openaiMessages = messages
       .map((msg, index) => {
         if (!msg.role || !msg.content) {
-          throw new Error(`無効なメッセージ形式 (インデックス: ${index})`);
+          throw new Error(`Invalid message format (Index: ${index})`);
         }
         return {
           role: msg.role,
@@ -43,7 +43,7 @@ export class OpenAIProvider extends LLMProvider {
       .filter((msg) => msg.content.length > 0);
 
     if (openaiMessages.length === 0) {
-      throw new Error('有効なメッセージが見つかりません');
+      throw new Error('有効なMessagenot found');
     }
 
     const requestConfig = {
@@ -60,62 +60,62 @@ export class OpenAIProvider extends LLMProvider {
       stream: false as const,
     };
 
-    logger.debug(`OpenAI API リクエスト開始: ${requestConfig.model}`, {
+    logger.debug(`OpenAI API RequestStarted: ${requestConfig.model}`, {
       messageCount: openaiMessages.length,
       temperature: requestConfig.temperature,
       maxTokens: requestConfig.max_tokens,
     });
 
-    // リトライ付きでAPI呼び出し実行
+    // Retry付きでAPI呼び出しExecute
     const result = await withRetry(
       async () => {
-        // タイムアウト設定（オプション、プロバイダー設定、またはデフォルト値の順）
+        // TimeoutConfig（Options、ProviderConfig、またはデフォルト値の順）
         const timeoutMs = options?.timeout || this.providerOptions.timeout;
         const apiPromise = this.client.chat.completions.create(requestConfig);
 
-        // Promise.raceでタイムアウトを実装
+        // Promise.raceでTimeoutを実装
         const response = await Promise.race([
           apiPromise,
           new Promise<never>((_, reject) =>
             setTimeout(
               () =>
                 reject(
-                  new Error(`OpenAI APIリクエストが${timeoutMs / 1000}秒でタイムアウトしました`),
+                  new Error(`OpenAI APIRequestが${timeoutMs / 1000}secondsでtimed out`),
                 ),
               timeoutMs,
             ),
           ),
         ]);
 
-        // レスポンス検証
+        // ResponseValidation
         if (!response) {
-          throw new Error('APIからレスポンスが返されませんでした');
+          throw new Error('APIからResponseが返されnotでした');
         }
 
         if (!('choices' in response)) {
-          throw new Error('ストリーミングレスポンスは非対応です');
+          throw new Error('ストリーミングResponseは非対応です');
         }
 
         if (!response.choices || response.choices.length === 0) {
-          throw new Error('APIレスポンスにchoicesが含まれていません');
+          throw new Error('APIResponse does not contain choices');
         }
 
         const choice = response.choices[0];
         if (!choice?.message?.content) {
           if (choice?.finish_reason === 'length') {
             throw new Error(
-              'レスポンスが最大トークン数に達しました。maxTokensを増やしてください。',
+              'Responseが最大トークン数に達done。maxTokensを増やしてplease。',
             );
           } else if (choice?.finish_reason === 'content_filter') {
-            throw new Error('コンテンツフィルタによりレスポンスがブロックされました。');
+            throw new Error('コンテンツフィルタによりResponseがブロックさed。');
           } else {
-            throw new Error('APIから空のレスポンスが返されました');
+            throw new Error('APIreturned empty response');
           }
         }
 
         const content = choice.message.content.trim();
         if (content.length === 0) {
-          throw new Error('APIから空の内容が返されました');
+          throw new Error('APIreturned empty content');
         }
 
         return content;
@@ -132,7 +132,7 @@ export class OpenAIProvider extends LLMProvider {
     if (!result.success) {
       logger.error('OpenAI chat error after retries:', result.error);
 
-      // OpenAI特有のエラーハンドリング
+      // OpenAI特有のErrorハンドリング
       const error = result.error!;
       if (error && typeof error === 'object' && 'status' in error) {
         const apiError = error as any;
@@ -140,51 +140,51 @@ export class OpenAIProvider extends LLMProvider {
 
         switch (status) {
           case 401:
-            throw new Error('OpenAI APIキーが無効です。設定を確認してください。');
+            throw new Error('OpenAI APIキーが無効です。Please check settings。');
           case 402:
-            throw new Error('OpenAI APIの利用枠が不足しています。課金情報を確認してください。');
+            throw new Error('OpenAI APIのquotaが不足してing。課金InfoをCheckしてplease。');
           case 429:
             throw new Error(
-              'OpenAI APIのレート制限に達しました。しばらく待ってからお試しください。',
+              'OpenAI APIのRate limitに達done。しばらく待ってからお試しplease。',
             );
           case 500:
           case 502:
           case 503:
           case 504:
             throw new Error(
-              'OpenAI APIサーバーエラーが発生しました。しばらく待ってからお試しください。',
+              'OpenAI APIServerErroroccurreddone。しばらく待ってからお試しplease。',
             );
           case 'insufficient_quota':
-            throw new Error('OpenAI APIの利用枠を超えています。アカウントを確認してください。');
+            throw new Error('OpenAI APIのquotaを超えてing。アカウントをCheckしてplease。');
           case 'model_not_found':
             throw new Error(
-              `指定されたモデル "${requestConfig?.model || this.defaultModel}" が見つかりません。`,
+              `specifiedModel "${requestConfig?.model || this.defaultModel}" not found。`,
             );
           case 'invalid_request_error':
-            throw new Error('無効なリクエストです。パラメータを確認してください。');
+            throw new Error('無効なRequestです。ParametersをCheckしてplease。');
           default:
             if (apiError.message) {
-              throw new Error(`OpenAI API エラー: ${apiError.message}`);
+              throw new Error(`OpenAI API Error: ${apiError.message}`);
             }
         }
       }
 
-      // ネットワークエラー
+      // ネットワークError
       if (error instanceof Error) {
         if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
-          throw new Error('OpenAI APIへの接続に失敗しました。ネットワーク接続を確認してください。');
-        } else if (error.message.includes('timeout') || error.message.includes('タイムアウト')) {
+          throw new Error('OpenAI APIFailed to connect to。ネットワークConnectionをCheckしてplease。');
+        } else if (error.message.includes('timeout') || error.message.includes('Timeout')) {
           throw new Error(
-            'OpenAI APIリクエストがタイムアウトしました。しばらく待ってからお試しください。',
+            'OpenAI APIRequestがtimed out。しばらく待ってからお試しplease。',
           );
         }
       }
 
-      // その他のエラーはそのまま再スロー
+      // その他のErrorはそのまま再スロー
       throw error;
     }
 
-    logger.debug(`OpenAI APIリクエスト完了: ${result.result!.length}文字`, {
+    logger.debug(`OpenAI APIRequestCompleted: ${result.result!.length}characters`, {
       attemptCount: result.attemptCount,
       totalTime: result.totalTime,
     });
@@ -192,9 +192,9 @@ export class OpenAIProvider extends LLMProvider {
   }
 
   async complete(options: CompletionOptions): Promise<string> {
-    // 入力検証
+    // 入力Validation
     if (!options || !options.prompt) {
-      throw new Error('プロンプトが指定されていません');
+      throw new Error('プロンプトが指定not initialized');
     }
 
     const trimmedPrompt = options.prompt.trim();
@@ -203,7 +203,7 @@ export class OpenAIProvider extends LLMProvider {
     }
 
     if (trimmedPrompt.length > 32000) {
-      throw new Error('プロンプトが長すぎます（最大32,000文字）');
+      throw new Error('プロンプトがis too long（最大32,000characters）');
     }
 
     const requestConfig = {
@@ -220,16 +220,16 @@ export class OpenAIProvider extends LLMProvider {
       stream: false as const,
     };
 
-    logger.debug(`OpenAI completion API リクエスト開始: ${requestConfig.model}`);
+    logger.debug(`OpenAI completion API RequestStarted: ${requestConfig.model}`);
 
-    // リトライ付きでAPI呼び出し実行
+    // Retry付きでAPI呼び出しExecute
     const result = await withRetry(
       async () => {
-        // タイムアウト設定（オプション、プロバイダー設定、またはデフォルト値の順）
+        // TimeoutConfig（Options、ProviderConfig、またはデフォルト値の順）
         const timeoutMs = options.timeout || this.providerOptions.timeout;
         const apiPromise = this.client.chat.completions.create(requestConfig);
 
-        // Promise.raceでタイムアウトを実装
+        // Promise.raceでTimeoutを実装
         const response = await Promise.race([
           apiPromise,
           new Promise<never>((_, reject) =>
@@ -237,7 +237,7 @@ export class OpenAIProvider extends LLMProvider {
               () =>
                 reject(
                   new Error(
-                    `OpenAI completion APIリクエストが${timeoutMs / 1000}秒でタイムアウトしました`,
+                    `OpenAI completion APIRequestが${timeoutMs / 1000}secondsでtimed out`,
                   ),
                 ),
               timeoutMs,
@@ -245,27 +245,27 @@ export class OpenAIProvider extends LLMProvider {
           ),
         ]);
 
-        // レスポンス検証（chatメソッドと同様）
+        // ResponseValidation（chatメソッドと同様）
         if (!response || !('choices' in response)) {
-          throw new Error('ストリーミングレスポンスは非対応です');
+          throw new Error('ストリーミングResponseは非対応です');
         }
 
         const choice = response.choices[0];
         if (!choice?.message?.content) {
           if (choice?.finish_reason === 'length') {
             throw new Error(
-              'レスポンスが最大トークン数に達しました。maxTokensを増やしてください。',
+              'Responseが最大トークン数に達done。maxTokensを増やしてplease。',
             );
           } else if (choice?.finish_reason === 'content_filter') {
-            throw new Error('コンテンツフィルタによりレスポンスがブロックされました。');
+            throw new Error('コンテンツフィルタによりResponseがブロックさed。');
           } else {
-            throw new Error('APIから空のレスポンスが返されました');
+            throw new Error('APIreturned empty response');
           }
         }
 
         const content = choice.message.content.trim();
         if (content.length === 0) {
-          throw new Error('APIから空の内容が返されました');
+          throw new Error('APIreturned empty content');
         }
 
         return content;
@@ -282,7 +282,7 @@ export class OpenAIProvider extends LLMProvider {
     if (!result.success) {
       logger.error('OpenAI completion error after retries:', result.error);
 
-      // chatメソッドと同様のエラーハンドリング
+      // chatメソッドと同様のErrorハンドリング
       const error = result.error!;
       if (error && typeof error === 'object' && 'status' in error) {
         const apiError = error as any;
@@ -290,33 +290,33 @@ export class OpenAIProvider extends LLMProvider {
 
         switch (status) {
           case 401:
-            throw new Error('OpenAI APIキーが無効です。設定を確認してください。');
+            throw new Error('OpenAI APIキーが無効です。Please check settings。');
           case 402:
-            throw new Error('OpenAI APIの利用枠が不足しています。課金情報を確認してください。');
+            throw new Error('OpenAI APIのquotaが不足してing。課金InfoをCheckしてplease。');
           case 429:
             throw new Error(
-              'OpenAI APIのレート制限に達しました。しばらく待ってからお試しください。',
+              'OpenAI APIのRate limitに達done。しばらく待ってからお試しplease。',
             );
           case 500:
           case 502:
           case 503:
           case 504:
             throw new Error(
-              'OpenAI APIサーバーエラーが発生しました。しばらく待ってからお試しください。',
+              'OpenAI APIServerErroroccurreddone。しばらく待ってからお試しplease。',
             );
           default:
             if (apiError.message) {
-              throw new Error(`OpenAI API エラー: ${apiError.message}`);
+              throw new Error(`OpenAI API Error: ${apiError.message}`);
             }
         }
       }
 
       if (error instanceof Error) {
         if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
-          throw new Error('OpenAI APIへの接続に失敗しました。ネットワーク接続を確認してください。');
-        } else if (error.message.includes('timeout') || error.message.includes('タイムアウト')) {
+          throw new Error('OpenAI APIFailed to connect to。ネットワークConnectionをCheckしてplease。');
+        } else if (error.message.includes('timeout') || error.message.includes('Timeout')) {
           throw new Error(
-            'OpenAI completion APIリクエストがタイムアウトしました。しばらく待ってからお試しください。',
+            'OpenAI completion APIRequestがtimed out。しばらく待ってからお試しplease。',
           );
         }
       }
@@ -324,7 +324,7 @@ export class OpenAIProvider extends LLMProvider {
       throw error;
     }
 
-    logger.debug(`OpenAI completion API 完了: ${result.result!.length}文字`, {
+    logger.debug(`OpenAI completion API Completed: ${result.result!.length}characters`, {
       attemptCount: result.attemptCount,
       totalTime: result.totalTime,
     });
@@ -343,9 +343,9 @@ export class OpenAIProvider extends LLMProvider {
 
   async validateConnection(): Promise<boolean> {
     try {
-      logger.debug('OpenAI接続検証開始');
+      logger.debug('OpenAIConnectionValidationStarted');
 
-      // タイムアウト付きでモデルリストを取得（プロバイダー設定を使用）
+      // Timeout付きでModelリストをGet（ProviderConfigを使用）
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error('Connection validation timeout')),
@@ -357,15 +357,15 @@ export class OpenAIProvider extends LLMProvider {
 
       await Promise.race([modelsPromise, timeoutPromise]);
 
-      logger.debug('OpenAI接続検証成功');
+      logger.debug('OpenAIConnectionValidationSuccess');
       return true;
     } catch (error) {
       logger.error('OpenAI connection validation failed:', error);
 
-      // エラーログに詳細情報を記録
+      // ErrorログにDetailsInfoを記録
       if (error && typeof error === 'object' && 'status' in error) {
         const apiError = error as any;
-        logger.error('OpenAI API エラー詳細:', {
+        logger.error('OpenAI API ErrorDetails:', {
           status: apiError.status,
           code: apiError.code,
           message: apiError.message,
@@ -377,10 +377,10 @@ export class OpenAIProvider extends LLMProvider {
   }
 
   /**
-   * OpenAI APIのエラーがリトライ可能かを判定
+   * OpenAI APIのErrorがRetry可能かを判定
    */
   private isRetryableError(error: unknown): boolean {
-    // ネットワークエラー
+    // ネットワークError
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
       if (
@@ -398,7 +398,7 @@ export class OpenAIProvider extends LLMProvider {
     if (error && typeof error === 'object' && error !== null && 'status' in error) {
       const statusError = error as { status?: number; code?: number };
       const status = statusError.status || statusError.code;
-      // レート制限、サーバーエラーはリトライ可能
+      // Rate limit、ServerErrorはRetry可能
       return status === 429 || (status !== undefined && status >= 500);
     }
 

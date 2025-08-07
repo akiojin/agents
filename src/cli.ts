@@ -18,22 +18,22 @@ const program = new Command();
 
 program
   .name('agents')
-  .description('オープンソースで完全無料の自律型コーディングエージェント')
+  .description('オープンソースで完全無料の自律型コーディングAgent')
   .version(packageJson.version);
 
-// グローバルオプション
+// グローバルOptions
 program
-  .option('-m, --model <model>', 'LLMモデルを指定', 'gpt-4')
-  .option('-c, --config <path>', '設定ファイルのパス', '.agents.yaml')
-  .option('-v, --verbose', '詳細ログ出力')
+  .option('-m, --model <model>', 'LLMModelを指定', 'gpt-4')
+  .option('-c, --config <path>', 'Configファイルのパス', '.agents.yaml')
+  .option('-v, --verbose', 'Detailsログ出力')
   .option('--no-color', 'カラー出力を無効化')
-  .option('--max-parallel <number>', '並列タスク実行数', '5')
-  .option('--timeout <seconds>', 'タスクタイムアウト（秒）', '300');
+  .option('--max-parallel <number>', 'ParallelTaskExecute数', '5')
+  .option('--timeout <seconds>', 'TaskTimeout（seconds）', '300');
 
-// initコマンド
+// initCommand
 program
   .command('init')
-  .description('エージェント設定を初期化')
+  .description('AgentConfigをInitialize')
   .action(async () => {
     const { globalProgressReporter } = await import('./ui/progress.js');
     
@@ -45,24 +45,24 @@ program
         useMCP: boolean;
       }
 
-      globalProgressReporter.startTask('エージェント初期化', ['TTY確認', '設定入力', '設定ファイル作成']);
+      globalProgressReporter.startTask('AgentInitialize', ['TTYCheck', 'Config入力', 'Configファイル作成']);
 
-      // TTY確認
+      // TTYCheck
       globalProgressReporter.updateSubtask(0);
       if (!process.stdin.isTTY) {
         globalProgressReporter.completeTask(false);
         throw new Error(
-          '対話型セットアップにはTTY環境が必要です。docker exec -it を使用してください。',
+          '対話型セットアップにはTTY環境が必要です。docker exec -it を使用してplease。',
         );
       }
 
-      // 設定入力
+      // Config入力
       globalProgressReporter.updateSubtask(1);
       const answers: InitAnswers = await inquirer.prompt([
         {
           type: 'list',
           name: 'provider',
-          message: 'LLMプロバイダーを選択:',
+          message: 'LLMProviderを選択:',
           choices: [
             { name: 'OpenAI', value: 'openai' },
             { name: 'Anthropic', value: 'anthropic' },
@@ -73,29 +73,29 @@ program
         {
           type: 'input',
           name: 'apiKey',
-          message: 'APIキーを入力（ローカルの場合は空欄）:',
+          message: 'APIキーを入力（Localの場合は空欄）:',
           when: (answers: InitAnswers) => !answers.provider.startsWith('local-'),
         },
         {
           type: 'input',
           name: 'localEndpoint',
-          message: 'ローカルエンドポイントURL:',
+          message: 'LocalエンドポイントURL:',
           default: 'http://127.0.0.1:1234',
           when: (answers: InitAnswers) => answers.provider.startsWith('local-'),
         },
         {
           type: 'confirm',
           name: 'useMCP',
-          message: 'MCPツールを有効化しますか？',
+          message: 'MCPToolを有効化しますか？',
           default: true,
         },
       ]);
 
-      // 設定ファイル作成
+      // Configファイル作成
       globalProgressReporter.updateSubtask(2);
       const configManager = ConfigManager.getInstance();
 
-      // InitAnswersを統一Configに変換
+      // InitAnswersを統一ConfigにConvert
       const unifiedConfig: Partial<Config> = {
         llm: {
           provider: answers.provider,
@@ -111,55 +111,55 @@ program
         },
       };
 
-      // ローカルプロバイダーの場合はエンドポイントを追加
+      // LocalProviderの場合はエンドポイントを追加
       if (answers.localEndpoint && answers.provider.startsWith('local-')) {
-        // エンドポイント情報は環境変数に設定することを推奨
+        // エンドポイントInfoは環境変数にConfigすることを推奨
         process.env.AGENTS_LOCAL_ENDPOINT = answers.localEndpoint;
       }
 
       await configManager.save(unifiedConfig);
       globalProgressReporter.completeTask(true);
-      console.log(chalk.green('✅ 設定を初期化しました'));
+      console.log(chalk.green('✅ ConfigをInitializedone'));
     } catch (error) {
       globalProgressReporter.completeTask(false);
       globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
-      console.log(chalk.red('❌ 初期化に失敗しました'));
+      console.log(chalk.red('❌ InitializeにFaileddone'));
       logger.error('Init failed:', error);
       process.exit(1);
     }
   });
 
-// taskコマンド
+// taskCommand
 program
   .command('task <description>')
-  .description('タスクを実行')
+  .description('TaskをExecute')
   .option('-f, --file <paths...>', 'ターゲットファイル')
-  .option('-p, --parallel', '並列実行を有効化', false)
+  .option('-p, --parallel', 'ParallelExecuteを有効化', false)
   .action(async (description: string, options) => {
     const { globalProgressReporter } = await import('./ui/progress.js');
     
-    globalProgressReporter.startTask('タスク実行準備', ['設定読み込み', 'エージェント初期化', 'MCP初期化', 'タスク実行']);
+    globalProgressReporter.startTask('Preparing task execution', ['Loading config', 'Initializing agent', 'Initializing MCP', 'Executing task']);
     
     try {
-      // 設定読み込み
+      // ConfigLoad
       globalProgressReporter.updateSubtask(0);
       const configManager = ConfigManager.getInstance();
       const config = await configManager.load();
       
-      // エージェント初期化
+      // AgentInitialize
       globalProgressReporter.updateSubtask(1);
       const agent = new AgentCore(config);
       const mcpManager = new MCPManager(config);
 
-      // MCP初期化
+      // MCPInitialize
       globalProgressReporter.updateSubtask(2);
       if (config.mcp?.enabled) {
         await mcpManager.initialize();
         agent.setupMCPTools(mcpManager);
-        globalProgressReporter.showInfo('MCPツールが初期化されました');
+        globalProgressReporter.showInfo('MCP tools initialized');
       }
 
-      // タスク実行
+      // TaskExecute
       globalProgressReporter.updateSubtask(3);
       globalProgressReporter.completeTask(true);
       
@@ -175,7 +175,7 @@ program
             parallel: options.parallel,
           });
 
-      console.log(chalk.green('✅ タスクが完了しました'));
+      console.log(chalk.green('✅ TaskがCompleteddone'));
       console.log(result);
     } catch (error) {
       globalProgressReporter.completeTask(false);
@@ -187,18 +187,18 @@ program
 
 
 
-// watchコマンド
+// watchCommand
 program
   .command('watch [paths...]')
-  .description('ファイル変更を監視して自動実行')
-  .option('-t, --task <task>', '実行するタスク')
+  .description('ファイル変更をMonitorして自動Execute')
+  .option('-t, --task <task>', 'ExecuteするTask')
   .action(async (paths: string[], options) => {
-    console.log(chalk.cyan('ファイル監視を開始します...'));
+    console.log(chalk.cyan('ファイルMonitorをStartedします...'));
     const configManager = ConfigManager.getInstance();
     const config = await configManager.load();
     const agent = new AgentCore(config);
 
-    // chokidarを使用してファイル監視
+    // chokidarを使用してファイルMonitor
     const { watch } = await import('chokidar');
     const watcher = watch(paths.length > 0 ? paths : ['.'], {
       ignored: /node_modules|\.git|dist/,
@@ -218,72 +218,72 @@ program
     });
   });
 
-// statusコマンド
+// statusCommand
 program
   .command('status')
-  .description('エージェントステータスを表示')
+  .description('Agentステータスを表示')
   .action(async () => {
     const configManager = ConfigManager.getInstance();
     const config = await configManager.load();
-    console.log(chalk.cyan('エージェントステータス:'));
-    console.log(chalk.gray('  プロバイダー:'), config.llm.provider);
-    console.log(chalk.gray('  モデル:'), config.llm.model || 'デフォルト');
+    console.log(chalk.cyan('Agentステータス:'));
+    console.log(chalk.gray('  Provider:'), config.llm.provider);
+    console.log(chalk.gray('  Model:'), config.llm.model || 'デフォルト');
     console.log(chalk.gray('  MCP:'), config.mcp.enabled ? '有効' : '無効');
-    console.log(chalk.gray('  並列タスク数:'), config.app.maxParallel);
-    console.log(chalk.gray('  タイムアウト:'), `${config.app.timeout / 1000}秒`);
+    console.log(chalk.gray('  ParallelTask数:'), config.app.maxParallel);
+    console.log(chalk.gray('  Timeout:'), `${config.app.timeout / 1000}seconds`);
     console.log(chalk.gray('  ログレベル:'), config.app.logLevel);
   });
 
-// 引数なしの場合は対話モードを開始
+// Argumentsなしの場合は対話モードをStarted
 if (process.argv.length === 2) {
   const { globalProgressReporter } = await import('./ui/progress.js');
   
-  globalProgressReporter.startTask('対話モード開始', ['設定読み込み', 'エージェント初期化', 'MCP初期化', 'REPL開始']);
+  globalProgressReporter.startTask('Starting interactive mode', ['Loading config', 'Initializing agent', 'Initializing MCP', 'Starting REPL']);
   
   try {
-    // 設定読み込み
+    // ConfigLoad
     globalProgressReporter.updateSubtask(0);
     const configManager = ConfigManager.getInstance();
     const config = await configManager.load();
     
-    // エージェント初期化
+    // AgentInitialize
     globalProgressReporter.updateSubtask(1);
     const agent = new AgentCore(config);
     const mcpManager = new MCPManager(config);
 
-    // MCP初期化
+    // MCPInitialize
     globalProgressReporter.updateSubtask(2);
     if (config.mcp?.enabled) {
       await mcpManager.initialize();
       agent.setupMCPTools(mcpManager);
-      globalProgressReporter.showInfo('MCPツールが有効化されました');
+      globalProgressReporter.showInfo('MCP tools enabled');
     }
 
-    // REPL開始
+    // REPLStarted
     globalProgressReporter.updateSubtask(3);
     globalProgressReporter.completeTask(true);
     
-    console.log(chalk.cyan('🤖 エージェントとの対話を開始します'));
-    console.log(chalk.gray('終了するには /exit を入力してください'));
+    console.log(chalk.cyan('🤖 Starting agent interactive mode'));
+    console.log(chalk.gray('Type /exit to quit'));
 
     await startREPL(agent, mcpManager);
   } catch (error) {
     globalProgressReporter.completeTask(false);
     globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
-    console.error(chalk.red('対話モードの開始に失敗しました:'), error);
+    console.error(chalk.red('Failed to start interactive mode:'), error);
     process.exit(1);
   }
 } else {
-  // 引数ありの場合は通常のコマンド処理
+  // Argumentsありの場合は通常のCommandProcessing
   try {
     await program.parseAsync(process.argv);
   } catch (error) {
     if (error instanceof Error && error.message.includes('outputHelp')) {
-      // ヘルプ表示の場合は正常終了
+      // ヘルプ表示の場合は正常Exit
       process.exit(0);
     }
     if (error instanceof Error) {
-      console.error(chalk.red('エラー:'), error.message);
+      console.error(chalk.red('Error:'), error.message);
     }
     process.exit(1);
   }

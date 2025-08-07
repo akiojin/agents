@@ -8,7 +8,7 @@ import { DEFAULT_CONFIG, ENV_MAPPING } from './types.js';
 import { logger } from '../utils/logger.js';
 
 /**
- * 設定スキーマの定義
+ * Configスキーマの定義
  */
 const ConfigSchema = z.object({
   llm: z.object({
@@ -51,7 +51,7 @@ const ConfigSchema = z.object({
 });
 
 /**
- * 統一された設定ローダー
+ * 統一されたConfigローダー
  */
 export class ConfigManager {
   private static instance: ConfigManager;
@@ -63,7 +63,7 @@ export class ConfigManager {
   }
 
   /**
-   * シングルトンインスタンスの取得
+   * シングルトンインスタンスのGet
    */
   public static getInstance(): ConfigManager {
     if (!ConfigManager.instance) {
@@ -73,46 +73,46 @@ export class ConfigManager {
   }
 
   /**
-   * 設定の読み込み
+   * ConfigのLoad
    */
   public async load(customPath?: string): Promise<Config> {
     if (customPath) {
       this.configPath = customPath;
     }
 
-    // キャッシュされた設定を返す
+    // キャッシュされたConfigを返す
     if (this.config) {
       return this.config;
     }
 
     try {
-      // 1. デフォルト設定から開始
+      // 1. デフォルトConfigからStarted
       let config = this.deepClone(DEFAULT_CONFIG);
 
-      // 2. 設定ファイルの読み込み
+      // 2. ConfigファイルのLoad
       if (existsSync(this.configPath)) {
         const fileConfig = await this.loadFromFile();
         config = this.deepMerge(config, fileConfig);
       }
 
-      // 3. 環境変数の読み込み
+      // 3. 環境変数のLoad
       const envConfig = this.loadFromEnv();
       config = this.deepMerge(config, envConfig);
 
-      // 4. 設定の検証
+      // 4. ConfigのValidation
       this.config = ConfigSchema.parse(config);
 
-      logger.debug('設定を読み込みました:', this.config);
+      logger.debug('ConfigをLoadました:', this.config);
       return this.config;
     } catch (error) {
-      logger.error('設定の読み込みに失敗しました:', error);
+      logger.error('ConfigのLoadにFaileddone:', error);
       this.config = DEFAULT_CONFIG;
       return this.config;
     }
   }
 
   /**
-   * 設定の保存
+   * ConfigのSave
    */
   public async save(config: Partial<Config>): Promise<void> {
     const mergedConfig = this.deepMerge(this.deepClone(DEFAULT_CONFIG), config);
@@ -127,28 +127,28 @@ export class ConfigManager {
     await writeFile(this.configPath, yamlContent, 'utf-8');
     this.config = validated;
 
-    logger.info('設定を保存しました:', this.configPath);
+    logger.info('ConfigをSavedone:', this.configPath);
   }
 
   /**
-   * 設定ファイルの存在確認
+   * Configファイルの存在Check
    */
   public async exists(): Promise<boolean> {
     return existsSync(this.configPath);
   }
 
   /**
-   * 現在の設定を取得
+   * 現在のConfigをGet
    */
   public getConfig(): Config {
     if (!this.config) {
-      throw new Error('設定が読み込まれていません。load()を最初に呼び出してください。');
+      throw new Error('Configが読み込まれていnot。load()を最初に呼び出してplease。');
     }
     return this.config;
   }
 
   /**
-   * 設定のリロード
+   * Configのリロード
    */
   public async reload(): Promise<Config> {
     this.config = null;
@@ -156,20 +156,20 @@ export class ConfigManager {
   }
 
   /**
-   * 設定ファイルからの読み込み
+   * ConfigファイルからのLoad
    */
   private async loadFromFile(): Promise<Partial<Config>> {
     try {
       const content = await readFile(this.configPath, 'utf-8');
       return yaml.parse(content) as Partial<Config>;
     } catch (error) {
-      logger.warn('設定ファイルの読み込みに失敗しました:', error);
+      logger.warn('ConfigファイルのLoadにFaileddone:', error);
       return {};
     }
   }
 
   /**
-   * 環境変数からの読み込み
+   * 環境変数からのLoad
    */
   private loadFromEnv(): Partial<Config> {
     const config: Record<string, unknown> = {};
@@ -188,12 +188,12 @@ export class ConfigManager {
    * 環境変数値のパース
    */
   private parseEnvValue(value: string): string | number | boolean {
-    // 数値の変換
+    // 数値のConvert
     if (/^\d+$/.test(value)) {
       return parseInt(value, 10);
     }
 
-    // ブール値の変換
+    // ブール値のConvert
     if (value.toLowerCase() === 'true') return true;
     if (value.toLowerCase() === 'false') return false;
 
@@ -201,7 +201,7 @@ export class ConfigManager {
   }
 
   /**
-   * ネストされたオブジェクトへの値の設定
+   * ネストされたオブジェクトへの値のConfig
    */
   private setNestedValue(obj: Record<string, unknown>, path: string, value: string | number | boolean): void {
     const keys = path.split('.');
@@ -250,12 +250,12 @@ export class ConfigManager {
 }
 
 /**
- * グローバル設定インスタンス
+ * グローバルConfigインスタンス
  */
 export const config = ConfigManager.getInstance();
 
 /**
- * 設定を読み込む便利関数（後方互換性のため）
+ * Configを読み込む便利関数（後方互換性のため）
  */
 export async function loadConfig(customPath?: string): Promise<Config> {
   return await config.load(customPath);

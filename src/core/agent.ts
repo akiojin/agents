@@ -26,10 +26,10 @@ export class AgentCore extends EventEmitter {
   private parallelMode: boolean = false;
   private verboseMode: boolean = false;
   
-  // メモリ管理関連の設定
-  private readonly MAX_HISTORY_SIZE = 100; // 最大履歴サイズ
-  private readonly MEMORY_CHECK_INTERVAL = 10; // N回のチャット毎にメモリチェック
-  private chatCount: number = 0; // チャット回数カウンター
+  // メモリ管理関連のConfig
+  private readonly MAX_HISTORY_SIZE = 100; // 最大Historyサイズ
+  private readonly MEMORY_CHECK_INTERVAL = 10; // N回のChat毎にメモリチェック
+  private chatCount: number = 0; // Chat回数カウンター
   
   // リソース管理用
   private timers: Set<NodeJS.Timeout> = new Set();
@@ -45,15 +45,15 @@ export class AgentCore extends EventEmitter {
     this.taskDecomposer = new SimpleTaskDecomposer();
     this.parallelExecutor = new ParallelExecutor(config.app.maxParallel || 3);
     
-    // 初期化を非同期で実行（エラーハンドリングを含む）
+    // Initializeを非同期でExecute（Errorハンドリングを含む）
     void this.initialize();
     
-    // プロセス終了時のクリーンアップ処理を登録
+    // プロセスExit時のCleanupProcessingを登録
     this.setupCleanupHandlers();
   }
 
   /**
-   * 新しいConfig型を既存のLegacy Config型に変換
+   * 新しいConfig型を既存のLegacy Config型にConvert
    */
   private convertToLegacyConfig(config: Config): import('../types/config.js').Config {
     return {
@@ -73,33 +73,33 @@ export class AgentCore extends EventEmitter {
 
   private async initialize(): Promise<void> {
     try {
-      // 履歴を読み込む
+      // Historyを読み込む
       this.history = await this.memoryManager.loadHistory();
       
-      // 初回起動時にメモリ最適化
+      // 初回起動時にメモリOptimize
       await this.optimizeMemory();
       
-      logger.info('エージェントコアを初期化しました');
+      logger.info('AgentコアをInitializedone');
     } catch (error) {
-      logger.error('初期化エラー:', error);
+      logger.error('InitializeError:', error);
 
-      // 初期化エラーでも基本的な機能は利用可能にする
+      // InitializeErrorでも基本的な機能は利用可能にする
       this.history = [];
-      logger.warn('履歴の読み込みに失敗しましたが、新しいセッションとして開始します');
+      logger.warn('HistoryのLoadにFaileddoneが、Starting as new sessionします');
 
-      // 初期化エラーは致命的ではないので例外を投げない
+      // InitializeErrorは致命的ではないので例外を投げない
     }
   }
 
   /**
-   * クリーンアップハンドラーの設定
+   * CleanupハンドラーのConfig
    */
   private setupCleanupHandlers(): void {
     const cleanup = () => {
       this.cleanup();
     };
 
-    // プロセス終了時のクリーンアップ
+    // プロセスExit時のCleanup
     process.on('exit', cleanup);
     process.on('SIGINT', cleanup);
     process.on('SIGTERM', cleanup);
@@ -111,51 +111,51 @@ export class AgentCore extends EventEmitter {
   }
 
   /**
-   * リソースのクリーンアップ
+   * リソースのCleanup
    */
   public cleanup(): void {
     try {
-      // タイマーのクリア
+      // タイマーのcleared
       this.timers.forEach(timer => clearTimeout(timer));
       this.timers.clear();
 
       // イベントリスナーの解除
       this.removeAllListeners();
 
-      logger.info('リソースのクリーンアップが完了しました');
+      logger.info('リソースのCleanupがCompleteddone');
     } catch (error) {
-      logger.error('クリーンアップエラー:', error);
+      logger.error('CleanupError:', error);
     }
   }
 
   /**
-   * メモリ最適化処理
+   * メモリOptimizeProcessing
    */
   private async optimizeMemory(): Promise<void> {
     try {
-      // 履歴のサイズ制限
+      // Historyのサイズ制限
       if (this.history.length > this.MAX_HISTORY_SIZE) {
         const oldSize = this.history.length;
         this.history = this.history.slice(-this.MAX_HISTORY_SIZE);
         await this.memoryManager.saveHistory(this.history);
-        logger.info(`履歴を最適化しました: ${oldSize}件 → ${this.history.length}件`);
+        logger.info(`HistoryをOptimizedone: ${oldSize}items → ${this.history.length}items`);
       }
 
-      // MemoryManagerの履歴も最適化
+      // MemoryManagerのHistoryもOptimize
       await this.memoryManager.pruneHistory(this.MAX_HISTORY_SIZE);
 
-      // ガベージコレクションの実行（可能であれば）
+      // ガベージコレクションのExecute（可能であれば）
       if (global.gc) {
         global.gc();
-        logger.debug('ガベージコレクションを実行しました');
+        logger.debug('ガベージコレクションをExecutedone');
       }
     } catch (error) {
-      logger.error('メモリ最適化エラー:', error);
+      logger.error('メモリOptimizeError:', error);
     }
   }
 
   /**
-   * メモリ使用量の監視
+   * メモリ使用量のMonitor
    */
   private monitorMemoryUsage(): void {
     const memUsage = process.memoryUsage();
@@ -168,16 +168,16 @@ export class AgentCore extends EventEmitter {
 
     logger.debug('メモリ使用量:', mbUsage);
 
-    // メモリ使用量が高い場合の警告
+    // メモリ使用量が高い場合のWarning
     if (mbUsage.heapUsed > 500) { // 500MB以上の場合
-      logger.warn(`メモリ使用量が高くなっています: ${mbUsage.heapUsed}MB`);
-      // 自動最適化を実行
+      logger.warn(`メモリ使用量がis highing: ${mbUsage.heapUsed}MB`);
+      // 自動OptimizeをExecute
       void this.optimizeMemory();
     }
   }
 
   /**
-   * タイマーの登録（自動クリーンアップ対応）
+   * タイマーの登録（自動Cleanup対応）
    */
   private registerTimer(callback: () => void, delay: number): NodeJS.Timeout {
     const timer = setTimeout(() => {
@@ -208,20 +208,20 @@ export class AgentCore extends EventEmitter {
     const { globalProgressReporter } = await import('../ui/progress.js');
 
     try {
-      // プログレス表示開始
-      globalProgressReporter.startTask('チャット処理', ['入力検証', 'LLM呼び出し', 'レスポンス処理', '履歴保存']);
+      // プログレス表示Started
+      globalProgressReporter.startTask('ChatProcessing', ['入力Validation', 'LLM呼び出し', 'ResponseProcessing', 'HistorySave']);
 
-      // 入力検証
+      // 入力Validation
       globalProgressReporter.updateSubtask(0);
       if (!input || input.trim().length === 0) {
         globalProgressReporter.completeTask(false);
-        throw new Error('入力が空です');
+        throw new Error('Input is empty');
       }
 
       const trimmedInput = input.trim();
       if (trimmedInput.length > 32000) {
         globalProgressReporter.completeTask(false);
-        throw new Error('入力が長すぎます（最大32,000文字）');
+        throw new Error('入力がis too long（最大32,000characters）');
       }
 
       // メモリ使用量チェック（定期的）
@@ -231,7 +231,7 @@ export class AgentCore extends EventEmitter {
         await this.optimizeMemory();
       }
 
-      // ユーザーメッセージを履歴に追加
+      // UserMessageをHistoryに追加
       const userMessage: ChatMessage = {
         role: 'user',
         content: trimmedInput,
@@ -239,10 +239,10 @@ export class AgentCore extends EventEmitter {
       };
       this.history.push(userMessage);
 
-      // プロバイダー接続確認
+      // ProviderConnectionCheck
       if (!this.provider) {
         globalProgressReporter.completeTask(false);
-        throw new Error('LLMプロバイダーが初期化されていません');
+        throw new Error('LLMProviderがInitializenot initialized');
       }
 
       // LLM呼び出し
@@ -264,7 +264,7 @@ export class AgentCore extends EventEmitter {
           timeout: this.config.llm.timeout,
           shouldRetry: (error: Error) => {
             const message = error.message.toLowerCase();
-            // リトライ可能なエラー: タイムアウト、レート制限、ネットワークエラー、サーバーエラー
+            // Retry可能なError: Timeout、Rate limit、ネットワークError、ServerError
             return (
               message.includes('timeout') ||
               message.includes('rate limit') ||
@@ -280,25 +280,25 @@ export class AgentCore extends EventEmitter {
       );
 
       if (!result.success) {
-        logger.error('LLMチャットエラー after retries:', result.error);
+        logger.error('LLMChatError after retries:', result.error);
         globalProgressReporter.completeTask(false);
         throw result.error!;
       }
 
       const response = result.result!;
 
-      // レスポンス処理
+      // ResponseProcessing
       globalProgressReporter.updateSubtask(2);
       
-      // 応答検証
+      // 応答Validation
       if (!response || response.trim().length === 0) {
         globalProgressReporter.completeTask(false);
-        throw new Error('LLMからの応答が空です');
+        throw new Error('LLMからのResponse is empty');
       }
 
       const trimmedResponse = response.trim();
 
-      // アシスタントメッセージを履歴に追加
+      // AssistantMessageをHistoryに追加
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: trimmedResponse,
@@ -306,16 +306,16 @@ export class AgentCore extends EventEmitter {
       };
       this.history.push(assistantMessage);
 
-      // 履歴保存
+      // HistorySave
       globalProgressReporter.updateSubtask(3);
       
-      // 履歴を保存（エラーが発生しても会話は継続）
+      // HistoryをSave（Erroroccurredしても会話は継続）
       try {
         await this.memoryManager.saveHistory(this.history);
       } catch (saveError) {
-        logger.warn('履歴保存に失敗しました:', saveError);
-        globalProgressReporter.showWarning('履歴保存に失敗しましたが、会話は継続します');
-        // 履歴保存失敗は致命的ではない
+        logger.warn('HistorySaveにFaileddone:', saveError);
+        globalProgressReporter.showWarning('HistorySaveにFaileddoneが、会話は継続します');
+        // HistorySaveFailedは致命的ではない
       }
 
       globalProgressReporter.completeTask(true);
@@ -325,8 +325,8 @@ export class AgentCore extends EventEmitter {
       logger.error('Chat error:', error);
       globalProgressReporter.completeTask(false);
 
-      // エラーメッセージをユーザーフレンドリーに変換
-      let errorMessage = 'エラーが発生しました';
+      // ErrorMessageをUserフレンドリーにConvert
+      let errorMessage = 'Erroroccurreddone';
       let canRetry = false;
 
       if (error instanceof Error) {
@@ -337,34 +337,34 @@ export class AgentCore extends EventEmitter {
           errorMsg.includes('unauthorized') ||
           errorMsg.includes('authentication')
         ) {
-          errorMessage = 'APIキーが無効または期限切れです。設定を確認してください。';
+          errorMessage = 'APIキーが無効または期限切れです。Please check settings。';
         } else if (
           errorMsg.includes('quota') ||
           errorMsg.includes('billing') ||
           errorMsg.includes('payment')
         ) {
           errorMessage =
-            'APIの利用枠または請求に問題があります。アカウント状況を確認してください。';
+            'APIのquotaまたはbillingにhas issues。account statusをCheckしてplease。';
         } else if (errorMsg.includes('timeout')) {
-          errorMessage = 'リクエストがタイムアウトしました。もう一度お試しください。';
+          errorMessage = 'Requestがtimed out。Try againplease。';
           canRetry = true;
         } else if (errorMsg.includes('rate limit') || errorMsg.includes('too many requests')) {
-          errorMessage = 'レート制限に達しました。しばらくお待ちください。';
+          errorMessage = 'Rate limitに達done。Please waitplease。';
           canRetry = true;
         } else if (errorMsg.includes('network') || errorMsg.includes('connection')) {
-          errorMessage = 'ネットワークエラーが発生しました。接続を確認してください。';
+          errorMessage = 'ネットワークErroroccurreddone。ConnectionをCheckしてplease。';
           canRetry = true;
         } else if (errorMsg.includes('model') && errorMsg.includes('not found')) {
-          errorMessage = `指定されたモデル "${this.currentModel}" が利用できません。`;
+          errorMessage = `specifiedModel "${this.currentModel}" が利用できnot。`;
         } else if (errorMsg.includes('input') || errorMsg.includes('長すぎ')) {
           errorMessage = error.message;
         } else {
-          errorMessage = `チャットエラー: ${error.message}`;
+          errorMessage = `ChatError: ${error.message}`;
           canRetry = true;
         }
       }
 
-      // エラー情報をより詳細に記録
+      // ErrorInfoをよりDetailsに記録
       const errorDetails = {
         originalError: error instanceof Error ? error.message : String(error),
         model: this.currentModel,
@@ -373,9 +373,9 @@ export class AgentCore extends EventEmitter {
         timestamp: new Date().toISOString(),
       };
 
-      logger.error('詳細なチャットエラー情報:', errorDetails);
+      logger.error('DetailsなChatErrorInfo:', errorDetails);
 
-      // エラーをラップして追加情報を含める
+      // Errorをラップして追加Infoを含める
       const wrappedError = new Error(errorMessage);
       (wrappedError as any).details = errorDetails;
       (wrappedError as any).canRetry = canRetry;
@@ -385,62 +385,62 @@ export class AgentCore extends EventEmitter {
   }
 
   /**
-   * タスク分解機能付きのチャット
-   * @param input ユーザーの入力
+   * TaskDecompose機能付きのChat
+   * @param input Userの入力
    * @returns AIの応答
    */
   async chatWithTaskDecomposition(input: string): Promise<string> {
     const perf = new PerformanceLogger('chatWithTaskDecomposition');
 
     try {
-      // 入力検証
+      // 入力Validation
       if (!input || input.trim().length === 0) {
-        throw new Error('入力が空です');
+        throw new Error('Input is empty');
       }
 
       const trimmedInput = input.trim();
       
-      // タスクの複雑度を判定
+      // Taskの複雑度を判定
       if (this.taskDecomposer.isComplexTask(trimmedInput)) {
-        logger.info('📝 タスクを分解しています...');
+        logger.info('📝 TaskをDecomposeしてing...');
         
-        // タスクを分解
+        // TaskをDecompose
         const subtasks = this.taskDecomposer.decompose(trimmedInput);
         
         if (subtasks.length > 1) {
-          // タスクが分解された場合の表示
-          logger.info('タスクが以下のサブタスクに分解されました:');
+          // TaskがDecomposeされた場合の表示
+          logger.info('Taskが以下のサブTaskにDecomposeさed:');
           subtasks.forEach((subtask, index) => {
             logger.info(`  ${index + 1}. ${subtask}`);
           });
 
-          // 並列実行可能かどうか判定
+          // ParallelExecute可能かどうか判定
           const canRunParallel = this.parallelMode && this.canRunSubtasksInParallel(subtasks);
           
           let results: string[];
           
           if (canRunParallel) {
-            logger.info('🚀 サブタスクを並列実行します');
+            logger.info('🚀 サブTaskをParallelExecuteします');
             results = await this.executeSubtasksInParallel(subtasks);
           } else {
-            logger.info('🔄 サブタスクを順次実行します');
+            logger.info('🔄 サブTaskをSequentialExecuteします');
             results = await this.executeSubtasksSequentially(subtasks);
           }
 
-          // 結果を統合
-          const finalResponse = `タスク分解実行結果:\n\n${results.join('\n\n')}\n\n📊 実行サマリー: ${subtasks.length}個のサブタスクのうち${results.filter(r => !r.includes('エラーが発生')).length}個が成功しました。`;
+          // ResultをIntegrate
+          const finalResponse = `TaskDecomposeExecuteResult:\n\n${results.join('\n\n')}\n\n📊 ExecuteSummary: ${subtasks.length}itemsのサブTaskof${results.filter(r => !r.includes('Erroroccurred')).length}itemsがSuccessdone。`;
           
           perf.end(`Task decomposition completed: ${subtasks.length} subtasks`);
           return finalResponse;
         }
       }
       
-      // 通常のチャット処理にフォールバック
+      // 通常のChatProcessingにFallback
       return await this.chat(trimmedInput);
     } catch (error) {
       logger.error('Task decomposition error:', error);
       
-      // エラーの場合は通常のチャットにフォールバック
+      // Errorの場合は通常のChatにFallback
       try {
         return await this.chat(input);
       } catch (fallbackError) {
@@ -464,7 +464,7 @@ export class AgentCore extends EventEmitter {
     } catch (error) {
       const errorResult: TaskResult = {
         success: false,
-        message: `タスク実行エラー: ${error instanceof Error ? error.message : String(error)}`,
+        message: `TaskExecuteError: ${error instanceof Error ? error.message : String(error)}`,
         error: error instanceof Error ? error : new Error(String(error)),
       };
 
@@ -491,10 +491,10 @@ export class AgentCore extends EventEmitter {
     const session = await this.memoryManager.loadSession(filename);
     this.history = session.history;
     
-    // ロード後にメモリ最適化
+    // ロード後にメモリOptimize
     await this.optimizeMemory();
     
-    logger.info(`セッションを読み込みました: ${filename}`);
+    logger.info(`セッションをLoadました: ${filename}`);
   }
 
   getHistory(): ChatMessage[] {
@@ -503,7 +503,7 @@ export class AgentCore extends EventEmitter {
 
   clearHistory(): void {
     this.history = [];
-    logger.info('履歴をクリアしました');
+    logger.info('Historyをcleareddone');
   }
 
   getCurrentModel(): string {
@@ -512,7 +512,7 @@ export class AgentCore extends EventEmitter {
 
   setModel(model: string): void {
     this.currentModel = model;
-    logger.info(`モデルを変更しました: ${model}`);
+    logger.info(`Modelchangeddone: ${model}`);
   }
 
   toggleParallelMode(): boolean {
@@ -551,20 +551,20 @@ export class AgentCore extends EventEmitter {
   }
 
   /**
-   * MCPManagerを設定してツールヘルパーを初期化
+   * MCPManagerをConfigしてToolヘルパーをInitialize
    */
   setupMCPTools(mcpManager: MCPManager): void {
     this.mcpToolsHelper = new MCPToolsHelper(mcpManager);
     this.mcpTaskPlanner = new MCPTaskPlanner(this.mcpToolsHelper);
-    logger.info('MCPツールが初期化されました');
+    logger.info('MCPToolがInitializeさed');
   }
 
   /**
-   * MCPツールを使用してタスクを実行
+   * MCPToolを使用してTaskをExecute
    */
   async executeTaskWithMCP(config: TaskConfig): Promise<TaskResult> {
     if (!this.mcpToolsHelper || !this.mcpTaskPlanner) {
-      logger.warn('MCPツールが初期化されていません。通常のタスク実行に切り替えます');
+      logger.warn('MCPToolがInitializenot initialized。通常のTaskExecuteswitching to');
       return this.executeTask(config);
     }
 
@@ -573,25 +573,25 @@ export class AgentCore extends EventEmitter {
     try {
       this.emit('task:start', config);
 
-      // タスク実行プランを作成
+      // TaskExecuteプランを作成
       const executionPlan = await this.mcpTaskPlanner.createExecutionPlan(config.description);
-      logger.info(`実行プラン作成完了: ${executionPlan.steps.length}ステップ`, executionPlan);
+      logger.info(`Executeプラン作成Completed: ${executionPlan.steps.length}Step`, executionPlan);
 
-      // 各ステップを実行
+      // 各StepをExecute
       const stepResults: unknown[] = [];
       for (const step of executionPlan.steps) {
         try {
-          logger.info(`ステップ実行中: ${step.description}`);
+          logger.info(`StepExecute中: ${step.description}`);
           const stepResult = await this.mcpToolsHelper.executeTool(step.tool, step.params);
           stepResults.push(stepResult);
-          logger.info(`ステップ完了: ${step.description}`);
+          logger.info(`StepCompleted: ${step.description}`);
         } catch (error) {
-          logger.error(`ステップエラー: ${step.description}`, error);
+          logger.error(`StepError: ${step.description}`, error);
           stepResults.push({ error: error instanceof Error ? error.message : String(error) });
         }
       }
 
-      // 結果をまとめて返す
+      // Resultをまとめて返す
       const result: TaskResult = {
         success: stepResults.every((r) => !(r && typeof r === 'object' && 'error' in r)),
         message: config.description,
@@ -609,7 +609,7 @@ export class AgentCore extends EventEmitter {
     } catch (error) {
       const errorResult: TaskResult = {
         success: false,
-        message: `MCPタスク実行エラー: ${error instanceof Error ? error.message : String(error)}`,
+        message: `MCPTaskExecuteError: ${error instanceof Error ? error.message : String(error)}`,
         error: error instanceof Error ? error : new Error(String(error)),
       };
 
@@ -621,7 +621,7 @@ export class AgentCore extends EventEmitter {
   }
 
   /**
-   * 結果をサマリー化
+   * ResultをSummary化
    */
   private summarizeResults(results: unknown[]): string {
     const successCount = results.filter(
@@ -629,11 +629,11 @@ export class AgentCore extends EventEmitter {
     ).length;
     const errorCount = results.length - successCount;
 
-    return `${results.length}ステップ中 ${successCount}成功、${errorCount}エラー`;
+    return `${results.length}Step中 ${successCount}Success、${errorCount}Error`;
   }
 
   /**
-   * 利用可能なMCPツールの一覧を取得
+   * 利用可能なMCPToolの一覧をGet
    */
   async getAvailableMCPTools(): Promise<{ name: string; description: string }[]> {
     if (!this.mcpToolsHelper) {
@@ -647,13 +647,13 @@ export class AgentCore extends EventEmitter {
         description: tool.description,
       }));
     } catch (error) {
-      logger.error('MCPツール一覧取得エラー:', error);
+      logger.error('MCPTool一覧GetError:', error);
       return [];
     }
   }
 
   /**
-   * MCPサーバーのステータスを取得
+   * MCPServerのステータスをGet
    */
   getMCPServerStatus(): Map<string, boolean> | null {
     if (!this.mcpToolsHelper) {
@@ -663,7 +663,7 @@ export class AgentCore extends EventEmitter {
   }
 
   /**
-   * ステップ実行結果の詳細サマリーを作成
+   * StepExecuteResultのDetailsSummaryを作成
    */
   private createDetailedSummary(
     stepResults: Array<{
@@ -681,46 +681,46 @@ export class AgentCore extends EventEmitter {
     const totalDuration = stepResults.reduce((sum, r) => sum + (r.duration || 0), 0);
 
     const summaryParts = [
-      `${totalSteps}ステップ中 ${successCount}成功、${errorCount}エラー`,
-      `実行時間: ${totalDuration}ms`,
+      `${totalSteps}Step中 ${successCount}Success、${errorCount}Error`,
+      `Execute時間: ${totalDuration}ms`,
     ];
 
-    // エラーがある場合はエラーの詳細を追加
+    // Errorがある場合はErrorのDetailsを追加
     if (errorCount > 0) {
       const failedSteps = stepResults
         .filter((r) => !r.success)
         .map((r) => `- ${r.description}: ${r.error}`)
         .join('\n');
-      summaryParts.push(`失敗したステップ:\n${failedSteps}`);
+      summaryParts.push(`FailedしたStep:\n${failedSteps}`);
     }
 
     return summaryParts.join('\n');
   }
 
   /**
-   * サブタスクが並列実行可能かを判定
+   * サブTaskがParallelExecute可能かを判定
    */
   private canRunSubtasksInParallel(subtasks: string[]): boolean {
-    // シンプルな並列実行判定ルール
+    // シンプルなParallelExecute判定ルール
     const conflictKeywords = [
       '同じファイル',
       '順番',
-      '順次',
-      '前のタスク',
+      'Sequential',
+      '前のTask',
       '依存',
-      '結果を使用',
-      '結果を利用',
+      'Resultを使用',
+      'Resultを利用',
       'の後で',
       'に基づいて',
     ];
 
-    // タスク間で競合するキーワードがあるかチェック
+    // Task間で競合するキーワードがあるかチェック
     const hasConflict = subtasks.some((subtask) =>
       conflictKeywords.some((keyword) => subtask.includes(keyword))
     );
 
     if (hasConflict) {
-      logger.debug('サブタスクに依存関係が検出されました。順次実行を選択します。');
+      logger.debug('サブTaskに依存関係が検出さed。SequentialExecuteを選択します。');
       return false;
     }
 
@@ -731,7 +731,7 @@ export class AgentCore extends EventEmitter {
       const hasFileConflict = files.some(file => usedFiles.has(file));
       
       if (hasFileConflict) {
-        logger.debug('サブタスク間でファイルの競合が検出されました。順次実行を選択します。');
+        logger.debug('サブTask間でファイルの競合が検出さed。SequentialExecuteを選択します。');
         return false;
       }
       
@@ -745,7 +745,7 @@ export class AgentCore extends EventEmitter {
   }
 
   /**
-   * サブタスクから関連ファイルを抽出
+   * サブTaskから関連ファイルを抽出
    */
   private extractFilesFromSubtask(subtask: string): string[] {
     const files: string[] = [];
@@ -769,60 +769,60 @@ export class AgentCore extends EventEmitter {
   }
 
   /**
-   * サブタスクを並列実行
+   * サブTaskをParallelExecute
    */
   private async executeSubtasksInParallel(subtasks: string[]): Promise<string[]> {
     const { globalProgressReporter } = await import('../ui/progress.js');
 
-    // サブタスクをParallelTaskに変換
+    // サブTaskをParallelTaskにConvert
     const parallelTasks = subtasks.map((subtask, index) => ({
       id: `subtask-${index}`,
       description: subtask,
       priority: 5,
       task: async () => {
-        logger.info(`🔄 サブタスク ${index + 1} 開始: ${subtask}`);
+        logger.info(`🔄 サブTask ${index + 1} Started: ${subtask}`);
         try {
           const result = await this.chat(subtask);
-          logger.info(`✅ サブタスク ${index + 1} 完了`);
-          return `サブタスク ${index + 1}: ${result}`;
+          logger.info(`✅ サブTask ${index + 1} Completed`);
+          return `サブTask ${index + 1}: ${result}`;
         } catch (error) {
-          const errorMsg = `サブタスク ${index + 1} でエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`;
+          const errorMsg = `サブTask ${index + 1} でErroroccurreddone: ${error instanceof Error ? error.message : String(error)}`;
           logger.error(`❌ ${errorMsg}`);
           return errorMsg;
         }
       },
     }));
 
-    // 並列実行
+    // ParallelExecute
     const parallelResults = await this.parallelExecutor.executeParallelWithDetails(
       parallelTasks,
       (completed, total, currentTask) => {
-        globalProgressReporter.showInfo(`並列実行進捗: ${completed}/${total} - ${currentTask}`);
+        globalProgressReporter.showInfo(`ParallelExecute進捗: ${completed}/${total} - ${currentTask}`);
       }
     );
 
-    // 結果を文字列配列に変換
+    // Resultをcharacters列配列にConvert
     return parallelResults.map(pr => 
-      pr.success ? pr.data as string : `エラー: ${pr.error?.message || 'Unknown error'}`
+      pr.success ? pr.data as string : `Error: ${pr.error?.message || 'Unknown error'}`
     );
   }
 
   /**
-   * サブタスクを順次実行
+   * サブTaskをSequentialExecute
    */
   private async executeSubtasksSequentially(subtasks: string[]): Promise<string[]> {
     const results: string[] = [];
     
     for (let i = 0; i < subtasks.length; i++) {
       const subtask = subtasks[i];
-      logger.info(`\n🔄 サブタスク ${i + 1}/${subtasks.length} を実行中: ${subtask}`);
+      logger.info(`\n🔄 サブTask ${i + 1}/${subtasks.length} をExecute中: ${subtask}`);
       
       try {
         const subtaskResult = await this.chat(subtask);
-        results.push(`サブタスク ${i + 1}: ${subtaskResult}`);
-        logger.info(`✅ サブタスク ${i + 1} 完了`);
+        results.push(`サブTask ${i + 1}: ${subtaskResult}`);
+        logger.info(`✅ サブTask ${i + 1} Completed`);
       } catch (error) {
-        const errorMsg = `サブタスク ${i + 1} でエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`;
+        const errorMsg = `サブTask ${i + 1} でErroroccurreddone: ${error instanceof Error ? error.message : String(error)}`;
         results.push(errorMsg);
         logger.error(`❌ ${errorMsg}`);
       }

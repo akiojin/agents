@@ -1,6 +1,6 @@
 /**
  * プログレス表示を管理するクラス
- * タスクの開始、進捗更新、完了を視覚的に表示します
+ * TaskのStarted、進捗Update、Completedを視覚的に表示します
  */
 export class ProgressReporter {
   private currentTask: string = '';
@@ -9,9 +9,9 @@ export class ProgressReporter {
   private currentSubtaskIndex: number = 0;
   
   /**
-   * タスクを開始する
-   * @param name タスク名
-   * @param subtasks サブタスクの配列（オプション）
+   * TaskをStartedする
+   * @param name Task名
+   * @param subtasks サブTaskの配列（Options）
    */
   startTask(name: string, subtasks?: string[]): void {
     this.currentTask = name;
@@ -21,13 +21,13 @@ export class ProgressReporter {
     
     console.log(`\n🔄 ${name}...`);
     if (subtasks && subtasks.length > 1) {
-      console.log(`  📝 ${subtasks.length}個のサブタスクがあります`);
+      console.log(`  📝 ${subtasks.length} subtasks`);
     }
   }
   
   /**
-   * サブタスクの進捗を更新する
-   * @param index 現在実行中のサブタスクのインデックス
+   * サブTaskの進捗をUpdateする
+   * @param index 現在Execute中のサブTaskのIndex
    */
   updateSubtask(index: number): void {
     if (this.subtasks.length > 0 && index < this.subtasks.length) {
@@ -37,8 +37,8 @@ export class ProgressReporter {
   }
   
   /**
-   * タスクを完了する
-   * @param success 成功したかどうか（デフォルト: true）
+   * TaskをCompletedする
+   * @param success Successしたかどうか（デフォルト: true）
    */
   completeTask(success: boolean = true): void {
     const duration = Date.now() - this.startTime;
@@ -47,33 +47,33 @@ export class ProgressReporter {
   }
   
   /**
-   * エラーメッセージを表示する
-   * @param error エラーメッセージ
+   * ErrorMessageを表示する
+   * @param error ErrorMessage
    */
   showError(error: string): void {
-    console.log(`❌ エラー: ${error}`);
+    console.log(`❌ Error: ${error}`);
   }
   
   /**
-   * 警告メッセージを表示する
-   * @param warning 警告メッセージ
+   * WarningMessageを表示する
+   * @param warning WarningMessage
    */
   showWarning(warning: string): void {
-    console.log(`⚠️ 警告: ${warning}`);
+    console.log(`⚠️ Warning: ${warning}`);
   }
   
   /**
-   * 情報メッセージを表示する
-   * @param info 情報メッセージ
+   * InfoMessageを表示する
+   * @param info InfoMessage
    */
   showInfo(info: string): void {
     console.log(`ℹ️ ${info}`);
   }
   
   /**
-   * 時間を人間が読みやすい形式にフォーマットする
-   * @param ms ミリ秒
-   * @returns フォーマットされた時間文字列
+   * 時間を人間が読みやすい形式にFormatする
+   * @param ms ミリseconds
+   * @returns Formatされた時間characters列
    */
   private formatDuration(ms: number): string {
     if (ms < 1000) return `${ms}ms`;
@@ -82,23 +82,23 @@ export class ProgressReporter {
   }
   
   /**
-   * 現在実行中のタスク名を取得する
-   * @returns 現在のタスク名
+   * 現在Execute中のTask名をGetする
+   * @returns 現在のTask名
    */
   getCurrentTask(): string {
     return this.currentTask;
   }
   
   /**
-   * 現在の実行時間を取得する
-   * @returns 実行時間（ミリ秒）
+   * 現在のExecute時間をGetする
+   * @returns Execute時間（ミリseconds）
    */
   getCurrentDuration(): number {
     return Date.now() - this.startTime;
   }
   
   /**
-   * サブタスクの進捗率を取得する
+   * サブTaskの進捗率をGetする
    * @returns 進捗率（0-1）
    */
   getProgress(): number {

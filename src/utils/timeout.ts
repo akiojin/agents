@@ -1,16 +1,16 @@
 /**
- * タイムアウト機能のユーティリティ
+ * Timeout機能のユーティリティ
  */
 
 /**
- * Promiseにタイムアウトを追加する
+ * PromiseにTimeoutを追加する
  */
 export function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number = 30000,
   timeoutMessage?: string,
 ): Promise<T> {
-  const defaultMessage = `リクエストが${timeoutMs / 1000}秒でタイムアウトしました`;
+  const defaultMessage = `Requestが${timeoutMs / 1000}secondsでtimed out`;
 
   return Promise.race([
     promise,
@@ -23,7 +23,7 @@ export function withTimeout<T>(
 }
 
 /**
- * AbortControllerを使用したタイムアウト
+ * AbortControllerを使用したTimeout
  */
 export function createTimeoutController(timeoutMs: number = 30000): {
   controller: AbortController;
@@ -38,19 +38,19 @@ export function createTimeoutController(timeoutMs: number = 30000): {
 }
 
 /**
- * タイムアウト設定のインターフェース
+ * TimeoutConfigのインターフェース
  */
 export interface TimeoutConfig {
-  /** タイムアウト時間（ミリ秒） */
+  /** Timeout時間（ミリseconds） */
   timeoutMs?: number;
-  /** タイムアウト時のエラーメッセージ */
+  /** Timeout時のErrorMessage */
   timeoutMessage?: string;
 }
 
 /**
- * デフォルトのタイムアウト設定
+ * デフォルトのTimeoutConfig
  */
 export const DEFAULT_TIMEOUT_CONFIG: Required<TimeoutConfig> = {
-  timeoutMs: 30000, // 30秒
-  timeoutMessage: 'リクエストが30秒でタイムアウトしました',
+  timeoutMs: 30000, // 30seconds
+  timeoutMessage: 'Requestが30secondsでtimed out',
 };

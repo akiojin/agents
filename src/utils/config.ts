@@ -5,7 +5,7 @@ import yaml from 'yaml';
 import { z } from 'zod';
 import type { Config } from '../config/types.js';
 
-// 設定スキーマの定義
+// Configスキーマの定義
 const ConfigSchema = z.object({
   provider: z.enum(['openai', 'anthropic', 'local-gptoss', 'local-lmstudio']),
   apiKey: z.string().optional(),
@@ -44,12 +44,12 @@ class ConfigLoader {
       this.configPath = customPath;
     }
 
-    // キャッシュされた設定を返す
+    // キャッシュされたConfigを返す
     if (this.config) {
       return this.config;
     }
 
-    // 設定ファイルが存在しない場合はデフォルト設定を返す
+    // Configファイルが存在しない場合はデフォルトConfigを返す
     if (!existsSync(this.configPath)) {
       return this.getDefaultConfig();
     }
@@ -60,7 +60,7 @@ class ConfigLoader {
       this.config = ConfigSchema.parse(parsed);
       return this.config;
     } catch (error) {
-      console.error('設定ファイルの読み込みに失敗しました:', error);
+      console.error('ConfigファイルのLoadにFaileddone:', error);
       return this.getDefaultConfig();
     }
   }
@@ -101,7 +101,7 @@ class ConfigLoader {
     };
   }
 
-  // 環境変数から設定を読み込む
+  // 環境変数からConfigを読み込む
   loadFromEnv(): Partial<Config> {
     const config: Partial<Config> = {};
 
@@ -140,7 +140,7 @@ class ConfigLoader {
     return config;
   }
 
-  // 設定をマージ
+  // Configをマージ
   merge(...configs: Partial<Config>[]): Config {
     const defaultConfig = this.getDefaultConfig();
     const envConfig = this.loadFromEnv();

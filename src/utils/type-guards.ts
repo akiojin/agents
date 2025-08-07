@@ -6,14 +6,14 @@
 import type { Config } from '../config/types.js';
 
 /**
- * エラーオブジェクトの型ガード
+ * Errorオブジェクトの型ガード
  */
 export function isError(error: unknown): error is Error {
   return error instanceof Error;
 }
 
 /**
- * HTTPステータスコードを持つエラーの型ガード
+ * HTTPステータスコードを持つErrorの型ガード
  */
 export function isHttpError(error: unknown): error is Error & { status: number } {
   return (
@@ -30,7 +30,7 @@ export function isDefined<T>(value: T | null | undefined): value is T {
 }
 
 /**
- * 文字列の型ガード
+ * characters列の型ガード
  */
 export function isString(value: unknown): value is string {
   return typeof value === 'string';
@@ -65,7 +65,7 @@ export function isArray(value: unknown): value is unknown[] {
 }
 
 /**
- * プロバイダー名の型ガード
+ * Provider名の型ガード
  */
 export function isValidProvider(value: unknown): value is Config['llm']['provider'] {
   return (
@@ -92,14 +92,14 @@ export function isValidEnvValue(value: string | undefined): value is string {
 }
 
 /**
- * APIキーのバリデーション（空でない文字列かチェック）
+ * APIキーのバリデーション（空でないcharacters列かチェック）
  */
 export function isValidApiKey(value: unknown): value is string {
   return isString(value) && value.trim().length > 0;
 }
 
 /**
- * URLのバリデーション（基本的なURLフォーマットチェック）
+ * URLのバリデーション（基本的なURLFormatチェック）
  */
 export function isValidUrl(value: unknown): value is string {
   if (!isString(value)) return false;
@@ -125,7 +125,7 @@ export function isValidPort(value: unknown): value is number {
 }
 
 /**
- * ファイルパスのバリデーション（空でない文字列かチェック）
+ * ファイルパスのバリデーション（空でないcharacters列かチェック）
  */
 export function isValidFilePath(value: unknown): value is string {
   return isString(value) && value.trim().length > 0;
@@ -146,21 +146,21 @@ export function isNonNegativeInteger(value: unknown): value is number {
 }
 
 /**
- * タイムアウト値のバリデーション（正の整数）
+ * Timeout値のバリデーション（正の整数）
  */
 export function isValidTimeout(value: unknown): value is number {
-  return isPositiveInteger(value) && value <= 300000; // 最大5分
+  return isPositiveInteger(value) && value <= 300000; // 最大5minutes
 }
 
 /**
- * 並列実行数のバリデーション
+ * ParallelExecute数のバリデーション
  */
 export function isValidMaxParallel(value: unknown): value is number {
-  return isPositiveInteger(value) && value <= 100; // 最大100並列
+  return isPositiveInteger(value) && value <= 100; // 最大100Parallel
 }
 
 /**
- * リトライ回数のバリデーション
+ * Retry回数のバリデーション
  */
 export function isValidMaxRetries(value: unknown): value is number {
   return isNonNegativeInteger(value) && value <= 10; // 最大10回

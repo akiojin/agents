@@ -1,40 +1,40 @@
 /**
- * タスク分解機能を提供するクラス
- * 複雑なタスクをより小さなサブタスクに分解する
+ * TaskDecompose機能を提供するクラス
+ * 複雑なTaskをより小さなサブTaskにDecomposeする
  */
 export class SimpleTaskDecomposer {
   /**
-   * タスクをサブタスクに分解する
-   * @param task 分解対象のタスク文字列
-   * @returns サブタスクの配列
+   * TaskをサブTaskにDecomposeする
+   * @param task Decompose対象のTaskcharacters列
+   * @returns サブTaskの配列
    */
   decompose(task: string): string[] {
-    // シンプルなルールベースの分解
+    // シンプルなルールベースのDecompose
     const subtasks: string[] = [];
     
-    // "and" で分割
+    // "and" でminutes割
     if (task.includes(' and ')) {
       return task.split(' and ').map(t => t.trim());
     }
     
-    // 「、」で分割（日本語）
+    // 「、」でminutes割（日本語）
     if (task.includes('、')) {
       return task.split('、').map(t => t.trim());  
     }
     
-    // セミコロンで分割
+    // セミコロンでminutes割
     if (task.includes(';')) {
       return task.split(';').map(t => t.trim());
     }
     
-    // それ以外は分解しない
+    // それ以外はDecomposeしない
     return [task];
   }
   
   /**
-   * タスクの複雑度を判定する
-   * @param task 判定対象のタスク文字列
-   * @returns 複雑なタスクの場合true
+   * Taskの複雑度を判定する
+   * @param task 判定対象のTaskcharacters列
+   * @returns 複雑なTaskの場合true
    */
   isComplexTask(task: string): boolean {
     return task.includes(' and ') || 
@@ -44,8 +44,8 @@ export class SimpleTaskDecomposer {
   }
   
   /**
-   * タスクの優先度を評価する（将来拡張用）
-   * @param task タスク文字列
+   * Taskの優先度を評価する（将来拡張用）
+   * @param task Taskcharacters列
    * @returns 優先度（1-5、5が最高）
    */
   getPriority(task: string): number {
@@ -65,8 +65,8 @@ export class SimpleTaskDecomposer {
   }
   
   /**
-   * サブタスク間の依存関係を推定する（基本実装）
-   * @param subtasks サブタスクの配列
+   * サブTask間の依存関係を推定する（基本実装）
+   * @param subtasks サブTaskの配列
    * @returns 依存関係のマップ
    */
   analyzeDependencies(subtasks: string[]): Map<number, number[]> {
@@ -78,9 +78,9 @@ export class SimpleTaskDecomposer {
       
       // 順序を示すキーワードがあるかチェック
       if (task.includes('まず') || task.includes('first')) {
-        // 他のタスクより優先
+        // 他のTaskより優先
       } else if (task.includes('次に') || task.includes('then') || task.includes('その後')) {
-        // 前のタスクに依存
+        // 前のTaskに依存
         if (index > 0) {
           deps.push(index - 1);
         }
@@ -93,9 +93,9 @@ export class SimpleTaskDecomposer {
   }
   
   /**
-   * サブタスクの実行順序を決定する
-   * @param subtasks サブタスクの配列
-   * @returns 実行順序に並び替えられたインデックス配列
+   * サブTaskのExecute順序を決定する
+   * @param subtasks サブTaskの配列
+   * @returns Execute順序に並び替えられたIndex配列
    */
   getExecutionOrder(subtasks: string[]): number[] {
     const dependencies = this.analyzeDependencies(subtasks);
@@ -103,7 +103,7 @@ export class SimpleTaskDecomposer {
     const visited = new Set<number>();
     const visiting = new Set<number>();
     
-    // トポロジカルソートを実行
+    // トポロジカルソートをExecute
     const visit = (index: number) => {
       if (visiting.has(index)) {
         // 循環依存が検出された場合、元の順序を維持
@@ -126,7 +126,7 @@ export class SimpleTaskDecomposer {
       order.push(index);
     };
     
-    // 全てのタスクを訪問
+    // 全てのTaskを訪問
     for (let i = 0; i < subtasks.length; i++) {
       if (!visited.has(i)) {
         visit(i);

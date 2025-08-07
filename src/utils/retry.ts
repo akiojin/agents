@@ -1,15 +1,15 @@
 import { logger } from './logger.js';
 
 export interface RetryOptions {
-  /** 最大リトライ回数（デフォルト: 3） */
+  /** 最大Retry回数（デフォルト: 3） */
   maxRetries?: number;
-  /** リトライ間隔（ミリ秒、デフォルト: 1000） */
+  /** Retry間隔（ミリseconds、デフォルト: 1000） */
   delay?: number;
   /** 指数バックオフを使用するか（デフォルト: false） */
   exponentialBackoff?: boolean;
-  /** タイムアウト（ミリ秒、デフォルト: 30000） */
+  /** Timeout（ミリseconds、デフォルト: 30000） */
   timeout?: number;
-  /** リトライ可能なエラーかを判定する関数 */
+  /** Retry可能なErrorかを判定する関数 */
   shouldRetry?: (error: Error) => boolean;
 }
 
@@ -22,7 +22,7 @@ export interface RetryResult<T> {
 }
 
 /**
- * デフォルトのリトライ可能エラー判定
+ * デフォルトのRetry可能Error判定
  */
 const defaultShouldRetry = (error: Error): boolean => {
   const message = error.message.toLowerCase();
@@ -38,10 +38,10 @@ const defaultShouldRetry = (error: Error): boolean => {
 };
 
 /**
- * 関数を指定された条件でリトライ実行する
- * @param fn 実行する関数
- * @param options リトライオプション
- * @returns リトライ結果
+ * 関数をspecified条itemsでRetryExecuteする
+ * @param fn Executeする関数
+ * @param options RetryOptions
+ * @returns RetryResult
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
@@ -63,10 +63,10 @@ export async function withRetry<T>(
     attemptCount++;
 
     try {
-      // タイムアウト付きで関数実行
+      // Timeout付きで関数Execute
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error(`処理がタイムアウトしました（${timeout}ms）`));
+          reject(new Error(`Processingがtimed out（${timeout}ms）`));
         }, timeout);
       });
 
@@ -81,22 +81,22 @@ export async function withRetry<T>(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
-      logger.warn(`リトライ実行 ${attemptCount}/${maxRetries}:`, {
+      logger.warn(`RetryExecute ${attemptCount}/${maxRetries}:`, {
         error: lastError.message,
         attemptCount,
       });
 
-      // 最後の試行でない場合、リトライ可能かチェック
+      // 最後の試行でない場合、Retry可能かチェック
       if (attemptCount < maxRetries) {
         if (!shouldRetry(lastError)) {
-          logger.debug('リトライ不可能なエラーのため中断します:', lastError.message);
+          logger.debug('Retry不可能なErrorのため中断します:', lastError.message);
           break;
         }
 
         // 遅延時間を計算（指数バックオフの場合）
         const currentDelay = exponentialBackoff ? delay * Math.pow(2, attemptCount - 1) : delay;
 
-        logger.debug(`${currentDelay}ms 待機後にリトライします...`);
+        logger.debug(`${currentDelay}ms 待機後にRetryします...`);
         await sleep(currentDelay);
       }
     }
@@ -104,21 +104,21 @@ export async function withRetry<T>(
 
   return {
     success: false,
-    error: lastError || new Error('不明なエラー'),
+    error: lastError || new Error('不明なError'),
     attemptCount,
     totalTime: Date.now() - startTime,
   };
 }
 
 /**
- * 指定された時間待機する
+ * specified時間待機する
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * リトライ付きでPromiseを実行するユーティリティクラス
+ * Retry付きでPromiseをExecuteするユーティリティクラス
  */
 export class RetryHandler {
   private defaultOptions: RetryOptions;
@@ -135,21 +135,21 @@ export class RetryHandler {
   }
 
   /**
-   * 関数をデフォルト設定でリトライ実行
+   * 関数をデフォルトConfigでRetryExecute
    */
   async execute<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<RetryResult<T>> {
     return withRetry(fn, { ...this.defaultOptions, ...options });
   }
 
   /**
-   * デフォルトオプションを更新
+   * デフォルトOptionsをUpdate
    */
   setDefaultOptions(options: Partial<RetryOptions>): void {
     this.defaultOptions = { ...this.defaultOptions, ...options };
   }
 
   /**
-   * デフォルトオプションを取得
+   * デフォルトOptionsをGet
    */
   getDefaultOptions(): RetryOptions {
     return { ...this.defaultOptions };

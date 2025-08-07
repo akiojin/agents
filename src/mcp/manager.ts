@@ -25,19 +25,19 @@ export class MCPManager extends EventEmitter {
     super();
     this.config = config;
 
-    // MCP設定を抽出（統一設定または従来設定から）
+    // MCPConfigを抽出（統一Configまたは従来Configから）
     this.mcpConfig = {
-      timeout: 30000, // デフォルト30秒
+      timeout: 30000, // デフォルト30seconds
       maxRetries: 2, // デフォルト2回
       enabled: config.useMCP ?? true,
     };
   }
 
   /**
-   * 新しい統一設定システムを使用するコンストラクタ
+   * 新しい統一Configシステムを使用するコンストラクタ
    */
   static fromUnifiedConfig(config: import('../config/types.js').Config): MCPManager {
-    // 統一設定を従来設定に変換
+    // 統一Configを従来ConfigにConvert
     const legacyConfig: import('../types/config.js').Config = {
       provider: config.llm.provider,
       apiKey: config.llm.apiKey,
@@ -54,7 +54,7 @@ export class MCPManager extends EventEmitter {
 
     const manager = new MCPManager(legacyConfig);
 
-    // 統一設定からMCP設定を設定
+    // 統一ConfigからMCPConfigをConfig
     manager.mcpConfig = {
       timeout: config.mcp.timeout,
       maxRetries: config.mcp.maxRetries,
@@ -66,23 +66,23 @@ export class MCPManager extends EventEmitter {
 
   async initialize(): Promise<void> {
     if (!this.mcpConfig.enabled || !this.config.mcpServers) {
-      logger.info('MCPは無効化されています');
+      logger.info('MCPは無効化されてing');
       return;
     }
 
-    logger.info('MCPサーバーを初期化中...');
+    logger.info('MCPServerをInitialize中...');
 
     for (const serverConfig of this.config.mcpServers) {
       try {
         await this.startServer(serverConfig);
       } catch (error) {
-        logger.error(`MCPサーバーの起動に失敗: ${serverConfig.name}`, error);
+        logger.error(`MCPServerの起動にFailed: ${serverConfig.name}`, error);
       }
     }
   }
 
   private async startServer(serverConfig: MCPServerConfig): Promise<void> {
-    logger.info(`MCPサーバーを起動中: ${serverConfig.name}`);
+    logger.info(`MCPServerを起動中: ${serverConfig.name}`);
 
     // プロセスを起動
     const childProcess = spawn(serverConfig.command, serverConfig.args || [], {
@@ -92,7 +92,7 @@ export class MCPManager extends EventEmitter {
 
     this.processes.set(serverConfig.name, childProcess);
 
-    // MCPクライアントを作成（統一設定を使用）
+    // MCPクライアントを作成（統一Configを使用）
     const client = new MCPClient(serverConfig.name, {
       timeout: this.mcpConfig.timeout,
       maxRetries: this.mcpConfig.maxRetries,
@@ -101,13 +101,13 @@ export class MCPManager extends EventEmitter {
     await client.connect(childProcess);
     this.servers.set(serverConfig.name, client);
 
-    // ツールを取得 - forEach + asyncの問題を修正：for...ofループを使用
+    // ToolをGet - forEach + asyncの問題を修正：for...ofループを使用
     const tools = await client.listTools();
     for (const tool of tools) {
       this.tools.set(`${serverConfig.name}:${tool.name}`, tool);
     }
 
-    logger.info(`MCPサーバーが起動しました: ${serverConfig.name} (${tools.length}個のツール)`);
+    logger.info(`MCPServerが起動done: ${serverConfig.name} (${tools.length}itemsのTool)`);
   }
 
   async listTools(): Promise<Tool[]> {
@@ -121,7 +121,7 @@ export class MCPManager extends EventEmitter {
 
     const client = this.servers.get(serverName || '');
     if (!client) {
-      throw new Error(`MCPサーバーが見つかりません: ${serverName || 'デフォルト'}`);
+      throw new Error(`MCPServernot found: ${serverName || 'デフォルト'}`);
     }
 
     return client.invokeTool(name || '', params);
@@ -130,30 +130,30 @@ export class MCPManager extends EventEmitter {
   private getDefaultServer(): string {
     const serverNames = Array.from(this.servers.keys());
     if (serverNames.length === 0) {
-      throw new Error('利用可能なMCPサーバーがありません');
+      throw new Error('利用可能なMCPServerがありnot');
     }
     return serverNames[0] || '';
   }
 
   async shutdown(): Promise<void> {
-    logger.info('MCPサーバーをシャットダウン中...');
+    logger.info('MCPServerをシャットダウン中...');
 
-    // すべてのクライアントを切断
+    // すべてのクライアントをDisconnect
     for (const [name, client] of this.servers) {
       try {
         await client.disconnect();
       } catch (error) {
-        logger.error(`クライアントの切断に失敗: ${name}`, error);
+        logger.error(`クライアントのDisconnectにFailed: ${name}`, error);
       }
     }
 
-    // すべてのプロセスを終了
+    // すべてのプロセスをExit
     for (const [name, process] of this.processes) {
       try {
         process.kill('SIGTERM');
-        logger.info(`プロセスを終了しました: ${name}`);
+        logger.info(`プロセスをExitdone: ${name}`);
       } catch (error) {
-        logger.error(`プロセスの終了に失敗: ${name}`, error);
+        logger.error(`プロセスのExitにFailed: ${name}`, error);
       }
     }
 
@@ -165,10 +165,10 @@ export class MCPManager extends EventEmitter {
   async restartServer(serverName: string): Promise<void> {
     const serverConfig = this.config.mcpServers?.find((s) => s.name === serverName);
     if (!serverConfig) {
-      throw new Error(`サーバー設定が見つかりません: ${serverName}`);
+      throw new Error(`ServerConfignot found: ${serverName}`);
     }
 
-    // 既存のサーバーを停止
+    // 既存のServerを停止
     const client = this.servers.get(serverName);
     if (client) {
       await client.disconnect();
@@ -181,7 +181,7 @@ export class MCPManager extends EventEmitter {
       this.processes.delete(serverName);
     }
 
-    // サーバーを再起動
+    // Serverを再起動
     await this.startServer(serverConfig);
   }
 
@@ -194,17 +194,17 @@ export class MCPManager extends EventEmitter {
   }
 
   /**
-   * MCP設定の取得
+   * MCPConfigのGet
    */
   getMCPConfig() {
     return { ...this.mcpConfig };
   }
 
   /**
-   * MCP設定の更新
+   * MCPConfigのUpdate
    */
   updateMCPConfig(newConfig: Partial<typeof this.mcpConfig>): void {
     this.mcpConfig = { ...this.mcpConfig, ...newConfig };
-    logger.info('MCP設定を更新しました:', this.mcpConfig);
+    logger.info('MCPConfigをUpdatedone:', this.mcpConfig);
   }
 }

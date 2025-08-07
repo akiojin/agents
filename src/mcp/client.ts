@@ -23,55 +23,55 @@ export class MCPClient extends EventEmitter {
   constructor(name: string, options: { timeout?: number; maxRetries?: number } = {}) {
     super();
     this.name = name;
-    this.timeout = options.timeout || 30000; // デフォルト30秒
-    this.maxRetries = options.maxRetries || 2; // デフォルト2回リトライ
+    this.timeout = options.timeout || 30000; // デフォルト30seconds
+    this.maxRetries = options.maxRetries || 2; // デフォルト2回Retry
   }
 
   async connect(process: ChildProcess): Promise<void> {
     try {
       this.process = process;
 
-      // stdout からのデータを処理
+      // stdout からのデータをProcessing
       if (process.stdout) {
         process.stdout.on('data', (data) => {
           try {
             this.handleData(data.toString());
           } catch (error) {
-            logger.error(`データ処理エラー [${this.name}]:`, error);
-            // データ処理エラーでもプロセス全体を終了させない
+            logger.error(`データProcessingError [${this.name}]:`, error);
+            // データProcessingErrorでもプロセス全体をExitさせない
           }
         });
       }
 
-      // stderr からのエラーを処理
+      // stderr からのErrorをProcessing
       if (process.stderr) {
         process.stderr.on('data', (data) => {
-          logger.error(`MCPサーバーエラー [${this.name}]:`, data.toString());
+          logger.error(`MCPServerError [${this.name}]:`, data.toString());
         });
       }
 
-      // プロセス終了を処理
+      // プロセスExitをProcessing
       process.on('exit', (code) => {
-        logger.info(`MCPサーバー終了 [${this.name}]: code=${code}`);
+        logger.info(`MCPServerExit [${this.name}]: code=${code}`);
         this.connected = false;
         this.emit('disconnected');
       });
 
-      // エラーイベントをキャッチ
+      // Errorイベントをキャッチ
       process.on('error', (error) => {
-        logger.error(`MCPプロセスエラー [${this.name}]:`, error);
+        logger.error(`MCPプロセスError [${this.name}]:`, error);
         this.connected = false;
         this.emit('error', error);
       });
 
-      // 初期化リクエストを送信
+      // InitializeRequestをSend
       await this.initialize();
       this.connected = true;
     } catch (error) {
-      logger.error(`MCP接続エラー [${this.name}]:`, error);
+      logger.error(`MCPConnectionError [${this.name}]:`, error);
       this.connected = false;
-      // エラーをラップして詳細情報を追加
-      throw new Error(`MCPサーバー [${this.name}] への接続に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+      // ErrorをラップしてDetailsInfoを追加
+      throw new Error(`MCPServer [${this.name}] Failed to connect to: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -85,17 +85,17 @@ export class MCPClient extends EventEmitter {
         },
       });
 
-      logger.info(`MCPサーバー初期化完了 [${this.name}]:`, response);
+      logger.info(`MCPServerInitializeCompleted [${this.name}]:`, response);
     } catch (error) {
-      logger.error(`MCP初期化エラー [${this.name}]:`, error);
-      // 初期化エラーは接続エラーとして扱う
-      throw new Error(`MCPサーバー [${this.name}] の初期化に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`MCPInitializeError [${this.name}]:`, error);
+      // InitializeErrorはConnectionErrorとして扱う
+      throw new Error(`MCPServer [${this.name}] のInitializeにFaileddone: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   private handleData(data: string): void {
     try {
-      // 改行で分割して各JSONを処理
+      // 改行でminutes割して各JSONをProcessing
       const lines = data.split('\n').filter((line) => line.trim());
 
       for (const line of lines) {
@@ -104,7 +104,7 @@ export class MCPClient extends EventEmitter {
           const message = jsonrpc.parseObject(parsed);
 
           if (message.type === 'success' || message.type === 'error') {
-            // レスポンスの処理
+            // ResponseのProcessing
             const id = message.payload.id;
             const pending = id !== null ? this.pendingRequests.get(id) : undefined;
 
@@ -114,42 +114,42 @@ export class MCPClient extends EventEmitter {
               } else {
                 const errorMessage = message.payload.error?.message || 'Unknown error';
                 const errorCode = message.payload.error?.code || -1;
-                logger.error(`MCPエラーレスポンス [${this.name}]:`, { errorMessage, errorCode });
+                logger.error(`MCPErrorResponse [${this.name}]:`, { errorMessage, errorCode });
                 pending.reject(new Error(`MCP Error (${errorCode}): ${errorMessage}`));
               }
               if (id !== null) this.pendingRequests.delete(id);
             } else {
-              logger.warn(`未処理のレスポンス [${this.name}]:`, message);
+              logger.warn(`未ProcessingのResponse [${this.name}]:`, message);
             }
           } else if (message.type === 'notification') {
-            // 通知の処理
+            // 通知のProcessing
             try {
               this.emit('notification', message.payload);
             } catch (error) {
-              logger.error(`通知処理エラー [${this.name}]:`, error);
+              logger.error(`通知ProcessingError [${this.name}]:`, error);
             }
           } else {
-            logger.warn(`不明なメッセージタイプ [${this.name}]:`, message.type);
+            logger.warn(`不明なMessageタイプ [${this.name}]:`, message.type);
           }
         } catch (parseError) {
-          logger.debug(`JSON解析エラー [${this.name}] (行: "${line.substring(0, 100)}..."):`, parseError);
-          // 個別の行の解析エラーは続行可能
+          logger.debug(`JSON解析Error [${this.name}] (行: "${line.substring(0, 100)}..."):`, parseError);
+          // items別の行の解析Errorは続行可能
         }
       }
     } catch (error) {
-      logger.error(`データ処理エラー [${this.name}]:`, error);
-      // データ処理エラーは接続を切断しない
+      logger.error(`データProcessingError [${this.name}]:`, error);
+      // データProcessingErrorはConnectionをDisconnectしない
     }
   }
 
   private async sendRequest(method: string, params?: unknown): Promise<unknown> {
-    // リトライ付きでリクエスト送信
+    // Retry付きでRequestSend
     const result = await withRetry(
       async () => {
         return new Promise((resolve, reject) => {
           try {
             if (!this.process || !this.process.stdin) {
-              reject(new Error(`MCPサーバー [${this.name}] が接続されていません`));
+              reject(new Error(`MCPServer [${this.name}] がConnectionnot initialized`));
               return;
             }
 
@@ -157,30 +157,30 @@ export class MCPClient extends EventEmitter {
             const request = jsonrpc.request(id, method, params as any);
             const json = JSON.stringify(request) + '\n';
 
-            // リクエストを記録
+            // Requestを記録
             this.pendingRequests.set(id, { resolve, reject });
 
-            // タイムアウト設定（設定値を使用）
+            // TimeoutConfig（Config値を使用）
             const timeout = setTimeout(() => {
               if (id !== null) this.pendingRequests.delete(id);
-              reject(new Error(`リクエストタイムアウト [${this.name}/${method}]: ${this.timeout}ミリ秒を超えました`));
+              reject(new Error(`RequestTimeout [${this.name}/${method}]: ${this.timeout}ミリsecondsを超えました`));
             }, this.timeout);
 
-            // リクエスト送信
+            // RequestSend
             this.process!.stdin!.write(json, (error) => {
               if (error) {
                 clearTimeout(timeout);
                 if (id !== null) this.pendingRequests.delete(id);
-                logger.error(`リクエスト送信エラー [${this.name}/${method}]:`, error);
-                reject(new Error(`リクエスト送信に失敗しました [${this.name}/${method}]: ${error.message}`));
+                logger.error(`RequestSendError [${this.name}/${method}]:`, error);
+                reject(new Error(`RequestSendにFaileddone [${this.name}/${method}]: ${error.message}`));
                 return;
               }
 
-              // リクエスト送信成功時のデバッグログ
-              logger.debug(`リクエスト送信完了 [${this.name}/${method}]`);
+              // RequestSendSuccess時のデバッグログ
+              logger.debug(`RequestSendCompleted [${this.name}/${method}]`);
             });
 
-            // レスポンスが返ってきたらタイムアウトをクリア
+            // Responseが返ってきたらTimeoutをcleared
             const originalResolve = resolve;
             const originalReject = reject;
             
@@ -196,8 +196,8 @@ export class MCPClient extends EventEmitter {
             });
 
           } catch (error) {
-            logger.error(`リクエスト準備エラー [${this.name}/${method}]:`, error);
-            reject(new Error(`リクエストの準備に失敗しました [${this.name}/${method}]: ${error instanceof Error ? error.message : String(error)}`));
+            logger.error(`Request準備Error [${this.name}/${method}]:`, error);
+            reject(new Error(`Requestの準備にFaileddone [${this.name}/${method}]: ${error instanceof Error ? error.message : String(error)}`));
           }
         });
       },
@@ -211,7 +211,7 @@ export class MCPClient extends EventEmitter {
     );
 
     if (!result.success) {
-      logger.error(`MCPリクエストエラー after retries [${this.name}/${method}]:`, result.error);
+      logger.error(`MCPRequestError after retries [${this.name}/${method}]:`, result.error);
       throw result.error!;
     }
 
@@ -220,37 +220,37 @@ export class MCPClient extends EventEmitter {
 
   async listTools(): Promise<Tool[]> {
     try {
-      // 接続確認
+      // ConnectionCheck
       if (!this.connected) {
-        logger.warn(`MCPサーバー [${this.name}] が未接続です`);
+        logger.warn(`MCPServer [${this.name}] が未Connectionです`);
         return [];
       }
 
       const response = (await this.sendRequest('tools/list')) as { tools: Tool[] };
       
-      // レスポンス検証
+      // ResponseValidation
       if (!response || typeof response !== 'object') {
-        logger.warn(`無効なレスポンス形式 [${this.name}]:`, response);
+        logger.warn(`無効なResponse形式 [${this.name}]:`, response);
         return [];
       }
 
       const tools = response.tools || [];
-      logger.debug(`ツールリスト取得完了 [${this.name}]: ${tools.length}個のツール`);
+      logger.debug(`ToolリストGetCompleted [${this.name}]: ${tools.length}itemsのTool`);
       
       return tools;
     } catch (error) {
-      logger.error(`ツールリスト取得エラー [${this.name}]:`, error);
+      logger.error(`ToolリストGetError [${this.name}]:`, error);
       
-      // エラーの詳細化
+      // ErrorのDetails化
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
-          logger.warn(`ツールリスト取得がタイムアウトしました [${this.name}]`);
+          logger.warn(`ToolリストGetがtimed out [${this.name}]`);
         } else if (error.message.includes('not found')) {
-          logger.warn(`ツールリストエンドポイントが見つかりません [${this.name}]`);
+          logger.warn(`Toolリストエンドポイントnot found [${this.name}]`);
         }
       }
 
-      // エラー時は空配列を返してアプリケーションを継続
+      // Error時は空配列を返してアプリケーションを継続
       return [];
     }
   }
@@ -258,53 +258,53 @@ export class MCPClient extends EventEmitter {
   async invokeTool(name: string, params?: Record<string, unknown>): Promise<unknown> {
     const { globalProgressReporter } = await import('../ui/progress.js');
     
-    // 基本的な検証
+    // 基本的なValidation
     if (!name || name.trim().length === 0) {
-      globalProgressReporter.showError('ツール名が指定されていません');
-      throw new Error('ツール名が指定されていません');
+      globalProgressReporter.showError('Tool名が指定not initialized');
+      throw new Error('Tool名が指定not initialized');
     }
 
-    // 接続確認
+    // ConnectionCheck
     if (!this.connected) {
-      globalProgressReporter.showError(`MCPサーバー [${this.name}] が接続されていません`);
-      throw new Error(`MCPサーバー [${this.name}] が接続されていません`);
+      globalProgressReporter.showError(`MCPServer [${this.name}] がConnectionnot initialized`);
+      throw new Error(`MCPServer [${this.name}] がConnectionnot initialized`);
     }
 
-    // プロセス状態確認
+    // プロセスStatusCheck
     if (!this.process || this.process.killed) {
-      globalProgressReporter.showError(`MCPサーバー [${this.name}] のプロセスが無効です`);
-      throw new Error(`MCPサーバー [${this.name}] のプロセスが無効です`);
+      globalProgressReporter.showError(`MCPServer [${this.name}] のプロセスが無効です`);
+      throw new Error(`MCPServer [${this.name}] のプロセスが無効です`);
     }
 
-    // プログレス表示開始
+    // プログレス表示Started
     globalProgressReporter.startTask(
-      `MCPツール実行: ${name}`,
-      ['接続確認', 'ツール実行', 'レスポンス検証']
+      `MCPToolExecute: ${name}`,
+      ['ConnectionCheck', 'ToolExecute', 'ResponseValidation']
     );
 
-    logger.debug(`ツール実行開始 [${this.name}/${name}]:`, { params });
+    logger.debug(`ToolExecuteStarted [${this.name}/${name}]:`, { params });
     
     try {
-      // 接続確認完了
+      // ConnectionCheckCompleted
       globalProgressReporter.updateSubtask(0);
       
-      // ツール実行
+      // ToolExecute
       globalProgressReporter.updateSubtask(1);
-      globalProgressReporter.showInfo(`${this.name}サーバーで${name}ツールを実行中...`);
+      globalProgressReporter.showInfo(`${this.name}Serverで${name}ToolをExecute中...`);
 
-      // リトライ付きでツール実行
+      // Retry付きでToolExecute
       const result = await withRetry(
         async () => {
-          // ツール実行リクエスト
+          // ToolExecuteRequest
           const result = await this.sendRequest('tools/call', {
             name: name.trim(),
             arguments: params || {},
           });
 
-          // 結果検証
+          // ResultValidation
           if (result === undefined || result === null) {
-            logger.warn(`ツール実行結果が空です [${this.name}/${name}]`);
-            return { error: false, message: 'ツール実行は成功しましたが、結果は空でした', result: null };
+            logger.warn(`ToolExecuteResultが空です [${this.name}/${name}]`);
+            return { error: false, message: 'ToolExecuteはSuccessdoneが、Resultは空でした', result: null };
           }
 
           return result;
@@ -318,38 +318,38 @@ export class MCPClient extends EventEmitter {
         }
       );
 
-      // レスポンス検証
+      // ResponseValidation
       globalProgressReporter.updateSubtask(2);
 
       if (!result.success) {
-        logger.error(`ツール実行エラー after retries [${this.name}/${name}]:`, result.error);
+        logger.error(`ToolExecuteError after retries [${this.name}/${name}]:`, result.error);
         globalProgressReporter.completeTask(false);
 
-        // エラーの詳細化とフォールバック
-        let errorMessage = 'ツール実行中にエラーが発生しました';
+        // ErrorのDetails化とFallback
+        let errorMessage = 'ToolExecute中にErroroccurreddone';
         let shouldRetry = false;
         const error = result.error!;
 
         if (error instanceof Error) {
           if (error.message.includes('timeout')) {
-            errorMessage = `ツール実行タイムアウト: ${name} (${this.timeout}ミリ秒を超えました)`;
+            errorMessage = `ToolExecuteTimeout: ${name} (${this.timeout}ミリsecondsを超えました)`;
           } else if (error.message.includes('not found') || error.message.includes('unknown')) {
-            errorMessage = `ツールが見つかりません: ${name}`;
+            errorMessage = `Toolnot found: ${name}`;
           } else if (error.message.includes('permission') || error.message.includes('unauthorized')) {
-            errorMessage = `ツール実行権限がありません: ${name}`;
+            errorMessage = `ToolExecute権限がありnot: ${name}`;
           } else if (error.message.includes('connection') || error.message.includes('disconnect')) {
-            errorMessage = `接続エラー: MCPサーバー [${this.name}] との通信に失敗しました`;
+            errorMessage = `ConnectionError: MCPServer [${this.name}] との通信にFaileddone`;
             shouldRetry = true;
           } else if (error.message.includes('invalid') || error.message.includes('argument')) {
-            errorMessage = `無効な引数: ${name}`;
+            errorMessage = `無効なArguments: ${name}`;
           } else {
-            errorMessage = `ツール実行エラー: ${error.message}`;
+            errorMessage = `ToolExecuteError: ${error.message}`;
           }
         }
 
         globalProgressReporter.showError(errorMessage);
 
-        // フォールバック結果を返す（アプリケーションクラッシュを防止）
+        // FallbackResultを返す（アプリケーションクラッシュを防止）
         const fallbackResult = {
           error: true,
           message: errorMessage,
@@ -362,7 +362,7 @@ export class MCPClient extends EventEmitter {
           totalTime: result.totalTime,
         };
 
-        // 重大なエラーの場合のみ例外を投げる、それ以外はフォールバック結果を返す
+        // 重大なErrorの場合のみ例外を投げる、それ以外はFallbackResultを返す
         if (error instanceof Error && error.message.includes('Critical')) {
           throw error;
         }
@@ -371,9 +371,9 @@ export class MCPClient extends EventEmitter {
       }
 
       globalProgressReporter.completeTask(true);
-      globalProgressReporter.showInfo(`ツール実行完了: ${name} (試行回数: ${result.attemptCount}, 所要時間: ${result.totalTime}ms)`);
+      globalProgressReporter.showInfo(`ToolExecuteCompleted: ${name} (試行回数: ${result.attemptCount}, 所要時間: ${result.totalTime}ms)`);
       
-      logger.debug(`ツール実行完了 [${this.name}/${name}]`, {
+      logger.debug(`ToolExecuteCompleted [${this.name}/${name}]`, {
         attemptCount: result.attemptCount,
         totalTime: result.totalTime,
       });
@@ -390,42 +390,42 @@ export class MCPClient extends EventEmitter {
     try {
       if (this.process) {
         try {
-          // 保留中のリクエストをクリーンアップ
+          // 保留中のRequestをCleanup
           const pendingCount = this.pendingRequests.size;
           if (pendingCount > 0) {
-            logger.info(`保留中のリクエストをキャンセル中 [${this.name}]: ${pendingCount}件`);
+            logger.info(`保留中のRequestをCancel中 [${this.name}]: ${pendingCount}items`);
             
-            // 保留中のリクエストにエラーを返す
+            // 保留中のRequestにErrorを返す
             for (const [id, { reject }] of this.pendingRequests) {
-              reject(new Error(`MCPサーバー [${this.name}] が切断されたため、リクエストがキャンセルされました`));
+              reject(new Error(`MCPServer [${this.name}] がDisconnectされたため、RequestがCancelさed`));
             }
             this.pendingRequests.clear();
           }
 
-          // 終了通知を送信（タイムアウト付き）
+          // Exit通知をSend（Timeout付き）
           const shutdownPromise = this.sendRequest('shutdown');
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Shutdown timeout')), 5000)
           );
 
           await Promise.race([shutdownPromise, timeoutPromise]);
-          logger.debug(`シャットダウンリクエスト送信完了 [${this.name}]`);
+          logger.debug(`シャットダウンRequestSendCompleted [${this.name}]`);
 
         } catch (shutdownError) {
-          logger.debug(`シャットダウンリクエストエラー [${this.name}]:`, shutdownError);
-          // シャットダウンエラーは無視して続行
+          logger.debug(`シャットダウンRequestError [${this.name}]:`, shutdownError);
+          // シャットダウンErrorは無視して続行
         }
 
-        // プロセスを終了
+        // プロセスをExit
         try {
           if (!this.process.killed) {
             this.process.kill('SIGTERM');
             
-            // プロセス終了を少し待つ
+            // プロセスExitを少し待つ
             await new Promise<void>((resolve) => {
               const timeout = setTimeout(() => {
                 if (this.process && !this.process.killed) {
-                  logger.warn(`強制終了を実行中 [${this.name}]`);
+                  logger.warn(`強制ExitをExecute中 [${this.name}]`);
                   this.process.kill('SIGKILL');
                 }
                 resolve();
@@ -443,22 +443,22 @@ export class MCPClient extends EventEmitter {
             });
           }
         } catch (killError) {
-          logger.error(`プロセス終了エラー [${this.name}]:`, killError);
-          // プロセス終了エラーも続行
+          logger.error(`プロセスExitError [${this.name}]:`, killError);
+          // プロセスExitErrorも続行
         }
 
         this.process = null;
         this.connected = false;
-        logger.info(`MCP切断完了 [${this.name}]`);
+        logger.info(`MCPDisconnectCompleted [${this.name}]`);
       }
     } catch (error) {
-      logger.error(`MCP切断エラー [${this.name}]:`, error);
-      // 切断エラーでも状態をリセット
+      logger.error(`MCPDisconnectError [${this.name}]:`, error);
+      // DisconnectErrorでもStatusをリセット
       this.process = null;
       this.connected = false;
       this.pendingRequests.clear();
       
-      // 切断エラーは致命的ではないので例外を投げない
+      // DisconnectErrorは致命的ではないので例外を投げない
     }
   }
 
@@ -479,13 +479,13 @@ export class MCPClient extends EventEmitter {
   }
 
   /**
-   * MCPのエラーがリトライ可能かを判定
+   * MCPのErrorがRetry可能かを判定
    */
   private isRetryableError(error: unknown): boolean {
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
       
-      // タイムアウト、接続エラーはリトライ可能
+      // Timeout、ConnectionErrorはRetry可能
       if (message.includes('timeout') ||
           message.includes('connection') ||
           message.includes('disconnect') ||
@@ -495,14 +495,14 @@ export class MCPClient extends EventEmitter {
         return true;
       }
 
-      // MCP特有のエラー
+      // MCP特有のError
       if (message.includes('server not responding') ||
           message.includes('communication error') ||
           message.includes('temporary')) {
         return true;
       }
 
-      // 権限エラーや見つからないエラーはリトライしない
+      // 権限Errorや見つからないErrorはRetryしない
       if (message.includes('not found') ||
           message.includes('permission') ||
           message.includes('unauthorized') ||

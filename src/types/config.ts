@@ -1,28 +1,28 @@
-// エージェント設定の型定義
+// AgentConfigの型定義
 export interface Config {
-  // LLMプロバイダー設定
+  // LLMProviderConfig
   provider: 'openai' | 'anthropic' | 'local-gptoss' | 'local-lmstudio';
   apiKey?: string;
   localEndpoint?: string;
   model?: string;
 
-  // MCP設定
+  // MCPConfig
   useMCP: boolean;
   mcpServers?: MCPServerConfig[];
 
-  // 実行設定
+  // ExecuteConfig
   maxParallel: number;
   timeout: number;
 
-  // ログ設定
+  // ログConfig
   logLevel: 'debug' | 'info' | 'warn' | 'error';
 
-  // パス設定
+  // パスConfig
   cachePath: string;
   historyPath: string;
 }
 
-// MCPサーバー設定
+// MCPServerConfig
 export interface MCPServerConfig {
   name: string;
   command: string;
@@ -30,7 +30,7 @@ export interface MCPServerConfig {
   env?: Record<string, string>;
 }
 
-// セッション設定
+// セッションConfig
 export interface SessionConfig {
   id: string;
   startedAt: Date;
@@ -38,7 +38,7 @@ export interface SessionConfig {
   history: ChatMessage[];
 }
 
-// チャットメッセージ
+// ChatMessage
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -46,7 +46,7 @@ export interface ChatMessage {
   metadata?: Record<string, unknown>;
 }
 
-// タスク設定
+// TaskConfig
 export interface TaskConfig {
   description: string;
   files?: string[];
@@ -55,7 +55,7 @@ export interface TaskConfig {
   context?: Record<string, unknown>;
 }
 
-// タスク結果
+// TaskResult
 export interface TaskResult {
   success: boolean;
   message: string;

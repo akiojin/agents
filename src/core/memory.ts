@@ -11,7 +11,7 @@ export class MemoryManager {
   private sessionCache = new WeakMap<object, SessionConfig>();
   private historyCache = new WeakMap<object, ChatMessage[]>();
   
-  // ファイル監視とクリーンアップ用
+  // ファイルMonitorとCleanup用
   private fileWatchers = new Set<any>();
   private timers = new Set<NodeJS.Timeout>();
 
@@ -19,12 +19,12 @@ export class MemoryManager {
     this.historyPath = historyPath;
     void this.ensureDirectoryExists();
     
-    // プロセス終了時のクリーンアップ
+    // プロセスExit時のCleanup
     this.setupCleanupHandlers();
   }
 
   /**
-   * クリーンアップハンドラーの設定
+   * CleanupハンドラーのConfig
    */
   private setupCleanupHandlers(): void {
     const cleanup = () => {
@@ -37,17 +37,17 @@ export class MemoryManager {
   }
 
   /**
-   * リソースクリーンアップ
+   * リソースCleanup
    */
   public cleanup(): void {
     try {
-      // タイマーのクリア - forEach + asyncの問題を修正：for...ofループを使用
+      // タイマーのcleared - forEach + asyncの問題を修正：for...ofループを使用
       for (const timer of this.timers) {
         clearTimeout(timer);
       }
       this.timers.clear();
 
-      // ファイル監視の停止 - forEach + asyncの問題を修正：for...ofループを使用
+      // ファイルMonitorの停止 - forEach + asyncの問題を修正：for...ofループを使用
       for (const watcher of this.fileWatchers) {
         if (watcher && typeof watcher.close === 'function') {
           watcher.close();
@@ -55,9 +55,9 @@ export class MemoryManager {
       }
       this.fileWatchers.clear();
 
-      logger.debug('MemoryManager のリソースクリーンアップが完了しました');
+      logger.debug('MemoryManager のリソースCleanupがCompleteddone');
     } catch (error) {
-      logger.error('MemoryManager クリーンアップエラー:', error);
+      logger.error('MemoryManager CleanupError:', error);
     }
   }
 
@@ -69,38 +69,38 @@ export class MemoryManager {
   }
 
   /**
-   * 履歴保存（メモリ最適化機能付き）
+   * HistorySave（メモリOptimize機能付き）
    */
   async saveHistory(history: ChatMessage[]): Promise<void> {
     try {
-      // 保存前にメモリ使用量をチェック
+      // Save前にメモリ使用量をチェック
       const memUsage = process.memoryUsage();
       if (memUsage.heapUsed > 1024 * 1024 * 1024) { // 1GB以上の場合
-        logger.warn('メモリ使用量が高いため、履歴の一部をトリムします');
+        logger.warn('メモリ使用量が高いため、Historyの一部をトリムします');
         history = this.trimHistoryForMemory(history);
       }
 
       const json = JSON.stringify(history, null, 2);
       await writeFile(this.historyPath, json, 'utf-8');
-      logger.debug('履歴を保存しました');
+      logger.debug('HistoryをSavedone');
       
-      // 保存後にメモリ解放を促進
+      // Save後にメモリ解放を促進
       if (global.gc) {
         global.gc();
       }
     } catch (error) {
-      logger.error('履歴の保存に失敗しました:', error);
+      logger.error('HistoryのSaveにFaileddone:', error);
       throw error;
     }
   }
 
   /**
-   * メモリ使用量に応じて履歴をトリム
+   * メモリ使用量に応じてHistoryをトリム
    */
   private trimHistoryForMemory(history: ChatMessage[]): ChatMessage[] {
-    const maxSize = 50; // メモリ不足時は50件に制限
+    const maxSize = 50; // メモリ不足時は50itemsに制限
     if (history.length > maxSize) {
-      logger.info(`メモリ不足のため履歴を${history.length}件から${maxSize}件にトリムします`);
+      logger.info(`メモリ不足のためHistoryを${history.length}itemsから${maxSize}itemsにトリムします`);
       return history.slice(-maxSize);
     }
     return history;
@@ -115,7 +115,7 @@ export class MemoryManager {
       const json = await readFile(this.historyPath, 'utf-8');
       const history = JSON.parse(json) as ChatMessage[];
 
-      // 日付文字列をDateオブジェクトに変換
+      // 日付characters列をDateオブジェクトにConvert
       const processedHistory = history.map((msg) => ({
         ...msg,
         timestamp: new Date(msg.timestamp),
@@ -124,31 +124,31 @@ export class MemoryManager {
       // ロード後にデータ整合性チェック
       return this.validateAndCleanHistory(processedHistory);
     } catch (error) {
-      logger.error('履歴の読み込みに失敗しました:', error);
+      logger.error('HistoryのLoadにFaileddone:', error);
       return [];
     }
   }
 
   /**
-   * 履歴データの整合性チェックとクリーンアップ
+   * Historyデータの整合性チェックとCleanup
    */
   private validateAndCleanHistory(history: ChatMessage[]): ChatMessage[] {
     return history.filter(msg => {
       // 必須フィールドのチェック
       if (!msg.role || !msg.content || !msg.timestamp) {
-        logger.warn('無効なメッセージを除去しました:', msg);
+        logger.warn('無効なMessageを除去done:', msg);
         return false;
       }
 
       // 日付の妥当性チェック
       if (!(msg.timestamp instanceof Date) || isNaN(msg.timestamp.getTime())) {
-        logger.warn('無効な日付のメッセージを除去しました:', msg);
+        logger.warn('無効な日付のMessageを除去done:', msg);
         return false;
       }
 
-      // コンテンツの長さチェック（異常に長いメッセージを除去）
+      // コンテンツの長さチェック（異常に長いMessageを除去）
       if (typeof msg.content === 'string' && msg.content.length > 100000) { // 100KB以上
-        logger.warn('異常に長いメッセージを除去しました');
+        logger.warn('異常に長いMessageを除去done');
         return false;
       }
 
@@ -160,25 +160,25 @@ export class MemoryManager {
     try {
       const sessionPath = join(dirname(this.historyPath), filename);
       
-      // セッションデータの最適化
+      // セッションデータのOptimize
       const optimizedSession = this.optimizeSessionData(session);
       
       const json = JSON.stringify(optimizedSession, null, 2);
       await writeFile(sessionPath, json, 'utf-8');
-      logger.info(`セッションを保存しました: ${filename}`);
+      logger.info(`セッションをSavedone: ${filename}`);
     } catch (error) {
-      logger.error('セッションの保存に失敗しました:', error);
+      logger.error('セッションのSaveにFaileddone:', error);
       throw error;
     }
   }
 
   /**
-   * セッションデータの最適化
+   * セッションデータのOptimize
    */
   private optimizeSessionData(session: SessionConfig): SessionConfig {
     return {
       ...session,
-      history: session.history.slice(-100), // 最新100件のみ保持
+      history: session.history.slice(-100), // 最新100itemsのみ保持
     };
   }
 
@@ -188,7 +188,7 @@ export class MemoryManager {
       const json = await readFile(sessionPath, 'utf-8');
       const session = JSON.parse(json) as SessionConfig;
 
-      // 日付文字列をDateオブジェクトに変換
+      // 日付characters列をDateオブジェクトにConvert
       session.startedAt = new Date(session.startedAt);
       session.history = session.history.map((msg) => ({
         ...msg,
@@ -200,7 +200,7 @@ export class MemoryManager {
 
       return session;
     } catch (error) {
-      logger.error('セッションの読み込みに失敗しました:', error);
+      logger.error('セッションのLoadにFaileddone:', error);
       throw error;
     }
   }
@@ -209,15 +209,15 @@ export class MemoryManager {
     try {
       if (existsSync(this.historyPath)) {
         await writeFile(this.historyPath, '[]', 'utf-8');
-        logger.info('履歴をクリアしました');
+        logger.info('Historyをcleareddone');
         
-        // クリア後にガベージコレクションを促進
+        // cleared後にガベージコレクションを促進
         if (global.gc) {
           global.gc();
         }
       }
     } catch (error) {
-      logger.error('履歴のクリアに失敗しました:', error);
+      logger.error('HistoryのclearedにFaileddone:', error);
       throw error;
     }
   }
@@ -231,13 +231,13 @@ export class MemoryManager {
       const history = await this.loadHistory();
       return history.length;
     } catch (error) {
-      logger.error('履歴サイズの取得に失敗しました:', error);
+      logger.error('HistoryサイズのGetにFaileddone:', error);
       return 0;
     }
   }
 
   /**
-   * 履歴の削除（メモリ最適化機能付き）
+   * HistoryのDelete（メモリOptimize機能付き）
    */
   async pruneHistory(maxSize: number): Promise<void> {
     try {
@@ -248,32 +248,32 @@ export class MemoryManager {
         await this.saveHistory(pruned);
         
         const removedCount = history.length - maxSize;
-        logger.info(`履歴を削除しました: ${removedCount}件（${history.length}件 → ${maxSize}件）`);
+        logger.info(`HistoryをDeletedone: ${removedCount}items（${history.length}items → ${maxSize}items）`);
         
-        // 削除後にメモリ解放を促進
+        // Delete後にメモリ解放を促進
         if (global.gc) {
           global.gc();
         }
       }
     } catch (error) {
-      logger.error('履歴の削除に失敗しました:', error);
+      logger.error('HistoryのDeleteにFaileddone:', error);
       throw error;
     }
   }
 
   /**
-   * メモリ使用量の取得
+   * メモリ使用量のGet
    */
   getMemoryUsage(): { historySize: number; memoryUsageMB: number } {
     const memUsage = process.memoryUsage();
     return {
-      historySize: 0, // この値は外部から設定される予定
+      historySize: 0, // この値は外部からConfigされる予定
       memoryUsageMB: Math.round(memUsage.heapUsed / 1024 / 1024),
     };
   }
 
   /**
-   * 古い履歴の自動クリーンアップ
+   * 古いHistoryの自動Cleanup
    */
   async cleanupOldHistory(daysToKeep: number = 30): Promise<void> {
     try {
@@ -288,15 +288,15 @@ export class MemoryManager {
       if (filteredHistory.length < history.length) {
         await this.saveHistory(filteredHistory);
         const removedCount = history.length - filteredHistory.length;
-        logger.info(`${daysToKeep}日より古い履歴を削除しました: ${removedCount}件`);
+        logger.info(`${daysToKeep}日より古いHistoryをDeletedone: ${removedCount}items`);
       }
     } catch (error) {
-      logger.error('古い履歴のクリーンアップに失敗しました:', error);
+      logger.error('古いHistoryのCleanupにFaileddone:', error);
     }
   }
 
   /**
-   * メモリ効率的な履歴検索
+   * メモリ効率的なHistory検索
    */
   async searchHistory(query: string, limit: number = 10): Promise<ChatMessage[]> {
     try {
@@ -314,7 +314,7 @@ export class MemoryManager {
       
       return results.reverse(); // 時系列順に戻す
     } catch (error) {
-      logger.error('履歴検索に失敗しました:', error);
+      logger.error('History検索にFaileddone:', error);
       return [];
     }
   }
@@ -330,29 +330,29 @@ export class MemoryManager {
       if (existsSync(this.historyPath)) {
         const content = await readFile(this.historyPath, 'utf-8');
         await writeFile(backupPath, content, 'utf-8');
-        logger.info(`バックアップを作成しました: ${backupPath}`);
+        logger.info(`バックアップを作成done: ${backupPath}`);
         return backupPath;
       }
       
-      throw new Error('履歴ファイルが存在しません');
+      throw new Error('Historyファイルが存在しnot');
     } catch (error) {
-      logger.error('バックアップの作成に失敗しました:', error);
+      logger.error('バックアップの作成にFaileddone:', error);
       throw error;
     }
   }
 
   /**
-   * 定期的なメンテナンスの実行
+   * 定期的なメンテナンスのExecute
    */
   async performMaintenance(): Promise<void> {
     try {
-      logger.info('定期メンテナンスを開始します');
+      logger.info('定期メンテナンスをStartedします');
       
-      // 古い履歴のクリーンアップ
+      // 古いHistoryのCleanup
       await this.cleanupOldHistory();
       
-      // 履歴サイズの最適化
-      await this.pruneHistory(1000); // 最大1000件に制限
+      // HistoryサイズのOptimize
+      await this.pruneHistory(1000); // 最大1000itemsに制限
       
       // バックアップの作成（週次）
       const lastBackup = this.getLastBackupTime();
@@ -363,14 +363,14 @@ export class MemoryManager {
         await this.createBackup();
       }
       
-      logger.info('定期メンテナンスが完了しました');
+      logger.info('定期メンテナンスがCompleteddone');
     } catch (error) {
-      logger.error('定期メンテナンスに失敗しました:', error);
+      logger.error('定期メンテナンスにFaileddone:', error);
     }
   }
 
   /**
-   * 最後のバックアップ時刻を取得
+   * 最後のバックアップ時刻をGet
    */
   private getLastBackupTime(): Date | null {
     try {
@@ -382,7 +382,7 @@ export class MemoryManager {
         return null;
       }
       
-      // 最新のバックアップファイルの時刻を取得
+      // 最新のバックアップファイルの時刻をGet
       const latestBackup = backupFiles.sort().pop();
       const match = latestBackup?.match(/\.backup\.(.+)$/);
       
@@ -392,7 +392,7 @@ export class MemoryManager {
       
       return null;
     } catch (error) {
-      logger.error('バックアップ時刻の取得に失敗しました:', error);
+      logger.error('バックアップ時刻のGetにFaileddone:', error);
       return null;
     }
   }

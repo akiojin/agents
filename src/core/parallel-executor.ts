@@ -1,34 +1,34 @@
 import { logger } from '../utils/logger.js';
 
 /**
- * 並列実行タスクの定義
+ * ParallelExecuteTaskの定義
  */
 export interface ParallelTask<T = any> {
-  /** タスクID（オプション） */
+  /** TaskID（Options） */
   id?: string;
-  /** タスクの説明 */
+  /** Taskの説明 */
   description?: string;
-  /** 実際に実行するPromise関数 */
+  /** 実際にExecuteするPromise関数 */
   task: () => Promise<T>;
-  /** タスクの優先度（1-10、デフォルト: 5） */
+  /** Taskの優先度（1-10、デフォルト: 5） */
   priority?: number;
-  /** タイムアウト時間（ミリ秒） */
+  /** Timeout時間（ミリseconds） */
   timeout?: number;
 }
 
 /**
- * 並列実行結果
+ * ParallelExecuteResult
  */
 export interface ParallelResult<T = any> {
-  /** 実行成功かどうか */
+  /** ExecuteSuccessかどうか */
   success: boolean;
-  /** 結果データ（成功時） */
+  /** Resultデータ（Success時） */
   data?: T;
-  /** エラー（失敗時） */
+  /** Error（Failed時） */
   error?: Error;
-  /** タスクID */
+  /** TaskID */
   taskId?: string;
-  /** 実行時間（ミリ秒） */
+  /** Execute時間（ミリseconds） */
   duration: number;
 }
 
@@ -38,8 +38,8 @@ export interface ParallelResult<T = any> {
 export type ProgressCallback = (completed: number, total: number, currentTask?: string) => void;
 
 /**
- * 基本的な並列処理実行クラス
- * シンプルで実用的な並列タスク実行を提供
+ * 基本的なParallelProcessingExecuteクラス
+ * シンプルで実用的なParallelTaskExecuteを提供
  */
 export class ParallelExecutor {
   private maxConcurrency: number;
@@ -49,10 +49,10 @@ export class ParallelExecutor {
   }
 
   /**
-   * タスクを並列実行する（基本版）
-   * @param tasks 実行するタスクの配列
+   * TaskをParallelExecuteする（基本版）
+   * @param tasks ExecuteするTaskの配列
    * @param onProgress 進捗コールバック
-   * @returns 実行結果の配列
+   * @returns ExecuteResultの配列
    */
   async executeParallel<T>(
     tasks: (() => Promise<T>)[],
@@ -65,7 +65,7 @@ export class ParallelExecutor {
     const results: T[] = [];
     let completed = 0;
 
-    // チャンク分割して並列実行
+    // チャンクminutes割してParallelExecute
     const chunks = this.chunkArray(tasks, this.maxConcurrency);
 
     for (const chunk of chunks) {
@@ -82,15 +82,15 @@ export class ParallelExecutor {
         }
       });
 
-      // Promise.allではなくPromise.allSettledを使用してエラー処理を改善
+      // Promise.allではなくPromise.allSettledを使用してErrorProcessingを改善
       const chunkSettledResults = await Promise.allSettled(chunkPromises);
       
       for (const settledResult of chunkSettledResults) {
         if (settledResult.status === 'fulfilled') {
           results.push(settledResult.value);
         } else {
-          // エラーが発生した場合はログに記録し、エラーを再スロー
-          logger.error('並列タスクでエラーが発生:', settledResult.reason);
+          // Erroroccurredした場合はログに記録し、Errorを再スロー
+          logger.error('ParallelTaskでErroroccurred:', settledResult.reason);
           throw settledResult.reason;
         }
       }
@@ -100,10 +100,10 @@ export class ParallelExecutor {
   }
 
   /**
-   * タスクを並列実行する（詳細版）
-   * @param tasks 並列タスクの配列
+   * TaskをParallelExecuteする（Details版）
+   * @param tasks ParallelTaskの配列
    * @param onProgress 進捗コールバック
-   * @returns 詳細な実行結果の配列
+   * @returns DetailsなExecuteResultの配列
    */
   async executeParallelWithDetails<T>(
     tasks: ParallelTask<T>[],
@@ -119,7 +119,7 @@ export class ParallelExecutor {
     const results: ParallelResult<T>[] = [];
     let completed = 0;
 
-    // チャンク分割して並列実行
+    // チャンクminutes割してParallelExecute
     const chunks = this.chunkArray(sortedTasks, this.maxConcurrency);
 
     for (const chunk of chunks) {
@@ -128,11 +128,11 @@ export class ParallelExecutor {
         const taskId = parallelTask.id || `task-${Date.now()}-${index}`;
 
         try {
-          logger.debug(`並列タスク開始: ${taskId} - ${parallelTask.description || 'Unknown task'}`);
+          logger.debug(`ParallelTaskStarted: ${taskId} - ${parallelTask.description || 'Unknown task'}`);
 
           let result: T;
 
-          // タイムアウト設定がある場合
+          // TimeoutConfigがある場合
           if (parallelTask.timeout) {
             result = await Promise.race([
               parallelTask.task(),
@@ -151,7 +151,7 @@ export class ParallelExecutor {
             parallelTask.description || taskId,
           );
 
-          logger.debug(`並列タスク完了: ${taskId} (${duration}ms)`);
+          logger.debug(`ParallelTaskCompleted: ${taskId} (${duration}ms)`);
 
           return {
             success: true,
@@ -169,7 +169,7 @@ export class ParallelExecutor {
             `${parallelTask.description || taskId} (Error)`,
           );
 
-          logger.error(`並列タスクエラー: ${taskId} (${duration}ms)`, error);
+          logger.error(`ParallelTaskError: ${taskId} (${duration}ms)`, error);
 
           return {
             success: false,
@@ -188,8 +188,8 @@ export class ParallelExecutor {
   }
 
   /**
-   * 独立したタスクを自動検出して並列実行
-   * @param tasks 実行するタスク
+   * 独立したTaskを自動検出してParallelExecute
+   * @param tasks ExecuteするTask
    * @param dependencyDetector 依存関係検出関数
    * @param onProgress 進捗コールバック
    */
@@ -210,12 +210,12 @@ export class ParallelExecutor {
       dependencyGraph.set(taskId, dependencyDetector(task));
     }
 
-    // トポロジカルソートで実行順序を決定
+    // トポロジカルソートでExecute順序を決定
     const executionLevels = this.topologicalSort(dependencyGraph);
     const results: ParallelResult<T>[] = [];
     let completed = 0;
 
-    // 各レベルを並列実行
+    // 各レベルをParallelExecute
     for (const level of executionLevels) {
       const levelTasks = level.map((taskId) => taskMap.get(taskId)!);
       const levelResults = await this.executeParallelWithDetails(
@@ -233,7 +233,7 @@ export class ParallelExecutor {
   }
 
   /**
-   * 配列をチャンクに分割
+   * 配列をチャンクにminutes割
    */
   private chunkArray<T>(array: T[], chunkSize: number): T[][] {
     const chunks: T[][] = [];
@@ -244,7 +244,7 @@ export class ParallelExecutor {
   }
 
   /**
-   * タイムアウトPromiseを作成
+   * TimeoutPromiseを作成
    */
   private createTimeoutPromise<T>(timeoutMs: number): Promise<T> {
     return new Promise((_, reject) => {
@@ -291,7 +291,7 @@ export class ParallelExecutor {
 
       levels.push(currentLevel);
 
-      // 現在のレベルのノードを処理 - forEach + asyncの問題を修正：for...ofループを使用
+      // 現在のレベルのノードをProcessing - forEach + asyncの問題を修正：for...ofループを使用
       for (const node of currentLevel) {
         remaining.delete(node);
         const deps = dependencyGraph.get(node) || [];
@@ -307,15 +307,15 @@ export class ParallelExecutor {
   }
 
   /**
-   * 並列度を変更
+   * Parallel度changed
    */
   setMaxConcurrency(maxConcurrency: number): void {
     this.maxConcurrency = Math.max(1, maxConcurrency);
-    logger.info(`並列度を変更しました: ${this.maxConcurrency}`);
+    logger.info(`Parallel度changeddone: ${this.maxConcurrency}`);
   }
 
   /**
-   * 現在の並列度を取得
+   * 現在のParallel度をGet
    */
   getMaxConcurrency(): number {
     return this.maxConcurrency;

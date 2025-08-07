@@ -15,7 +15,7 @@ export class SimpleLogger {
   private logDir: string;
 
   constructor(options?: { logLevel?: string; silent?: boolean; logDir?: string }) {
-    // 設定の優先順位: オプション > 環境変数 > デフォルト値
+    // Configの優先順位: Options > 環境変数 > デフォルト値
     this.level = this.parseLogLevel(options?.logLevel || process.env.AGENTS_LOG_LEVEL || 'info');
     this.silent = options?.silent ?? process.env.AGENTS_SILENT === 'true' ?? false;
     this.logDir = options?.logDir || process.env.AGENTS_LOG_DIR || './logs';
@@ -23,7 +23,7 @@ export class SimpleLogger {
   }
 
   /**
-   * 統一設定から SimpleLogger インスタンスを作成
+   * 統一Configから SimpleLogger インスタンスを作成
    */
   static fromUnifiedConfig(config: import('../config/types.js').Config): SimpleLogger {
     return new SimpleLogger({
@@ -63,7 +63,7 @@ export class SimpleLogger {
       try {
         formattedMessage += ` ${JSON.stringify(data)}`;
       } catch (error) {
-        // JSON.stringifyに失敗した場合は文字列に変換
+        // JSON.stringifyにFailedした場合はcharacters列にConvert
         formattedMessage += ` ${String(data)}`;
       }
     } else if (data !== undefined && data !== null) {
@@ -94,7 +94,7 @@ export class SimpleLogger {
       const logEntry = `${message}${error ? `\n${error.stack}` : ''}\n`;
       fs.appendFileSync(logFile, logEntry);
     } catch (writeError) {
-      // ファイル書き込みエラーはコンソールに出力のみ（ループを避けるため）
+      // ファイル書き込みErrorはコンソールに出力のみ（ループを避けるため）
       console.error('Failed to write to log file:', writeError);
     }
   }
@@ -112,7 +112,7 @@ export class SimpleLogger {
       console.log(colorizedMessage);
     }
 
-    // エラーログの場合はファイル出力
+    // Errorログの場合はファイル出力
     if (level === LogLevel.ERROR) {
       const error = dataOrError instanceof Error ? dataOrError : undefined;
       this.writeToFile('agents-error.log', formattedMessage, error);
@@ -145,7 +145,7 @@ export class SimpleLogger {
   }
 
   /**
-   * 設定を更新する
+   * ConfigをUpdateする
    */
   updateConfig(options: { logLevel?: string; silent?: boolean; logDir?: string }): void {
     if (options.logLevel) {
@@ -163,7 +163,7 @@ export class SimpleLogger {
   }
 
   /**
-   * 現在の設定を取得
+   * 現在のConfigをGet
    */
   getConfig() {
     return {
@@ -184,7 +184,7 @@ export const debug = (message: string, ...args: unknown[]): void => {
   }
 };
 
-// タスク実行ログ用のヘルパー関数
+// TaskExecuteログ用のヘルパー関数
 export const logTask = (
   taskName: string,
   status: 'start' | 'success' | 'error',

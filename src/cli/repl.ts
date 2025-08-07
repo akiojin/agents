@@ -12,28 +12,28 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
     prompt: chalk.cyan('agents> '),
   });
 
-  // スラッシュコマンドハンドラー
+  // スラッシュCommandハンドラー
   const handleSlashCommand = async (command: string, args: string): Promise<boolean> => {
     switch (command) {
       case '/help': {
-        console.log(chalk.cyan('利用可能なコマンド:'));
-        console.log('  /help        - ヘルプを表示');
-        console.log('  /exit        - 終了');
-        console.log('  /clear       - 画面をクリア');
-        console.log('  /history     - 履歴を表示');
-        console.log('  /save <file> - 会話を保存');
-        console.log('  /load <file> - 会話を読み込み');
-        console.log('  /tools       - 利用可能なツールを表示');
-        console.log('  /mcp         - MCPサーバーのステータス表示');
-        console.log('  /mcptools    - MCPツール一覧を表示');
-        console.log('  /model <name>- モデルを変更');
-        console.log('  /parallel    - 並列実行モードを切り替え');
-        console.log('  /verbose     - 詳細モードを切り替え');
+        console.log(chalk.cyan('Available commands:'));
+        console.log('  /help        - Show help');
+        console.log('  /exit        - Exit');
+        console.log('  /clear       - Clear screen');
+        console.log('  /history     - Show history');
+        console.log('  /save <file> - Save conversation');
+        console.log('  /load <file> - Load conversation');
+        console.log('  /tools       - Show available tools');
+        console.log('  /mcp         - Show MCP server status');
+        console.log('  /mcptools    - Show MCP tools list');
+        console.log('  /model <name>- Change model');
+        console.log('  /parallel    - Toggle parallel execution mode');
+        console.log('  /verbose     - Toggle verbose mode');
         return true;
       }
 
       case '/exit': {
-        console.log(chalk.yellow('さようなら！'));
+        console.log(chalk.yellow('Goodbye!'));
         rl.close();
         process.exit(0);
         break;
@@ -54,35 +54,35 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
 
       case '/save': {
         if (!args) {
-          console.log(chalk.red('ファイル名を指定してください'));
+          console.log(chalk.red('ファイル名を指定してplease'));
           return true;
         }
         try {
           await agent.saveSession(args);
-          console.log(chalk.green(`セッションを保存しました: ${args}`));
+          console.log(chalk.green(`セッションをSavedone: ${args}`));
         } catch (error) {
-          console.log(chalk.red('保存に失敗しました:', error));
+          console.log(chalk.red('SaveにFaileddone:', error));
         }
         return true;
       }
 
       case '/load': {
         if (!args) {
-          console.log(chalk.red('ファイル名を指定してください'));
+          console.log(chalk.red('ファイル名を指定してplease'));
           return true;
         }
         try {
           await agent.loadSession(args);
-          console.log(chalk.green(`セッションを読み込みました: ${args}`));
+          console.log(chalk.green(`セッションをLoadました: ${args}`));
         } catch (error) {
-          console.log(chalk.red('読み込みに失敗しました:', error));
+          console.log(chalk.red('LoadにFaileddone:', error));
         }
         return true;
       }
 
       case '/tools': {
         const tools = await mcpManager.listTools();
-        console.log(chalk.cyan('利用可能なツール:'));
+        console.log(chalk.cyan('利用可能なTool:'));
         tools.forEach((tool) => {
           console.log(`  - ${tool.name}: ${tool.description}`);
         });
@@ -92,12 +92,12 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       case '/mcp': {
         const serverStatus = agent.getMCPServerStatus();
         if (!serverStatus) {
-          console.log(chalk.red('MCPツールが初期化されていません'));
+          console.log(chalk.red('MCPToolがInitializenot initialized'));
           return true;
         }
-        console.log(chalk.cyan('MCPサーバーステータス:'));
+        console.log(chalk.cyan('MCPServerステータス:'));
         for (const [name, status] of serverStatus) {
-          const statusText = status ? chalk.green('接続済み') : chalk.red('切断');
+          const statusText = status ? chalk.green('Connected') : chalk.red('Disconnected');
           console.log(`  - ${name}: ${statusText}`);
         }
         return true;
@@ -107,50 +107,50 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         try {
           const mcpTools = await agent.getAvailableMCPTools();
           if (mcpTools.length === 0) {
-            console.log(chalk.yellow('利用可能なMCPツールがありません'));
+            console.log(chalk.yellow('No MCP tools available'));
             return true;
           }
-          console.log(chalk.cyan('利用可能なMCPツール:'));
+          console.log(chalk.cyan('Available MCP tools:'));
           mcpTools.forEach((tool) => {
             console.log(`  - ${chalk.green(tool.name)}: ${tool.description}`);
           });
         } catch (error) {
-          console.log(chalk.red('MCPツール一覧の取得に失敗しました:', error));
+          console.log(chalk.red('Failed to get MCP tools list:', error));
         }
         return true;
       }
 
       case '/model': {
         if (!args) {
-          console.log(chalk.yellow(`現在のモデル: ${agent.getCurrentModel()}`));
+          console.log(chalk.yellow(`Current model: ${agent.getCurrentModel()}`));
         } else {
           agent.setModel(args);
-          console.log(chalk.green(`モデルを変更しました: ${args}`));
+          console.log(chalk.green(`Model changed: ${args}`));
         }
         return true;
       }
 
       case '/parallel': {
         const isParallel = agent.toggleParallelMode();
-        console.log(chalk.yellow(`並列実行モード: ${isParallel ? '有効' : '無効'}`));
+        console.log(chalk.yellow(`Parallel execution mode: ${isParallel ? 'Enabled' : 'Disabled'}`));
         return true;
       }
 
       case '/verbose': {
         const isVerbose = agent.toggleVerboseMode();
-        console.log(chalk.yellow(`詳細モード: ${isVerbose ? '有効' : '無効'}`));
+        console.log(chalk.yellow(`Verbose mode: ${isVerbose ? 'Enabled' : 'Disabled'}`));
         return true;
       }
 
       default: {
-        console.log(chalk.red(`不明なコマンド: ${command}`));
-        console.log(chalk.gray('/help でコマンド一覧を表示'));
+        console.log(chalk.red(`Unknown command: ${command}`));
+        console.log(chalk.gray('Type /help to show commands'));
         return true;
       }
     }
   };
 
-  // 入力処理
+  // 入力Processing
   rl.on('line', (input) => {
     void (async () => {
       const trimmedInput = input.trim();
@@ -161,7 +161,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         return;
       }
 
-      // スラッシュコマンドのチェック
+      // スラッシュCommandのチェック
       if (trimmedInput.startsWith('/')) {
         const parts = trimmedInput.split(' ');
         const command = parts[0];
@@ -172,14 +172,14 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         return;
       }
 
-      // タスク実行
-      const spinner = ora('考え中...').start();
+      // TaskExecute
+      const spinner = ora('Thinking...').start();
       try {
         const response = await agent.chatWithTaskDecomposition(trimmedInput);
         spinner.stop();
-        console.log(chalk.green('エージェント:'), response);
+        console.log(chalk.green('Agent:'), response);
       } catch (error) {
-        spinner.fail(chalk.red('エラーが発生しました'));
+        spinner.fail(chalk.red('An error occurred'));
         logger.error('Chat error:', error);
       }
 
@@ -188,14 +188,14 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   });
 
   rl.on('close', () => {
-    console.log(chalk.yellow('\n終了します'));
+    console.log(chalk.yellow('\nExiting...'));
     process.exit(0);
   });
 
-  // ウェルカムメッセージ
+  // ウェルカムMessage
   console.log(chalk.cyan('━'.repeat(50)));
-  console.log(chalk.cyan.bold('  AI Coding Agent - 対話モード'));
-  console.log(chalk.gray('  /help でコマンド一覧を表示'));
+  console.log(chalk.cyan.bold('  AI Coding Agent - Interactive Mode'));
+  console.log(chalk.gray('  Type /help to show commands'));
   console.log(chalk.cyan('━'.repeat(50)));
 
   rl.prompt();

@@ -5,7 +5,7 @@ export interface ChatOptions {
   temperature?: number;
   maxTokens?: number;
   stream?: boolean;
-  /** タイムアウト時間（ミリ秒、デフォルト: 30000） */
+  /** Timeout時間（ミリseconds、デフォルト: 30000） */
   timeout?: number;
 }
 
@@ -36,7 +36,7 @@ export abstract class LLMProvider {
     this.apiKey = apiKey;
     this.endpoint = endpoint;
     this.providerOptions = {
-      timeout: options?.timeout || 30000, // デフォルト30秒
+      timeout: options?.timeout || 30000, // デフォルト30seconds
       maxRetries: options?.maxRetries || 3, // デフォルト3回
       temperature: options?.temperature,
       maxTokens: options?.maxTokens,
@@ -49,14 +49,14 @@ export abstract class LLMProvider {
   abstract validateConnection(): Promise<boolean>;
 
   /**
-   * プロバイダー設定の取得
+   * ProviderConfigのGet
    */
   getProviderOptions() {
     return { ...this.providerOptions };
   }
 
   /**
-   * プロバイダー設定の更新
+   * ProviderConfigのUpdate
    */
   updateProviderOptions(options: Partial<typeof this.providerOptions>): void {
     this.providerOptions = { ...this.providerOptions, ...options };

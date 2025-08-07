@@ -9,7 +9,7 @@ export function createProvider(config: Config): LLMProvider {
   switch (config.llm.provider) {
     case 'openai':
       if (!config.llm.apiKey) {
-        throw new Error('OpenAI APIキーが設定されていません');
+        throw new Error('OpenAI APIキーがConfignot initialized');
       }
       return new OpenAIProvider(config.llm.apiKey, config.llm.model, {
         timeout: config.llm.timeout,
@@ -20,7 +20,7 @@ export function createProvider(config: Config): LLMProvider {
 
     case 'anthropic':
       if (!config.llm.apiKey) {
-        throw new Error('Anthropic APIキーが設定されていません');
+        throw new Error('Anthropic APIキーがConfignot initialized');
       }
       return new AnthropicProvider(config.llm.apiKey, config.llm.model, {
         timeout: config.llm.timeout,
@@ -31,7 +31,7 @@ export function createProvider(config: Config): LLMProvider {
 
     case 'local-gptoss':
     case 'local-lmstudio':
-      // ローカルエンドポイントは環境変数またはデフォルト値を使用
+      // Localエンドポイントは環境変数またはデフォルト値を使用
       const endpoint = process.env.AGENTS_LOCAL_ENDPOINT || 'http://127.0.0.1:1234';
       return new LocalProvider(endpoint, config.llm.provider, {
         timeout: config.llm.timeout,
@@ -41,12 +41,12 @@ export function createProvider(config: Config): LLMProvider {
       });
 
     default:
-      throw new Error(`サポートされていないプロバイダー: ${config.llm.provider}`);
+      throw new Error(`サポートされていないProvider: ${config.llm.provider}`);
   }
 }
 
 /**
- * 統一設定システム用のファクトリー関数
+ * 統一Configシステム用のファクトリー関数
  */
 export function createProviderFromUnifiedConfig(
   config: import('../config/types.js').Config,
@@ -61,19 +61,19 @@ export function createProviderFromUnifiedConfig(
   switch (config.llm.provider) {
     case 'openai':
       if (!isValidApiKey(config.llm.apiKey)) {
-        throw new Error('OpenAI APIキーが設定されていません');
+        throw new Error('OpenAI APIキーがConfignot initialized');
       }
       return new OpenAIProvider(config.llm.apiKey, config.llm.model, providerOptions);
 
     case 'anthropic':
       if (!isValidApiKey(config.llm.apiKey)) {
-        throw new Error('Anthropic APIキーが設定されていません');
+        throw new Error('Anthropic APIキーがConfignot initialized');
       }
       return new AnthropicProvider(config.llm.apiKey, config.llm.model, providerOptions);
 
     case 'local-gptoss':
     case 'local-lmstudio': {
-      // ローカルエンドポイントは環境変数またはデフォルト値を使用
+      // Localエンドポイントは環境変数またはデフォルト値を使用
       const envEndpoint = process.env.AGENTS_LOCAL_ENDPOINT;
       const endpoint = isDefined(envEndpoint) && isValidUrl(envEndpoint) 
         ? envEndpoint 
@@ -83,6 +83,6 @@ export function createProviderFromUnifiedConfig(
     }
 
     default:
-      throw new Error(`サポートされていないプロバイダー: ${config.llm.provider}`);
+      throw new Error(`サポートされていないProvider: ${config.llm.provider}`);
   }
 }
