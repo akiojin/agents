@@ -1,78 +1,135 @@
-import winston from 'winston';
+import * as fs from 'fs';
+import * as path from 'path';
 import chalk from 'chalk';
 
-// カスタムフォーマット
-const customFormat = winston.format.printf(({ level, message, timestamp, ...metadata }) => {
-  let msg = `${timestamp} `;
+export enum LogLevel {
+  ERROR = 0,
+  WARN = 1,
+  INFO = 2,
+  DEBUG = 3
+}
 
-  // レベルに応じて色を変更
-  switch (level) {
-    case 'error':
-      msg += chalk.red(`[${level.toUpperCase()}]`);
-      break;
-    case 'warn':
-      msg += chalk.yellow(`[${level.toUpperCase()}]`);
-      break;
-    case 'info':
-      msg += chalk.blue(`[${level.toUpperCase()}]`);
-      break;
-    case 'debug':
-      msg += chalk.gray(`[${level.toUpperCase()}]`);
-      break;
-    default:
-      msg += `[${level.toUpperCase()}]`;
+export class SimpleLogger {
+  private level: LogLevel;
+  private silent: boolean;
+  private logDir: string;
+
+  constructor() {
+    this.level = this.parseLogLevel(process.env.AGENTS_LOG_LEVEL || 'info');
+    this.silent = process.env.AGENTS_SILENT === 'true';
+    this.logDir = process.env.AGENTS_LOG_DIR || './logs';
+    this.ensureLogDir();
   }
 
-  msg += ` ${message}`;
-
-  // メタデータがある場合は追加
-  if (Object.keys(metadata).length > 0) {
-    msg += ` ${JSON.stringify(metadata)}`;
+  private parseLogLevel(level: string): LogLevel {
+    switch (level.toLowerCase()) {
+      case 'error': return LogLevel.ERROR;
+      case 'warn': return LogLevel.WARN;
+      case 'info': return LogLevel.INFO;
+      case 'debug': return LogLevel.DEBUG;
+      default: return LogLevel.INFO;
+    }
   }
 
-  return msg;
-});
+  private ensureLogDir(): void {
+    if (!fs.existsSync(this.logDir)) {
+      fs.mkdirSync(this.logDir, { recursive: true });
+    }
+  }
 
-// Winstonロガーの設定
-const createLogger = (): winston.Logger => {
-  const logLevel = process.env.AGENTS_LOG_LEVEL || 'info';
-  const isProduction = process.env.NODE_ENV === 'production';
+  private formatMessage(level: LogLevel, message: string, data?: any): string {
+    const timestamp = new Date().toISOString();
+    const levelName = LogLevel[level];
+    let formattedMessage = `[${levelName}] ${timestamp} ${message}`;
+    
+    if (data && typeof data === 'object') {
+      formattedMessage += ` ${JSON.stringify(data)}`;
+    } else if (data) {
+      formattedMessage += ` ${data}`;
+    }
+    
+    return formattedMessage;
+  }
 
-  return winston.createLogger({
-    level: logLevel,
-    format: winston.format.combine(
-      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-      winston.format.errors({ stack: true }),
-      winston.format.splat(),
-      customFormat,
-    ),
-    transports: [
-      // コンソール出力
-      new winston.transports.Console({
-        silent: process.env.AGENTS_SILENT === 'true',
-      }),
-      // ファイル出力（エラーログ）
-      new winston.transports.File({
-        filename: 'agents-error.log',
-        level: 'error',
-        silent: isProduction ? false : true,
-      }),
-      // ファイル出力（全ログ）
-      new winston.transports.File({
-        filename: 'agents.log',
-        silent: isProduction ? false : true,
-      }),
-    ],
-  });
-};
+  private colorizeMessage(level: LogLevel, message: string): string {
+    switch (level) {
+      case LogLevel.ERROR:
+        return chalk.red(message);
+      case LogLevel.WARN:
+        return chalk.yellow(message);
+      case LogLevel.INFO:
+        return chalk.blue(message);
+      case LogLevel.DEBUG:
+        return chalk.gray(message);
+      default:
+        return message;
+    }
+  }
 
-// ロガーインスタンスの作成
-export const logger = createLogger();
+  private writeToFile(filename: string, message: string, error?: Error): void {
+    try {
+      const logFile = path.join(this.logDir, filename);
+      const logEntry = `${message}${error ? `\n${error.stack}` : ''}\n`;
+      fs.appendFileSync(logFile, logEntry);
+    } catch (writeError) {
+      // ファイル書き込みエラーはコンソールに出力のみ（ループを避けるため）
+      console.error('Failed to write to log file:', writeError);
+    }
+  }
 
-// デバッグモード用のヘルパー関数
+  private log(level: LogLevel, message: string, dataOrError?: any): void {
+    if (level > this.level) {
+      return;
+    }
+
+    const formattedMessage = this.formatMessage(level, message, dataOrError);
+    
+    // コンソール出力
+    if (!this.silent) {
+      const colorizedMessage = this.colorizeMessage(level, formattedMessage);
+      console.log(colorizedMessage);
+    }
+
+    // エラーログの場合はファイル出力
+    if (level === LogLevel.ERROR) {
+      const error = dataOrError instanceof Error ? dataOrError : undefined;
+      this.writeToFile('agents-error.log', formattedMessage, error);
+    }
+  }
+
+  error(message: string, error?: Error): void {
+    this.log(LogLevel.ERROR, message, error);
+  }
+
+  warn(message: string, data?: any): void {
+    this.log(LogLevel.WARN, message, data);
+  }
+
+  info(message: string, data?: any): void {
+    this.log(LogLevel.INFO, message, data);
+  }
+
+  debug(message: string, data?: any): void {
+    this.log(LogLevel.DEBUG, message, data);
+  }
+
+  setLevel(level: LogLevel): void {
+    this.level = level;
+    this.info(`Log level changed to ${LogLevel[level]}`);
+  }
+
+  getLevel(): LogLevel {
+    return this.level;
+  }
+}
+
+// シングルトンインスタンス
+export const logger = new SimpleLogger();
+
+// デバッグモード用のヘルパー関数（後方互換性）
 export const debug = (message: string, ...args: unknown[]): void => {
   if (process.env.DEBUG) {
-    console.log(chalk.gray(`[DEBUG] ${message}`), ...args);
+    logger.debug(`${message}${args.length > 0 ? ` ${args.join(' ')}` : ''}`);
   }
 };
 
@@ -82,17 +139,15 @@ export const logTask = (
   status: 'start' | 'success' | 'error',
   message?: string,
 ): void => {
-  const timestamp = new Date().toISOString();
-
   switch (status) {
     case 'start':
-      logger.info(`Task started: ${taskName}`, { timestamp });
+      logger.info(`Task started: ${taskName}`);
       break;
     case 'success':
-      logger.info(`Task completed: ${taskName}`, { timestamp, message });
+      logger.info(`Task completed: ${taskName}`, message ? { message } : undefined);
       break;
     case 'error':
-      logger.error(`Task failed: ${taskName}`, { timestamp, message });
+      logger.error(`Task failed: ${taskName}`, message ? new Error(message) : undefined);
       break;
   }
 };
@@ -110,6 +165,7 @@ export class PerformanceLogger {
 
   end(message?: string): void {
     const duration = performance.now() - this.startTime;
-    logger.info(`Performance: ${this.taskName} completed in ${duration.toFixed(2)}ms`, { message });
+    logger.info(`Performance: ${this.taskName} completed in ${duration.toFixed(2)}ms`, 
+      message ? { message, duration: `${duration.toFixed(2)}ms` } : { duration: `${duration.toFixed(2)}ms` });
   }
 }

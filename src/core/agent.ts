@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import type { Config, ChatMessage, TaskConfig, TaskResult } from '../types/config.js';
-import { logger, PerformanceLogger } from '../utils/logger.js';
+import { logger, PerformanceLogger, LogLevel } from '../utils/logger.js';
 import type { LLMProvider } from '../providers/base.js';
 import { createProvider } from '../providers/factory.js';
 import { TaskExecutor } from './task-executor.js';
@@ -169,7 +169,7 @@ export class AgentCore extends EventEmitter {
           errorMessage = 'ネットワークエラーが発生しました。接続を確認してください。';
           canRetry = true;
         } else if (errorMsg.includes('model') && errorMsg.includes('not found')) {
-          errorMessage = `指定されたモデル "${this.currentModel}" が利用できません。';
+          errorMessage = `指定されたモデル "${this.currentModel}" が利用できません。`;
         } else if (errorMsg.includes('input') || errorMsg.includes('長すぎ')) {
           errorMessage = error.message;
         } else {
@@ -269,11 +269,25 @@ export class AgentCore extends EventEmitter {
   toggleVerboseMode(): boolean {
     this.verboseMode = !this.verboseMode;
     if (this.verboseMode) {
-      logger.level = 'debug';
+      logger.setLevel(LogLevel.DEBUG);
+      logger.info('Verbose mode enabled');
     } else {
-      logger.level = this.config.logLevel;
+      // デフォルトレベルに戻す（通常はINFO）
+      const defaultLevel = this.parseLogLevel(this.config.logLevel || 'info');
+      logger.setLevel(defaultLevel);
+      logger.info('Verbose mode disabled');
     }
     return this.verboseMode;
+  }
+
+  private parseLogLevel(level: string): LogLevel {
+    switch (level.toLowerCase()) {
+      case 'error': return LogLevel.ERROR;
+      case 'warn': return LogLevel.WARN;
+      case 'info': return LogLevel.INFO;
+      case 'debug': return LogLevel.DEBUG;
+      default: return LogLevel.INFO;
+    }
   }
 
   /**
@@ -293,134 +307,6 @@ export class AgentCore extends EventEmitter {
       logger.warn('MCPツールが初期化されていません。通常のタスク実行に切り替えます');
       return this.executeTask(config);
     }
-
-    const perf = new PerformanceLogger('executeTaskWithMCP');
-
-    try {
-      this.emit('task:start', config);
-
-      // タスク実行プランを作成
-      let executionPlan;
-      try {
-        executionPlan = await this.mcpTaskPlanner.createExecutionPlan(config.description);
-        logger.info(`実行プラン作成完了: ${executionPlan.steps.length}ステップ`, executionPlan);
-      } catch (planError) {
-        logger.error('実行プラン作成エラー:', planError);
-        
-        // プラン作成に失敗した場合は通常のタスク実行にフォールバック
-        logger.info('通常のタスク実行にフォールバックします');
-        return this.executeTask(config);
-      }
-
-      // 各ステップを実行
-      const stepResults: Array<{
-        stepIndex: number;
-        description: string;
-        success: boolean;
-        result?: unknown;
-        error?: string;
-        duration?: number;
-      }> = [];
-
-      let successCount = 0;
-      let hasPartialSuccess = false;
-
-      for (let i = 0; i < executionPlan.steps.length; i++) {
-        const step = executionPlan.steps[i];
-        const stepStartTime = Date.now();
-
-        try {
-          logger.info(`ステップ実行中 (${i + 1}/${executionPlan.steps.length}): ${step.description}`);
-
-          // MCPツール実行にタイムアウトを設定
-          const stepExecutionPromise = this.mcpToolsHelper.executeTool(step.tool, step.params);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Step timeout')), 60000)
-          );
-
-          const stepResult = await Promise.race([stepExecutionPromise, timeoutPromise]);
-          const duration = Date.now() - stepStartTime;
-
-          stepResults.push({
-            stepIndex: i,
-            description: step.description,
-            success: true,
-            result: stepResult,
-            duration,
-          });
-
-          successCount++;
-          logger.info(`ステップ完了 (${i + 1}/${executionPlan.steps.length}): ${step.description} (${duration}ms)`);
-
-        } catch (stepError) {
-          const duration = Date.now() - stepStartTime;
-          const errorMessage = stepError instanceof Error ? stepError.message : String(stepError);
-          
-          logger.error(`ステップエラー (${i + 1}/${executionPlan.steps.length}): ${step.description}`, stepError);
-
-          stepResults.push({
-            stepIndex: i,
-            description: step.description,
-            success: false,
-            error: errorMessage,
-            duration,
-          });
-
-          // 重要でないステップのエラーは続行
-          if (!step.critical) {
-            logger.info('非重要ステップのため実行を継続します');
-            hasPartialSuccess = true;
-          } else {
-            logger.warn('重要ステップが失敗しました');
-            break; // 重要なステップが失敗した場合は停止
-          }
-        }
-      }
-
-      // 結果をまとめて返す
-      const isSuccess = successCount > 0 && (successCount === executionPlan.steps.length || hasPartialSuccess);
-      const summary = this.createDetailedSummary(stepResults, executionPlan.steps.length);
-
-      const result: TaskResult = {
-        success: isSuccess,
-        message: `MCPタスク実行: ${config.description}`,
-        data: {
-          executionPlan,
-          stepResults,
-          summary,
-          totalSteps: executionPlan.steps.length,
-          successfulSteps: successCount,
-          failedSteps: stepResults.length - successCount,
-          hasPartialSuccess,
-        },
-      };
-
-      this.emit('task:complete', result);
-      perf.end(`MCP Task completed: ${config.description}`);
-
-      return result;
-
-    } catch (error) {
-      const errorResult: TaskResult = {
-        success: false,
-        message: `MCPタスク実行エラー: ${error instanceof Error ? error.message : String(error)}`,
-        error: error instanceof Error ? error : new Error(String(error)),
-        data: {
-          executionError: true,
-          errorDetails: {
-            message: error instanceof Error ? error.message : String(error),
-            timestamp: new Date().toISOString(),
-            task: config.description,
-          },
-        },
-      };
-
-      this.emit('task:error', errorResult);
-      logger.error('MCP Task execution error:', error);
-
-      return errorResult;
-    }
-  }
 
     const perf = new PerformanceLogger('executeTaskWithMCP');
 
@@ -541,13 +427,11 @@ export class AgentCore extends EventEmitter {
       const failedSteps = stepResults
         .filter(r => !r.success)
         .map(r => `- ${r.description}: ${r.error}`)
-        .join('
-');
+        .join('\n');
       summaryParts.push(`失敗したステップ:
 ${failedSteps}`);
     }
 
-    return summaryParts.join('
-');
+    return summaryParts.join('\n');
   }
 }
