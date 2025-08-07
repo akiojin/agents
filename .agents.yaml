@@ -6,7 +6,7 @@ llm:
   maxTokens: 2000
 
 mcp:
-  enabled: false
+  enabled: true
   servers: []
   timeout: 30000
   maxRetries: 3

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { Config } from './types.js';
 import { DEFAULT_CONFIG, ENV_MAPPING } from './types.js';
 import { logger } from '../utils/logger.js';
+import { MCPLoader } from './mcp-loader.js';
 
 /**
  * Configスキーマの定義
@@ -99,7 +100,19 @@ export class ConfigManager {
       const envConfig = this.loadFromEnv();
       config = this.deepMerge(config, envConfig);
 
-      // 4. ConfigのValidation
+      // 4. .mcp.jsonからMCPサーバー設定をLoad
+      const mcpServers = await MCPLoader.loadMCPConfig();
+      if (mcpServers.length > 0) {
+        logger.info(`Loaded ${mcpServers.length} MCP servers from .mcp.json`);
+        config.mcp.servers = [...config.mcp.servers, ...mcpServers];
+        // .mcp.jsonが存在する場合はMCPを自動的に有効化
+        if (config.mcp.enabled === false) {
+          config.mcp.enabled = true;
+          logger.info('MCP enabled automatically due to .mcp.json presence');
+        }
+      }
+
+      // 5. ConfigのValidation
       this.config = ConfigSchema.parse(config);
 
       logger.debug('ConfigをLoadました:', this.config);

@@ -66,23 +66,23 @@ export class MCPManager extends EventEmitter {
 
   async initialize(): Promise<void> {
     if (!this.mcpConfig.enabled || !this.config.mcpServers) {
-      logger.info('MCPは無効化されてing');
+      logger.info('MCP is disabled');
       return;
     }
 
-    logger.info('MCPServerをInitialize中...');
+    logger.info('Initializing MCP servers...');
 
     for (const serverConfig of this.config.mcpServers) {
       try {
         await this.startServer(serverConfig);
       } catch (error) {
-        logger.error(`MCPServerの起動にFailed: ${serverConfig.name}`, error);
+        logger.error(`Failed to start MCP server: ${serverConfig.name}`, error);
       }
     }
   }
 
   private async startServer(serverConfig: MCPServerConfig): Promise<void> {
-    logger.info(`MCPServerを起動中: ${serverConfig.name}`);
+    logger.info(`Starting MCP server: ${serverConfig.name}`);
 
     // プロセスを起動
     const childProcess = spawn(serverConfig.command, serverConfig.args || [], {
@@ -107,7 +107,7 @@ export class MCPManager extends EventEmitter {
       this.tools.set(`${serverConfig.name}:${tool.name}`, tool);
     }
 
-    logger.info(`MCPServerが起動done: ${serverConfig.name} (${tools.length}itemsのTool)`);
+    logger.info(`MCP server started: ${serverConfig.name} (${tools.length} tools)`);
   }
 
   async listTools(): Promise<Tool[]> {

@@ -149,7 +149,7 @@ program
       // AgentInitialize
       globalProgressReporter.updateSubtask(1);
       const agent = new AgentCore(config);
-      const mcpManager = new MCPManager(config);
+      const mcpManager = MCPManager.fromUnifiedConfig(config);
 
       // MCPInitialize
       globalProgressReporter.updateSubtask(2);
@@ -240,7 +240,7 @@ if (process.argv.length === 2) {
     const configManager = ConfigManager.getInstance();
     const config = await configManager.load();
     const agent = new AgentCore(config);
-    const mcpManager = new MCPManager(config);
+    const mcpManager = MCPManager.fromUnifiedConfig(config);
 
     if (config.mcp?.enabled) {
       await mcpManager.initialize();

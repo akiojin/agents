@@ -209,7 +209,7 @@ export class AgentCore extends EventEmitter {
 
     try {
       // プログレス表示Started
-      globalProgressReporter.startTask('Chat processing', ['Input validation', 'LLM call', 'Response processing', 'History save']);
+      globalProgressReporter.startTask('Chat processing', ['Input validation', 'MCP check', 'LLM call', 'Response processing', 'History save']);
 
       // 入力Validation
       globalProgressReporter.updateSubtask(0);
@@ -222,6 +222,35 @@ export class AgentCore extends EventEmitter {
       if (trimmedInput.length > 32000) {
         globalProgressReporter.completeTask(false);
         throw new Error('Input is too long (maximum 32,000 characters)');
+      }
+
+      // ファイルシステム操作の直接実行をチェック（LLM呼び出し前）
+      globalProgressReporter.updateSubtask(1);
+      const directAction = await this.checkForDirectFileSystemActions(trimmedInput);
+      if (directAction) {
+        globalProgressReporter.completeTask(true);
+        
+        // UserMessageとResponseをHistoryに追加
+        const userMessage: ChatMessage = {
+          role: 'user',
+          content: trimmedInput,
+          timestamp: new Date(),
+        };
+        const assistantMessage: ChatMessage = {
+          role: 'assistant',
+          content: directAction,
+          timestamp: new Date(),
+        };
+        this.history.push(userMessage, assistantMessage);
+        
+        // HistoryをSave
+        try {
+          await this.memoryManager.saveHistory(this.history);
+        } catch (saveError) {
+          logger.warn('Failed to save history:', saveError);
+        }
+        
+        return directAction;
       }
 
       // メモリ使用量チェック（定期的）
@@ -246,7 +275,7 @@ export class AgentCore extends EventEmitter {
       }
 
       // LLM呼び出し
-      globalProgressReporter.updateSubtask(1);
+      globalProgressReporter.updateSubtask(2);
       
       // withRetryを使用したLLM呼び出し
       const result = await withRetry(
@@ -288,7 +317,7 @@ export class AgentCore extends EventEmitter {
       const response = result.result!;
 
       // ResponseProcessing
-      globalProgressReporter.updateSubtask(2);
+      globalProgressReporter.updateSubtask(3);
       
       // 応答Validation
       if (!response || response.trim().length === 0) {
@@ -307,7 +336,7 @@ export class AgentCore extends EventEmitter {
       this.history.push(assistantMessage);
 
       // HistorySave
-      globalProgressReporter.updateSubtask(3);
+      globalProgressReporter.updateSubtask(4);
       
       // HistoryをSave（Erroroccurredしても会話は継続）
       try {
@@ -829,5 +858,49 @@ export class AgentCore extends EventEmitter {
     }
 
     return results;
+  }
+
+  /**
+   * 直接的なファイルシステム操作をチェック
+   */
+  private async checkForDirectFileSystemActions(input: string): Promise<string | null> {
+    const lowerInput = input.toLowerCase();
+    
+    // ファイル一覧表示のパターン
+    if (lowerInput.includes('ファイル') && (lowerInput.includes('一覧') || lowerInput.includes('リスト') || lowerInput.includes('表示'))) {
+      return await this.listCurrentDirectory();
+    }
+    
+    // ディレクトリ一覧表示のパターン
+    if (lowerInput.includes('ディレクトリ') || lowerInput.includes('フォルダ') || lowerInput.includes('ls') || lowerInput.includes('dir')) {
+      return await this.listCurrentDirectory();
+    }
+    
+    return null;
+  }
+  
+  /**
+   * 現在のディレクトリのファイル一覧を取得
+   */
+  private async listCurrentDirectory(): Promise<string> {
+    if (!this.mcpToolsHelper) {
+      return 'ファイルシステムアクセス機能が初期化されていません。MCPサーバーが起動しているか確認してください。';
+    }
+    
+    try {
+      logger.info('Listing current directory using MCP tools...');
+      const result = await this.mcpToolsHelper.executeTool('serena:list_dir', {
+        relative_path: '.'
+      });
+      
+      if (typeof result === 'object' && result !== null) {
+        return `現在のディレクトリの内容:</p><p>${JSON.stringify(result, null, 2)}`;
+      }
+      
+      return `現在のディレクトリの内容:</p><p>${String(result)}`;
+    } catch (error) {
+      logger.error('Failed to list directory:', error);
+      return `ファイル一覧の取得に失敗しました: ${error instanceof Error ? error.message : String(error)}`;
+    }
   }
 }

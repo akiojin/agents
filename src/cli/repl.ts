@@ -21,7 +21,12 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
     input: process.stdin,
     output: process.stdout,
     prompt: chalk.gray('> '),
+    terminal: true,
   });
+
+  // Fix for multi-byte character handling (Japanese text)
+  // Enable proper UTF-8 support
+  process.stdin.setEncoding('utf8');
 
   // スラッシュCommandハンドラー
   const handleSlashCommand = async (command: string, args: string): Promise<boolean> => {
@@ -106,9 +111,13 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
           return true;
         }
         console.log(chalk.cyan('MCP server status:'));
-        for (const [name, status] of serverStatus) {
-          const statusText = status ? chalk.green('Connected') : chalk.red('Disconnected');
-          console.log(`  - ${name}: ${statusText}`);
+        if (serverStatus.size === 0) {
+          console.log(chalk.yellow('  No MCP servers configured'));
+        } else {
+          for (const [name, status] of serverStatus) {
+            const statusText = status ? chalk.green('Connected') : chalk.red('Disconnected');
+            console.log(`  - ${name}: ${statusText}`);
+          }
         }
         return true;
       }

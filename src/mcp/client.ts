@@ -78,7 +78,13 @@ export class MCPClient extends EventEmitter {
   private async initialize(): Promise<void> {
     try {
       const response = await this.sendRequest('initialize', {
-        protocolVersion: '1.0',
+        protocolVersion: '2024-11-05',
+        capabilities: {
+          tools: {},
+          resources: {},
+          prompts: {},
+          logging: {}
+        },
         clientInfo: {
           name: '@akiojin/agents',
           version: '0.1.0',
@@ -86,10 +92,13 @@ export class MCPClient extends EventEmitter {
       });
 
       logger.info(`MCPServerInitializeCompleted [${this.name}]:`, response);
+      
+      // Send initialized notification
+      await this.sendNotification('notifications/initialized', {});
     } catch (error) {
       logger.error(`MCPInitializeError [${this.name}]:`, error);
       // InitializeErrorはConnectionErrorとして扱う
-      throw new Error(`MCPServer [${this.name}] のInitializeにFaileddone: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`MCPServer [${this.name}] Initialize failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -216,6 +225,27 @@ export class MCPClient extends EventEmitter {
     }
 
     return result.result!;
+  }
+
+  private async sendNotification(method: string, params?: unknown): Promise<void> {
+    try {
+      if (!this.process || !this.process.stdin) {
+        throw new Error(`MCPServer [${this.name}] Connection not initialized`);
+      }
+
+      const notification = jsonrpc.notification(method, params as any);
+      const json = JSON.stringify(notification) + '\n';
+
+      this.process.stdin.write(json, (error) => {
+        if (error) {
+          logger.error(`NotificationSendError [${this.name}/${method}]:`, error);
+        } else {
+          logger.debug(`NotificationSent [${this.name}/${method}]`);
+        }
+      });
+    } catch (error) {
+      logger.error(`SendNotificationError [${this.name}/${method}]:`, error);
+    }
   }
 
   async listTools(): Promise<Tool[]> {

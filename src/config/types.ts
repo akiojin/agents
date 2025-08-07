@@ -10,6 +10,30 @@ export interface MCPServerConfig {
   env?: Record<string, string>;
 }
 
+// Claude Code .mcp.json format
+export interface MCPJsonConfig {
+  mcpServers: {
+    [serverName: string]: {
+      type?: 'stdio' | 'sse' | 'http';
+      command?: string;
+      args?: string[];
+      env?: Record<string, string>;
+      url?: string;
+      headers?: Record<string, string>;
+    };
+  };
+}
+
+// MCP server entry from .mcp.json
+export interface MCPJsonServerEntry {
+  type?: 'stdio' | 'sse' | 'http';
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  headers?: Record<string, string>;
+}
+
 // ChatMessage
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
