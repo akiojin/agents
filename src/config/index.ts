@@ -161,7 +161,7 @@ export class ConfigManager {
   private async loadFromFile(): Promise<Partial<Config>> {
     try {
       const content = await readFile(this.configPath, 'utf-8');
-      return yaml.parse(content);
+      return yaml.parse(content) as Partial<Config>;
     } catch (error) {
       logger.warn('設定ファイルの読み込みに失敗しました:', error);
       return {};
@@ -172,7 +172,7 @@ export class ConfigManager {
    * 環境変数からの読み込み
    */
   private loadFromEnv(): Partial<Config> {
-    const config: any = {};
+    const config: Record<string, unknown> = {};
 
     for (const [envKey, configPath] of Object.entries(ENV_MAPPING)) {
       const envValue = process.env[envKey];
@@ -181,13 +181,13 @@ export class ConfigManager {
       }
     }
 
-    return config;
+    return config as Partial<Config>;
   }
 
   /**
    * 環境変数値のパース
    */
-  private parseEnvValue(value: string): any {
+  private parseEnvValue(value: string): string | number | boolean {
     // 数値の変換
     if (/^\d+$/.test(value)) {
       return parseInt(value, 10);
@@ -203,16 +203,16 @@ export class ConfigManager {
   /**
    * ネストされたオブジェクトへの値の設定
    */
-  private setNestedValue(obj: any, path: string, value: any): void {
+  private setNestedValue(obj: Record<string, unknown>, path: string, value: string | number | boolean): void {
     const keys = path.split('.');
-    let current = obj;
+    let current: Record<string, unknown> = obj;
 
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
       if (!(key in current)) {
         current[key] = {};
       }
-      current = current[key];
+      current = current[key] as Record<string, unknown>;
     }
 
     current[keys[keys.length - 1]] = value;
@@ -228,14 +228,20 @@ export class ConfigManager {
   /**
    * ディープマージ
    */
-  private deepMerge(target: any, source: any): any {
+  private deepMerge<T>(target: T, source: Partial<T>): T {
     const result = { ...target };
 
     for (const key in source) {
-      if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.deepMerge(target[key] || {}, source[key]);
+      const sourceValue = source[key];
+      const targetValue = result[key];
+      
+      if (sourceValue !== null && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+        (result as Record<string, unknown>)[key] = this.deepMerge(
+          targetValue || {}, 
+          sourceValue
+        );
       } else {
-        result[key] = source[key];
+        (result as Record<string, unknown>)[key] = sourceValue;
       }
     }
 

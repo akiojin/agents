@@ -3,6 +3,7 @@ import type { LLMProvider } from './base.js';
 import { OpenAIProvider } from './openai.js';
 import { AnthropicProvider } from './anthropic.js';
 import { LocalProvider } from './local.js';
+import { isValidApiKey, isValidUrl, isDefined } from '../utils/type-guards.js';
 
 export function createProvider(config: Config): LLMProvider {
   switch (config.llm.provider) {
@@ -59,22 +60,27 @@ export function createProviderFromUnifiedConfig(
 
   switch (config.llm.provider) {
     case 'openai':
-      if (!config.llm.apiKey) {
+      if (!isValidApiKey(config.llm.apiKey)) {
         throw new Error('OpenAI APIキーが設定されていません');
       }
       return new OpenAIProvider(config.llm.apiKey, config.llm.model, providerOptions);
 
     case 'anthropic':
-      if (!config.llm.apiKey) {
+      if (!isValidApiKey(config.llm.apiKey)) {
         throw new Error('Anthropic APIキーが設定されていません');
       }
       return new AnthropicProvider(config.llm.apiKey, config.llm.model, providerOptions);
 
     case 'local-gptoss':
-    case 'local-lmstudio':
+    case 'local-lmstudio': {
       // ローカルエンドポイントは環境変数またはデフォルト値を使用
-      const endpoint = process.env.AGENTS_LOCAL_ENDPOINT || 'http://127.0.0.1:1234';
+      const envEndpoint = process.env.AGENTS_LOCAL_ENDPOINT;
+      const endpoint = isDefined(envEndpoint) && isValidUrl(envEndpoint) 
+        ? envEndpoint 
+        : 'http://127.0.0.1:1234';
+      
       return new LocalProvider(endpoint, config.llm.provider, providerOptions);
+    }
 
     default:
       throw new Error(`サポートされていないプロバイダー: ${config.llm.provider}`);

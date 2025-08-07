@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../types/config.js';
+import type { ChatMessage } from '../config/types.js';
 import { LLMProvider, type ChatOptions, type CompletionOptions } from './base.js';
 import { logger } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
@@ -22,7 +22,7 @@ interface LocalAPIResponse {
 export class LocalProvider extends LLMProvider {
   private providerType: 'local-gptoss' | 'local-lmstudio';
 
-  constructor(endpoint: string, providerType: 'local-gptoss' | 'local-lmstudio', options?: {
+  constructor(endpoint: string = 'http://127.0.0.1:1234', providerType: 'local-gptoss' | 'local-lmstudio' = 'local-gptoss', options?: {
     timeout?: number;
     maxRetries?: number;
     temperature?: number;
@@ -33,12 +33,10 @@ export class LocalProvider extends LLMProvider {
   }
 
   private async makeRequest(body: LocalAPIRequest): Promise<LocalAPIResponse> {
-    const endpoint =
-      this.providerType === 'local-gptoss'
-        ? `${this.endpoint}/v1/chat/completions`
-        : `${this.endpoint}/v1/completions`;
+    // 指定されたエンドポイントを使用：http://127.0.0.1:1234
+    const endpoint = `${this.endpoint}/v1/chat/completions`;
 
-    logger.debug(`ローカルAPIリクエスト開始: ${endpoint}`, { 
+    logger.debug(`ローカルAPI リクエスト開始: ${endpoint}`, { 
       providerType: this.providerType,
       hasModel: !!body.model,
     });
@@ -98,7 +96,7 @@ export class LocalProvider extends LLMProvider {
           // レスポンス検証
           const contentType = response.headers.get('content-type');
           if (!contentType?.includes('application/json')) {
-            throw new Error(`予期されたJSONレスポンスではありません: ${contentType}`);
+            throw new Error(`期待されたJSONレスポンスではありません: ${contentType}`);
           }
 
           const result = await response.json() as LocalAPIResponse;
@@ -190,15 +188,13 @@ export class LocalProvider extends LLMProvider {
         messageCount: localMessages.length,
         model: body.model,
         maxTokens: body.max_tokens,
+        endpoint: this.endpoint,
       });
 
       const response = await this.makeRequest(body);
 
-      // レスポンス内容を取得
-      const content =
-        this.providerType === 'local-gptoss'
-          ? response.choices[0]?.message?.content
-          : response.choices[0]?.text;
+      // レスポンス内容を取得（OpenAI互換APIを想定）
+      const content = response.choices[0]?.message?.content;
 
       if (!content) {
         // より詳細なエラー情報
@@ -236,8 +232,14 @@ export class LocalProvider extends LLMProvider {
 
   async complete(options: CompletionOptions): Promise<string> {
     try {
+      // 新しいOpenAI互換エンドポイントを使用
       const body: LocalAPIRequest = {
-        prompt: options.prompt,
+        messages: [
+          {
+            role: 'user',
+            content: options.prompt,
+          }
+        ],
         temperature: options.temperature || this.providerOptions.temperature || 0.7,
         max_tokens: options.maxTokens || this.providerOptions.maxTokens || 2000,
         stream: options.stream || false,
@@ -247,14 +249,21 @@ export class LocalProvider extends LLMProvider {
         body.model = options.model;
       }
 
+      logger.debug('ローカルプロバイダー completion 開始', {
+        promptLength: options.prompt.length,
+        model: body.model,
+        endpoint: this.endpoint,
+      });
+
       const response = await this.makeRequest(body);
 
-      const content = response.choices[0]?.text || response.choices[0]?.message?.content;
+      const content = response.choices[0]?.message?.content;
 
       if (!content) {
         throw new Error('応答が空です');
       }
 
+      logger.debug(`ローカルプロバイダー completion 完了: ${content.length}文字`);
       return content;
     } catch (error) {
       logger.error('Local provider completion error:', error);
@@ -264,17 +273,35 @@ export class LocalProvider extends LLMProvider {
 
   async listModels(): Promise<string[]> {
     try {
-      // ローカルプロバイダーのモデルリストエンドポイント
+      // 指定されたエンドポイントのモデルリスト
       const endpoint = `${this.endpoint}/v1/models`;
-      const response = await fetch(endpoint);
+      
+      logger.debug('ローカルプロバイダー モデルリスト取得開始:', endpoint);
+      
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000); // 10秒タイムアウト
+
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': '@akiojin/agents',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
 
       if (!response.ok) {
-        logger.warn('モデルリストの取得に失敗しました');
+        logger.warn(`モデルリストの取得に失敗: ${response.status} ${response.statusText}`);
         return ['local-model'];
       }
 
       const data = (await response.json()) as { data: Array<{ id: string }> };
-      return data.data.map((model) => model.id);
+      const models = data.data?.map((model) => model.id) || ['local-model'];
+      
+      logger.debug('ローカルプロバイダー モデルリスト取得完了:', models);
+      return models;
     } catch (error) {
       logger.error('Local provider list models error:', error);
       // エラーの場合はデフォルトモデルを返す
@@ -286,31 +313,10 @@ export class LocalProvider extends LLMProvider {
     try {
       logger.debug(`ローカルプロバイダー接続検証開始: ${this.endpoint}`);
       
-      // まずヘルスチェックエンドポイントを試す
-      try {
-        const healthController = new AbortController();
-        setTimeout(() => healthController.abort(), Math.min(this.providerOptions.timeout, 10000)); // 最大10秒に制限
-
-        const healthResponse = await fetch(`${this.endpoint}/health`, {
-          method: 'GET',
-          signal: healthController.signal,
-          headers: {
-            'User-Agent': '@akiojin/agents',
-          },
-        });
-
-        if (healthResponse.ok) {
-          logger.debug('ローカルサーバー接続検証成功（/health）');
-          return true;
-        }
-      } catch (healthError) {
-        logger.debug('ヘルスチェックエンドポイントは利用できません、モデルエンドポイントで検証します');
-      }
-
-      // ヘルスエンドポイントが利用できない場合はモデルエンドポイントを試す
+      // まずモデルエンドポイントで接続確認
       try {
         const modelsController = new AbortController();
-        setTimeout(() => modelsController.abort(), Math.min(this.providerOptions.timeout, 10000)); // 最大10秒に制限
+        setTimeout(() => modelsController.abort(), 5000); // 5秒タイムアウト
 
         const modelsResponse = await fetch(`${this.endpoint}/v1/models`, {
           method: 'GET',
@@ -326,22 +332,54 @@ export class LocalProvider extends LLMProvider {
           return true;
         }
         
-        logger.warn(`モデルエンドポイントレスポンス: ${modelsResponse.status} ${modelsResponse.statusText}`);
+        logger.debug(`モデルエンドポイントレスポンス: ${modelsResponse.status} ${modelsResponse.statusText}`);
       } catch (modelsError) {
-        logger.debug('モデルエンドポイントも失敗しました:', modelsError);
+        logger.debug('モデルエンドポイント接続失敗:', modelsError);
+      }
+
+      // 次にチャット completions エンドポイントで軽量テスト
+      try {
+        const testController = new AbortController();
+        setTimeout(() => testController.abort(), 3000); // 3秒タイムアウト
+
+        const testBody = {
+          messages: [{ role: 'user', content: 'test' }],
+          max_tokens: 1,
+          temperature: 0,
+        };
+
+        const testResponse = await fetch(`${this.endpoint}/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': '@akiojin/agents',
+          },
+          body: JSON.stringify(testBody),
+          signal: testController.signal,
+        });
+
+        // 200-299の範囲、または400番台（設定エラーだが接続は成功）
+        if (testResponse.status < 500) {
+          logger.debug(`ローカルサーバー接続検証成功（/v1/chat/completions）: ${testResponse.status}`);
+          return true;
+        }
+        
+        logger.debug(`チャット completions テスト: ${testResponse.status} ${testResponse.statusText}`);
+      } catch (testError) {
+        logger.debug('チャット completions テスト失敗:', testError);
       }
 
       // 最後の手段として基本的な接続テストを実行
       try {
         const baseController = new AbortController();
-        setTimeout(() => baseController.abort(), Math.min(this.providerOptions.timeout, 5000)); // 最大5秒に制限
+        setTimeout(() => baseController.abort(), 2000); // 2秒タイムアウト
 
         const baseResponse = await fetch(this.endpoint, {
           method: 'HEAD',
           signal: baseController.signal,
         });
 
-        // ステータスコードが200番台または400番台なら接続は成功している
+        // ステータスコードが500未満なら接続は成功している
         if (baseResponse.status < 500) {
           logger.debug(`ローカルサーバー基本接続確認: ${baseResponse.status}`);
           return true;
@@ -378,7 +416,7 @@ export class LocalProvider extends LLMProvider {
   /**
    * ローカルAPIのエラーがリトライ可能かを判定
    */
-  private isRetryableError(error: any): boolean {
+  private isRetryableError(error: unknown): boolean {
     // ネットワークエラー
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
@@ -393,10 +431,11 @@ export class LocalProvider extends LLMProvider {
     }
 
     // HTTPステータスコードベースの判定
-    if (error && typeof error === 'object' && 'status' in error) {
-      const status = error.status;
+    if (error && typeof error === 'object' && error !== null && 'status' in error) {
+      const statusError = error as { status?: number };
+      const status = statusError.status;
       // サーバーエラー（500番台）はリトライ可能
-      return status >= 500;
+      return status !== undefined && status >= 500;
     }
 
     return false;

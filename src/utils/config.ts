@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import yaml from 'yaml';
 import { z } from 'zod';
-import type { Config } from '../types/config.js';
+import type { Config } from '../config/types.js';
 
 // 設定スキーマの定義
 const ConfigSchema = z.object({

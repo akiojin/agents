@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import pLimit from 'p-limit';
-import type { Config, TaskConfig, TaskResult } from '../types/config.js';
+import type { Config, TaskConfig, TaskResult } from '../config/types.js';
 import type { LLMProvider } from '../providers/base.js';
 import { logger } from '../utils/logger.js';
 import { ParallelExecutor, ParallelTask } from './parallel-executor.js';

@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../types/config.js';
+import type { ChatMessage } from '../config/types.js';
 
 export interface ChatOptions {
   model?: string;

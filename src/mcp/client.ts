@@ -481,7 +481,7 @@ export class MCPClient extends EventEmitter {
   /**
    * MCPのエラーがリトライ可能かを判定
    */
-  private isRetryableError(error: any): boolean {
+  private isRetryableError(error: unknown): boolean {
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
       

@@ -1,7 +1,7 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
-import type { ChatMessage, SessionConfig } from '../types/config.js';
+import type { ChatMessage, SessionConfig } from '../config/types.js';
 import { logger } from '../utils/logger.js';
 
 export class MemoryManager {

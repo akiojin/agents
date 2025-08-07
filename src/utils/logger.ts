@@ -54,14 +54,19 @@ export class SimpleLogger {
     }
   }
 
-  private formatMessage(level: LogLevel, message: string, data?: any): string {
+  private formatMessage(level: LogLevel, message: string, data?: unknown): string {
     const timestamp = new Date().toISOString();
     const levelName = LogLevel[level];
     let formattedMessage = `[${levelName}] ${timestamp} ${message}`;
 
     if (data && typeof data === 'object') {
-      formattedMessage += ` ${JSON.stringify(data)}`;
-    } else if (data) {
+      try {
+        formattedMessage += ` ${JSON.stringify(data)}`;
+      } catch (error) {
+        // JSON.stringifyに失敗した場合は文字列に変換
+        formattedMessage += ` ${String(data)}`;
+      }
+    } else if (data !== undefined && data !== null) {
       formattedMessage += ` ${data}`;
     }
 
@@ -94,7 +99,7 @@ export class SimpleLogger {
     }
   }
 
-  private log(level: LogLevel, message: string, dataOrError?: any): void {
+  private log(level: LogLevel, message: string, dataOrError?: unknown): void {
     if (level > this.level) {
       return;
     }
@@ -114,19 +119,19 @@ export class SimpleLogger {
     }
   }
 
-  error(message: string, error?: Error): void {
+  error(message: string, error?: unknown): void {
     this.log(LogLevel.ERROR, message, error);
   }
 
-  warn(message: string, data?: any): void {
+  warn(message: string, data?: unknown): void {
     this.log(LogLevel.WARN, message, data);
   }
 
-  info(message: string, data?: any): void {
+  info(message: string, data?: unknown): void {
     this.log(LogLevel.INFO, message, data);
   }
 
-  debug(message: string, data?: any): void {
+  debug(message: string, data?: unknown): void {
     this.log(LogLevel.DEBUG, message, data);
   }
 

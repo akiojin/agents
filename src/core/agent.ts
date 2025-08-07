@@ -1,6 +1,5 @@
 import EventEmitter from 'events';
-import type { Config } from '../config/types.js';
-import type { ChatMessage, TaskConfig, TaskResult } from '../types/config.js';
+import type { Config, ChatMessage, TaskConfig, TaskResult } from '../config/types.js';
 import { logger, PerformanceLogger, LogLevel } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
 import type { LLMProvider } from '../providers/base.js';

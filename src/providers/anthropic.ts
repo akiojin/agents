@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { ChatMessage } from '../types/config.js';
+import type { ChatMessage } from '../config/types.js';
 import { LLMProvider, type ChatOptions, type CompletionOptions } from './base.js';
 import { logger } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
@@ -331,7 +331,7 @@ export class AnthropicProvider extends LLMProvider {
   /**
    * Anthropic APIのエラーがリトライ可能かを判定
    */
-  private isRetryableError(error: any): boolean {
+  private isRetryableError(error: unknown): boolean {
     // ネットワークエラー
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
@@ -345,10 +345,11 @@ export class AnthropicProvider extends LLMProvider {
     }
 
     // Anthropic APIのステータスコードベースの判定
-    if (error && typeof error === 'object' && 'status' in error) {
-      const status = error.status || error.statusCode;
+    if (error && typeof error === 'object' && error !== null && 'status' in error) {
+      const statusError = error as { status?: number; statusCode?: number };
+      const status = statusError.status || statusError.statusCode;
       // レート制限、サーバーエラーはリトライ可能
-      return status === 429 || status >= 500;
+      return status === 429 || (status !== undefined && status >= 500);
     }
 
     return false;
