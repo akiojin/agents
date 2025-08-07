@@ -19,32 +19,59 @@ export class TaskExecutor extends EventEmitter {
 
   async execute(taskConfig: TaskConfig, provider: LLMProvider): Promise<TaskResult> {
     const startTime = Date.now();
+    const { globalProgressReporter } = await import('../ui/progress.js');
 
     try {
-      logger.info(`タスク実行開始: ${taskConfig.description}`);
-
       // タスクを細分化
       const subtasks = this.decomposeTasks(taskConfig);
+      const subtaskNames = subtasks.map((task, index) => `サブタスク${index + 1}: ${task.description}`);
+      
+      // プログレス表示開始
+      globalProgressReporter.startTask(
+        `タスク実行: ${taskConfig.description}`,
+        ['タスク分解', this.parallelMode ? '並列実行' : '順次実行', '結果統合']
+      );
+      
+      logger.info(`タスク実行開始: ${taskConfig.description}`);
 
+      // タスク分解完了
+      globalProgressReporter.updateSubtask(0);
+      
       let results: TaskResult[];
 
       if (this.parallelMode && taskConfig.parallel !== false) {
         // 並列実行
+        globalProgressReporter.updateSubtask(1);
+        globalProgressReporter.showInfo(`${subtasks.length}個のサブタスクを並列実行します`);
         results = await this.executeParallel(subtasks, provider);
       } else {
         // 順次実行
+        globalProgressReporter.updateSubtask(1);
+        globalProgressReporter.showInfo(`${subtasks.length}個のサブタスクを順次実行します`);
         results = await this.executeSequential(subtasks, provider);
       }
 
-      // 結果を統合
+      // 結果統合
+      globalProgressReporter.updateSubtask(2);
       const finalResult = this.mergeResults(results);
       finalResult.duration = Date.now() - startTime;
 
+      // 成功/失敗の判定
+      const successCount = results.filter(r => r.success).length;
+      const success = successCount === results.length;
+      
+      globalProgressReporter.completeTask(success);
       logger.info(`タスク実行完了: ${taskConfig.description} (${finalResult.duration}ms)`);
+      
+      if (!success) {
+        globalProgressReporter.showWarning(`${results.length}個中${successCount}個のサブタスクが成功しました`);
+      }
 
       return finalResult;
     } catch (error) {
       logger.error('タスク実行エラー:', error);
+      globalProgressReporter.completeTask(false);
+      globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
 
       return {
         success: false,
@@ -67,13 +94,22 @@ export class TaskExecutor extends EventEmitter {
     provider: LLMProvider,
   ): Promise<TaskResult[]> {
     const results: TaskResult[] = [];
+    const { globalProgressReporter } = await import('../ui/progress.js');
 
-    for (const task of tasks) {
+    for (let i = 0; i < tasks.length; i++) {
+      const task = tasks[i];
+      
+      // 個別タスクの進捗表示
+      globalProgressReporter.showInfo(`[${i + 1}/${tasks.length}] ${task.description}`);
+      
       const result = await this.executeSingleTask(task, provider);
       results.push(result);
 
-      // エラーが発生した場合は中断
-      if (!result.success) {
+      if (result.success) {
+        globalProgressReporter.showInfo(`✅ サブタスク${i + 1}完了: ${task.description}`);
+      } else {
+        globalProgressReporter.showError(`❌ サブタスク${i + 1}失敗: ${task.description}`);
+        // エラーが発生した場合は中断
         break;
       }
     }

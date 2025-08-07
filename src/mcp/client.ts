@@ -256,100 +256,134 @@ export class MCPClient extends EventEmitter {
   }
 
   async invokeTool(name: string, params?: Record<string, unknown>): Promise<unknown> {
+    const { globalProgressReporter } = await import('../ui/progress.js');
+    
     // 基本的な検証
     if (!name || name.trim().length === 0) {
+      globalProgressReporter.showError('ツール名が指定されていません');
       throw new Error('ツール名が指定されていません');
     }
 
     // 接続確認
     if (!this.connected) {
+      globalProgressReporter.showError(`MCPサーバー [${this.name}] が接続されていません`);
       throw new Error(`MCPサーバー [${this.name}] が接続されていません`);
     }
 
     // プロセス状態確認
     if (!this.process || this.process.killed) {
+      globalProgressReporter.showError(`MCPサーバー [${this.name}] のプロセスが無効です`);
       throw new Error(`MCPサーバー [${this.name}] のプロセスが無効です`);
     }
 
-    logger.debug(`ツール実行開始 [${this.name}/${name}]:`, { params });
-
-    // リトライ付きでツール実行
-    const result = await withRetry(
-      async () => {
-        // ツール実行リクエスト
-        const result = await this.sendRequest('tools/call', {
-          name: name.trim(),
-          arguments: params || {},
-        });
-
-        // 結果検証
-        if (result === undefined || result === null) {
-          logger.warn(`ツール実行結果が空です [${this.name}/${name}]`);
-          return { error: false, message: 'ツール実行は成功しましたが、結果は空でした', result: null };
-        }
-
-        return result;
-      },
-      {
-        maxRetries: this.maxRetries,
-        delay: 1000,
-        exponentialBackoff: true,
-        timeout: this.timeout,
-        shouldRetry: this.isRetryableError.bind(this),
-      }
+    // プログレス表示開始
+    globalProgressReporter.startTask(
+      `MCPツール実行: ${name}`,
+      ['接続確認', 'ツール実行', 'レスポンス検証']
     );
 
-    if (!result.success) {
-      logger.error(`ツール実行エラー after retries [${this.name}/${name}]:`, result.error);
+    logger.debug(`ツール実行開始 [${this.name}/${name}]:`, { params });
+    
+    try {
+      // 接続確認完了
+      globalProgressReporter.updateSubtask(0);
+      
+      // ツール実行
+      globalProgressReporter.updateSubtask(1);
+      globalProgressReporter.showInfo(`${this.name}サーバーで${name}ツールを実行中...`);
 
-      // エラーの詳細化とフォールバック
-      let errorMessage = 'ツール実行中にエラーが発生しました';
-      let shouldRetry = false;
-      const error = result.error!;
+      // リトライ付きでツール実行
+      const result = await withRetry(
+        async () => {
+          // ツール実行リクエスト
+          const result = await this.sendRequest('tools/call', {
+            name: name.trim(),
+            arguments: params || {},
+          });
 
-      if (error instanceof Error) {
-        if (error.message.includes('timeout')) {
-          errorMessage = `ツール実行タイムアウト: ${name} (${this.timeout}ミリ秒を超えました)`;
-        } else if (error.message.includes('not found') || error.message.includes('unknown')) {
-          errorMessage = `ツールが見つかりません: ${name}`;
-        } else if (error.message.includes('permission') || error.message.includes('unauthorized')) {
-          errorMessage = `ツール実行権限がありません: ${name}`;
-        } else if (error.message.includes('connection') || error.message.includes('disconnect')) {
-          errorMessage = `接続エラー: MCPサーバー [${this.name}] との通信に失敗しました`;
-          shouldRetry = true;
-        } else if (error.message.includes('invalid') || error.message.includes('argument')) {
-          errorMessage = `無効な引数: ${name}`;
-        } else {
-          errorMessage = `ツール実行エラー: ${error.message}`;
+          // 結果検証
+          if (result === undefined || result === null) {
+            logger.warn(`ツール実行結果が空です [${this.name}/${name}]`);
+            return { error: false, message: 'ツール実行は成功しましたが、結果は空でした', result: null };
+          }
+
+          return result;
+        },
+        {
+          maxRetries: this.maxRetries,
+          delay: 1000,
+          exponentialBackoff: true,
+          timeout: this.timeout,
+          shouldRetry: this.isRetryableError.bind(this),
         }
+      );
+
+      // レスポンス検証
+      globalProgressReporter.updateSubtask(2);
+
+      if (!result.success) {
+        logger.error(`ツール実行エラー after retries [${this.name}/${name}]:`, result.error);
+        globalProgressReporter.completeTask(false);
+
+        // エラーの詳細化とフォールバック
+        let errorMessage = 'ツール実行中にエラーが発生しました';
+        let shouldRetry = false;
+        const error = result.error!;
+
+        if (error instanceof Error) {
+          if (error.message.includes('timeout')) {
+            errorMessage = `ツール実行タイムアウト: ${name} (${this.timeout}ミリ秒を超えました)`;
+          } else if (error.message.includes('not found') || error.message.includes('unknown')) {
+            errorMessage = `ツールが見つかりません: ${name}`;
+          } else if (error.message.includes('permission') || error.message.includes('unauthorized')) {
+            errorMessage = `ツール実行権限がありません: ${name}`;
+          } else if (error.message.includes('connection') || error.message.includes('disconnect')) {
+            errorMessage = `接続エラー: MCPサーバー [${this.name}] との通信に失敗しました`;
+            shouldRetry = true;
+          } else if (error.message.includes('invalid') || error.message.includes('argument')) {
+            errorMessage = `無効な引数: ${name}`;
+          } else {
+            errorMessage = `ツール実行エラー: ${error.message}`;
+          }
+        }
+
+        globalProgressReporter.showError(errorMessage);
+
+        // フォールバック結果を返す（アプリケーションクラッシュを防止）
+        const fallbackResult = {
+          error: true,
+          message: errorMessage,
+          toolName: name,
+          serverName: this.name,
+          canRetry: shouldRetry,
+          originalError: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+          attemptCount: result.attemptCount,
+          totalTime: result.totalTime,
+        };
+
+        // 重大なエラーの場合のみ例外を投げる、それ以外はフォールバック結果を返す
+        if (error instanceof Error && error.message.includes('Critical')) {
+          throw error;
+        }
+
+        return fallbackResult;
       }
 
-      // フォールバック結果を返す（アプリケーションクラッシュを防止）
-      const fallbackResult = {
-        error: true,
-        message: errorMessage,
-        toolName: name,
-        serverName: this.name,
-        canRetry: shouldRetry,
-        originalError: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
+      globalProgressReporter.completeTask(true);
+      globalProgressReporter.showInfo(`ツール実行完了: ${name} (試行回数: ${result.attemptCount}, 所要時間: ${result.totalTime}ms)`);
+      
+      logger.debug(`ツール実行完了 [${this.name}/${name}]`, {
         attemptCount: result.attemptCount,
         totalTime: result.totalTime,
-      };
-
-      // 重大なエラーの場合のみ例外を投げる、それ以外はフォールバック結果を返す
-      if (error instanceof Error && error.message.includes('Critical')) {
-        throw error;
-      }
-
-      return fallbackResult;
+      });
+      
+      return result.result!;
+    } catch (error) {
+      globalProgressReporter.completeTask(false);
+      globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+      throw error;
     }
-
-    logger.debug(`ツール実行完了 [${this.name}/${name}]`, {
-      attemptCount: result.attemptCount,
-      totalTime: result.totalTime,
-    });
-    return result.result!;
   }
 
   async disconnect(): Promise<void> {

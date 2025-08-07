@@ -10,6 +10,8 @@ import { MemoryManager } from './memory.js';
 import { MCPToolsHelper, MCPTaskPlanner } from '../mcp/tools.js';
 import type { MCPManager } from '../mcp/manager.js';
 
+import { SimpleTaskDecomposer } from './task-decomposer.js';
+
 export class AgentCore extends EventEmitter {
   private config: Config;
   private provider: LLMProvider;
@@ -17,6 +19,7 @@ export class AgentCore extends EventEmitter {
   private memoryManager: MemoryManager;
   private mcpToolsHelper?: MCPToolsHelper;
   private mcpTaskPlanner?: MCPTaskPlanner;
+  private taskDecomposer: SimpleTaskDecomposer;
   private history: ChatMessage[] = [];
   private currentModel: string;
   private parallelMode: boolean = false;
@@ -29,6 +32,7 @@ export class AgentCore extends EventEmitter {
     this.provider = createProviderFromUnifiedConfig(config);
     this.taskExecutor = new TaskExecutor(this.convertToLegacyConfig(config));
     this.memoryManager = new MemoryManager(config.paths.history);
+    this.taskDecomposer = new SimpleTaskDecomposer();
     // 初期化を非同期で実行（エラーハンドリングを含む）
     void this.initialize();
   }
@@ -84,15 +88,22 @@ export class AgentCore extends EventEmitter {
 
   async chat(input: string): Promise<string> {
     const perf = new PerformanceLogger('chat');
+    const { globalProgressReporter } = await import('../ui/progress.js');
 
     try {
+      // プログレス表示開始
+      globalProgressReporter.startTask('チャット処理', ['入力検証', 'LLM呼び出し', 'レスポンス処理', '履歴保存']);
+
       // 入力検証
+      globalProgressReporter.updateSubtask(0);
       if (!input || input.trim().length === 0) {
+        globalProgressReporter.completeTask(false);
         throw new Error('入力が空です');
       }
 
       const trimmedInput = input.trim();
       if (trimmedInput.length > 32000) {
+        globalProgressReporter.completeTask(false);
         throw new Error('入力が長すぎます（最大32,000文字）');
       }
 
@@ -106,9 +117,13 @@ export class AgentCore extends EventEmitter {
 
       // プロバイダー接続確認
       if (!this.provider) {
+        globalProgressReporter.completeTask(false);
         throw new Error('LLMプロバイダーが初期化されていません');
       }
 
+      // LLM呼び出し
+      globalProgressReporter.updateSubtask(1);
+      
       // withRetryを使用したLLM呼び出し
       const result = await withRetry(
         async () => {
@@ -142,13 +157,18 @@ export class AgentCore extends EventEmitter {
 
       if (!result.success) {
         logger.error('LLMチャットエラー after retries:', result.error);
+        globalProgressReporter.completeTask(false);
         throw result.error!;
       }
 
       const response = result.result!;
 
+      // レスポンス処理
+      globalProgressReporter.updateSubtask(2);
+      
       // 応答検証
       if (!response || response.trim().length === 0) {
+        globalProgressReporter.completeTask(false);
         throw new Error('LLMからの応答が空です');
       }
 
@@ -162,18 +182,24 @@ export class AgentCore extends EventEmitter {
       };
       this.history.push(assistantMessage);
 
+      // 履歴保存
+      globalProgressReporter.updateSubtask(3);
+      
       // 履歴を保存（エラーが発生しても会話は継続）
       try {
         await this.memoryManager.saveHistory(this.history);
       } catch (saveError) {
         logger.warn('履歴保存に失敗しました:', saveError);
+        globalProgressReporter.showWarning('履歴保存に失敗しましたが、会話は継続します');
         // 履歴保存失敗は致命的ではない
       }
 
+      globalProgressReporter.completeTask(true);
       perf.end(`Chat completed (attempts: ${result.attemptCount}, time: ${result.totalTime}ms)`);
       return trimmedResponse;
     } catch (error) {
       logger.error('Chat error:', error);
+      globalProgressReporter.completeTask(false);
 
       // エラーメッセージをユーザーフレンドリーに変換
       let errorMessage = 'エラーが発生しました';
@@ -231,6 +257,75 @@ export class AgentCore extends EventEmitter {
       (wrappedError as any).canRetry = canRetry;
 
       throw wrappedError;
+    }
+  }
+
+  /**
+   * タスク分解機能付きのチャット
+   * @param input ユーザーの入力
+   * @returns AIの応答
+   */
+  async chatWithTaskDecomposition(input: string): Promise<string> {
+    const perf = new PerformanceLogger('chatWithTaskDecomposition');
+
+    try {
+      // 入力検証
+      if (!input || input.trim().length === 0) {
+        throw new Error('入力が空です');
+      }
+
+      const trimmedInput = input.trim();
+      
+      // タスクの複雑度を判定
+      if (this.taskDecomposer.isComplexTask(trimmedInput)) {
+        logger.info('📝 タスクを分解しています...');
+        
+        // タスクを分解
+        const subtasks = this.taskDecomposer.decompose(trimmedInput);
+        
+        if (subtasks.length > 1) {
+          // タスクが分解された場合の表示
+          logger.info('タスクが以下のサブタスクに分解されました:');
+          subtasks.forEach((subtask, index) => {
+            logger.info(`  ${index + 1}. ${subtask}`);
+          });
+
+          // 各サブタスクを順次実行
+          const results: string[] = [];
+          for (let i = 0; i < subtasks.length; i++) {
+            const subtask = subtasks[i];
+            logger.info(`\n🔄 サブタスク ${i + 1}/${subtasks.length} を実行中: ${subtask}`);
+            
+            try {
+              const subtaskResult = await this.chat(subtask);
+              results.push(`サブタスク ${i + 1}: ${subtaskResult}`);
+              logger.info(`✅ サブタスク ${i + 1} 完了`);
+            } catch (error) {
+              const errorMsg = `サブタスク ${i + 1} でエラーが発生しました: ${error instanceof Error ? error.message : String(error)}`;
+              results.push(errorMsg);
+              logger.error(`❌ ${errorMsg}`);
+            }
+          }
+
+          // 結果を統合
+          const finalResponse = `タスク分解実行結果:\n\n${results.join('\n\n')}\n\n📊 実行サマリー: ${subtasks.length}個のサブタスクのうち${results.filter(r => !r.includes('エラーが発生')).length}個が成功しました。`;
+          
+          perf.end(`Task decomposition completed: ${subtasks.length} subtasks`);
+          return finalResponse;
+        }
+      }
+      
+      // 通常のチャット処理にフォールバック
+      return await this.chat(trimmedInput);
+    } catch (error) {
+      logger.error('Task decomposition error:', error);
+      
+      // エラーの場合は通常のチャットにフォールバック
+      try {
+        return await this.chat(input);
+      } catch (fallbackError) {
+        throw fallbackError;
+      }
     }
   }
 

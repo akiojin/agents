@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
 import chalk from 'chalk';
-import ora from 'ora';
+
 import inquirer from 'inquirer';
 import { createRequire } from 'module';
 import { startREPL } from './cli/repl.js';
@@ -35,6 +35,8 @@ program
   .command('init')
   .description('エージェント設定を初期化')
   .action(async () => {
+    const { globalProgressReporter } = await import('./ui/progress.js');
+    
     try {
       interface InitAnswers {
         provider: 'openai' | 'anthropic' | 'local-gptoss' | 'local-lmstudio';
@@ -43,11 +45,19 @@ program
         useMCP: boolean;
       }
 
+      globalProgressReporter.startTask('エージェント初期化', ['TTY確認', '設定入力', '設定ファイル作成']);
+
       // TTY確認
+      globalProgressReporter.updateSubtask(0);
       if (!process.stdin.isTTY) {
-        throw new Error('対話型セットアップにはTTY環境が必要です。docker exec -it を使用してください。');
+        globalProgressReporter.completeTask(false);
+        throw new Error(
+          '対話型セットアップにはTTY環境が必要です。docker exec -it を使用してください。',
+        );
       }
 
+      // 設定入力
+      globalProgressReporter.updateSubtask(1);
       const answers: InitAnswers = await inquirer.prompt([
         {
           type: 'list',
@@ -81,10 +91,10 @@ program
         },
       ]);
 
-      // 統一設定を作成
-      const spinner = ora('設定ファイルを作成中...').start();
+      // 設定ファイル作成
+      globalProgressReporter.updateSubtask(2);
       const configManager = ConfigManager.getInstance();
-      
+
       // InitAnswersを統一Configに変換
       const unifiedConfig: Partial<Config> = {
         llm: {
@@ -98,24 +108,26 @@ program
           timeout: 30000,
           enabled: answers.useMCP,
           maxRetries: 3,
-        }
+        },
       };
-      
+
       // ローカルプロバイダーの場合はエンドポイントを追加
       if (answers.localEndpoint && answers.provider.startsWith('local-')) {
         // エンドポイント情報は環境変数に設定することを推奨
         process.env.AGENTS_LOCAL_ENDPOINT = answers.localEndpoint;
       }
-      
-      await configManager.saveConfig(unifiedConfig);
-      spinner.succeed(chalk.green('設定を初期化しました'));
+
+      await configManager.save(unifiedConfig);
+      globalProgressReporter.completeTask(true);
+      console.log(chalk.green('✅ 設定を初期化しました'));
     } catch (error) {
-      console.log(chalk.red('初期化に失敗しました'));
+      globalProgressReporter.completeTask(false);
+      globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+      console.log(chalk.red('❌ 初期化に失敗しました'));
       logger.error('Init failed:', error);
       process.exit(1);
     }
   });
-
 
 // taskコマンド
 program
@@ -124,19 +136,34 @@ program
   .option('-f, --file <paths...>', 'ターゲットファイル')
   .option('-p, --parallel', '並列実行を有効化', false)
   .action(async (description: string, options) => {
-    const spinner = ora('タスクを実行中...').start();
-    const configManager = ConfigManager.getInstance();
-    const config = await configManager.load();
-    const agent = new AgentCore(config);
-    const mcpManager = new MCPManager(config);
-
+    const { globalProgressReporter } = await import('./ui/progress.js');
+    
+    globalProgressReporter.startTask('タスク実行準備', ['設定読み込み', 'エージェント初期化', 'MCP初期化', 'タスク実行']);
+    
     try {
-      if (config.useMCP) {
+      // 設定読み込み
+      globalProgressReporter.updateSubtask(0);
+      const configManager = ConfigManager.getInstance();
+      const config = await configManager.load();
+      
+      // エージェント初期化
+      globalProgressReporter.updateSubtask(1);
+      const agent = new AgentCore(config);
+      const mcpManager = new MCPManager(config);
+
+      // MCP初期化
+      globalProgressReporter.updateSubtask(2);
+      if (config.mcp?.enabled) {
         await mcpManager.initialize();
         agent.setupMCPTools(mcpManager);
+        globalProgressReporter.showInfo('MCPツールが初期化されました');
       }
 
-      const result = config.useMCP
+      // タスク実行
+      globalProgressReporter.updateSubtask(3);
+      globalProgressReporter.completeTask(true);
+      
+      const result = config.mcp?.enabled
         ? await agent.executeTaskWithMCP({
             description,
             files: options.file || [],
@@ -148,14 +175,17 @@ program
             parallel: options.parallel,
           });
 
-      spinner.succeed(chalk.green('タスクが完了しました'));
+      console.log(chalk.green('✅ タスクが完了しました'));
       console.log(result);
     } catch (error) {
-      spinner.fail(chalk.red('タスクの実行に失敗しました'));
+      globalProgressReporter.completeTask(false);
+      globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
       logger.error('Task execution failed:', error);
       process.exit(1);
     }
   });
+
+
 
 // watchコマンド
 program
@@ -218,17 +248,41 @@ try {
 
 // 引数なしの場合は対話モードを開始
 if (process.argv.length === 2) {
-  const config = await loadConfig.load();
-  const agent = new AgentCore(config);
-  const mcpManager = new MCPManager(config);
+  const { globalProgressReporter } = await import('./ui/progress.js');
+  
+  globalProgressReporter.startTask('対話モード開始', ['設定読み込み', 'エージェント初期化', 'MCP初期化', 'REPL開始']);
+  
+  try {
+    // 設定読み込み
+    globalProgressReporter.updateSubtask(0);
+    const configManager = ConfigManager.getInstance();
+    const config = await configManager.load();
+    
+    // エージェント初期化
+    globalProgressReporter.updateSubtask(1);
+    const agent = new AgentCore(config);
+    const mcpManager = new MCPManager(config);
 
-  if (config.useMCP) {
-    await mcpManager.initialize();
-    agent.setupMCPTools(mcpManager);
+    // MCP初期化
+    globalProgressReporter.updateSubtask(2);
+    if (config.useMCP) {
+      await mcpManager.initialize();
+      agent.setupMCPTools(mcpManager);
+      globalProgressReporter.showInfo('MCPツールが有効化されました');
+    }
+
+    // REPL開始
+    globalProgressReporter.updateSubtask(3);
+    globalProgressReporter.completeTask(true);
+    
+    console.log(chalk.cyan('🤖 エージェントとの対話を開始します'));
+    console.log(chalk.gray('終了するには /exit を入力してください'));
+
+    await startREPL(agent, mcpManager);
+  } catch (error) {
+    globalProgressReporter.completeTask(false);
+    globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+    console.error(chalk.red('対話モードの開始に失敗しました:'), error);
+    process.exit(1);
   }
-
-  console.log(chalk.cyan('🤖 エージェントとの対話を開始します'));
-  console.log(chalk.gray('終了するには /exit を入力してください'));
-
-  await startREPL(agent, mcpManager);
 }
