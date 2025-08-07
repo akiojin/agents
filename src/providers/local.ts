@@ -1,6 +1,7 @@
 import type { ChatMessage } from '../types/config.js';
 import { LLMProvider, type ChatOptions, type CompletionOptions } from './base.js';
 import { logger } from '../utils/logger.js';
+import { withRetry } from '../utils/retry.js';
 
 interface LocalAPIRequest {
   model?: string;
@@ -32,106 +33,122 @@ export class LocalProvider extends LLMProvider {
   }
 
   private async makeRequest(body: LocalAPIRequest): Promise<LocalAPIResponse> {
-    try {
-      const endpoint =
-        this.providerType === 'local-gptoss'
-          ? `${this.endpoint}/v1/chat/completions`
-          : `${this.endpoint}/v1/completions`;
+    const endpoint =
+      this.providerType === 'local-gptoss'
+        ? `${this.endpoint}/v1/chat/completions`
+        : `${this.endpoint}/v1/completions`;
 
-      logger.debug(`ローカルAPIリクエスト開始: ${endpoint}`, { 
-        providerType: this.providerType,
-        hasModel: !!body.model,
-      });
+    logger.debug(`ローカルAPIリクエスト開始: ${endpoint}`, { 
+      providerType: this.providerType,
+      hasModel: !!body.model,
+    });
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => {
-        controller.abort();
-      }, this.providerOptions.timeout); // プロバイダー設定からタイムアウト値を取得
+    // リトライ付きでAPI呼び出し実行
+    const result = await withRetry(
+      async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => {
+          controller.abort();
+        }, this.providerOptions.timeout); // プロバイダー設定からタイムアウト値を取得
 
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': '@akiojin/agents',
-          },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': '@akiojin/agents',
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
 
-        clearTimeout(timeout);
+          clearTimeout(timeout);
 
-        if (!response.ok) {
-          let errorMessage = `ローカルAPI エラー: ${response.status} ${response.statusText}`;
-          
-          try {
-            const errorBody = await response.text();
-            if (errorBody) {
-              errorMessage += ` - ${errorBody}`;
+          if (!response.ok) {
+            let errorMessage = `ローカルAPI エラー: ${response.status} ${response.statusText}`;
+            
+            try {
+              const errorBody = await response.text();
+              if (errorBody) {
+                errorMessage += ` - ${errorBody}`;
+              }
+            } catch (readError) {
+              logger.debug('エラーレスポンス読み取り失敗:', readError);
             }
-          } catch (readError) {
-            logger.debug('エラーレスポンス読み取り失敗:', readError);
+
+            // HTTPステータスコード別のエラーメッセージ
+            switch (response.status) {
+              case 400:
+                throw new Error('無効なリクエストです。パラメータを確認してください。');
+              case 401:
+                throw new Error('認証が必要です。APIキーまたは設定を確認してください。');
+              case 404:
+                throw new Error('エンドポイントが見つかりません。サーバー設定を確認してください。');
+              case 500:
+                throw new Error('ローカルサーバーで内部エラーが発生しました。');
+              case 502:
+              case 503:
+              case 504:
+                throw new Error('ローカルサーバーが利用できません。サーバーの状態を確認してください。');
+              default:
+                throw new Error(errorMessage);
+            }
           }
 
-          // HTTPステータスコード別のエラーメッセージ
-          switch (response.status) {
-            case 400:
-              throw new Error('無効なリクエストです。パラメータを確認してください。');
-            case 401:
-              throw new Error('認証が必要です。APIキーまたは設定を確認してください。');
-            case 404:
-              throw new Error('エンドポイントが見つかりません。サーバー設定を確認してください。');
-            case 500:
-              throw new Error('ローカルサーバーで内部エラーが発生しました。');
-            case 502:
-            case 503:
-            case 504:
-              throw new Error('ローカルサーバーが利用できません。サーバーの状態を確認してください。');
-            default:
-              throw new Error(errorMessage);
+          // レスポンス検証
+          const contentType = response.headers.get('content-type');
+          if (!contentType?.includes('application/json')) {
+            throw new Error(`予期されたJSONレスポンスではありません: ${contentType}`);
           }
-        }
 
-        // レスポンス検証
-        const contentType = response.headers.get('content-type');
-        if (!contentType?.includes('application/json')) {
-          throw new Error(`予期されたJSONレスポンスではありません: ${contentType}`);
-        }
-
-        const result = await response.json() as LocalAPIResponse;
-        
-        // 基本的なレスポンス形式検証
-        if (!result || typeof result !== 'object') {
-          throw new Error('無効なJSONレスポンス形式です');
-        }
-
-        if (!result.choices || !Array.isArray(result.choices) || result.choices.length === 0) {
-          throw new Error('レスポンスにchoicesが含まれていません');
-        }
-
-        logger.debug('ローカルAPIリクエスト完了');
-        return result;
-
-      } catch (fetchError) {
-        clearTimeout(timeout);
-        
-        if (fetchError instanceof Error) {
-          if (fetchError.name === 'AbortError') {
-            throw new Error(`ローカルAPIリクエストがタイムアウトしました（${this.providerOptions.timeout / 1000}秒）`);
-          } else if (fetchError.message.includes('ECONNREFUSED')) {
-            throw new Error(`ローカルサーバー（${this.endpoint}）に接続できません。サーバーが起動しているか確認してください。`);
-          } else if (fetchError.message.includes('ENOTFOUND')) {
-            throw new Error(`ローカルサーバーのアドレス（${this.endpoint}）が見つかりません。設定を確認してください。`);
+          const result = await response.json() as LocalAPIResponse;
+          
+          // 基本的なレスポンス形式検証
+          if (!result || typeof result !== 'object') {
+            throw new Error('無効なJSONレスポンス形式です');
           }
+
+          if (!result.choices || !Array.isArray(result.choices) || result.choices.length === 0) {
+            throw new Error('レスポンスにchoicesが含まれていません');
+          }
+
+          return result;
+
+        } catch (fetchError) {
+          clearTimeout(timeout);
+          
+          if (fetchError instanceof Error) {
+            if (fetchError.name === 'AbortError') {
+              throw new Error(`ローカルAPIリクエストがタイムアウトしました（${this.providerOptions.timeout / 1000}秒）`);
+            } else if (fetchError.message.includes('ECONNREFUSED')) {
+              throw new Error(`ローカルサーバー（${this.endpoint}）に接続できません。サーバーが起動しているか確認してください。`);
+            } else if (fetchError.message.includes('ENOTFOUND')) {
+              throw new Error(`ローカルサーバーのアドレス（${this.endpoint}）が見つかりません。設定を確認してください。`);
+            }
+          }
+          
+          throw fetchError;
         }
-        
-        throw fetchError;
+      },
+      {
+        maxRetries: this.providerOptions.maxRetries,
+        delay: 1000,
+        exponentialBackoff: true,
+        timeout: this.providerOptions.timeout,
+        shouldRetry: this.isRetryableError.bind(this),
       }
+    );
 
-    } catch (error) {
-      logger.error('ローカルAPIリクエストエラー:', error);
-      throw error;
+    if (!result.success) {
+      logger.error('ローカルAPIリクエストエラー after retries:', result.error);
+      throw result.error!;
     }
+
+    logger.debug('ローカルAPIリクエスト完了', {
+      attemptCount: result.attemptCount,
+      totalTime: result.totalTime,
+    });
+    return result.result!;
   }
 
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string> {
@@ -356,5 +373,32 @@ export class LocalProvider extends LLMProvider {
       
       return false;
     }
+  }
+
+  /**
+   * ローカルAPIのエラーがリトライ可能かを判定
+   */
+  private isRetryableError(error: any): boolean {
+    // ネットワークエラー
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      if (message.includes('timeout') ||
+          message.includes('connection') ||
+          message.includes('network') ||
+          message.includes('econnrefused') ||
+          message.includes('enotfound') ||
+          message.includes('abort')) {
+        return true;
+      }
+    }
+
+    // HTTPステータスコードベースの判定
+    if (error && typeof error === 'object' && 'status' in error) {
+      const status = error.status;
+      // サーバーエラー（500番台）はリトライ可能
+      return status >= 500;
+    }
+
+    return false;
   }
 }

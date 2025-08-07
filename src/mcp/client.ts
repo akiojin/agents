@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import type { ChildProcess } from 'child_process';
 import * as jsonrpc from 'jsonrpc-lite';
 import { logger } from '../utils/logger.js';
+import { withRetry } from '../utils/retry.js';
 import type { Tool } from './manager.js';
 
 export class MCPClient extends EventEmitter {
@@ -142,60 +143,79 @@ export class MCPClient extends EventEmitter {
   }
 
   private async sendRequest(method: string, params?: unknown): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-      try {
-        if (!this.process || !this.process.stdin) {
-          reject(new Error(`MCPサーバー [${this.name}] が接続されていません`));
-          return;
-        }
+    // リトライ付きでリクエスト送信
+    const result = await withRetry(
+      async () => {
+        return new Promise((resolve, reject) => {
+          try {
+            if (!this.process || !this.process.stdin) {
+              reject(new Error(`MCPサーバー [${this.name}] が接続されていません`));
+              return;
+            }
 
-        const id = ++this.requestId;
-        const request = jsonrpc.request(id, method, params as any);
-        const json = JSON.stringify(request) + '\n';
+            const id = ++this.requestId;
+            const request = jsonrpc.request(id, method, params as any);
+            const json = JSON.stringify(request) + '\n';
 
-        // リクエストを記録
-        this.pendingRequests.set(id, { resolve, reject });
+            // リクエストを記録
+            this.pendingRequests.set(id, { resolve, reject });
 
-        // タイムアウト設定（設定値を使用）
-        const timeout = setTimeout(() => {
-          if (id !== null) this.pendingRequests.delete(id);
-          reject(new Error(`リクエストタイムアウト [${this.name}/${method}]: ${this.timeout}ミリ秒を超えました`));
-        }, this.timeout);
+            // タイムアウト設定（設定値を使用）
+            const timeout = setTimeout(() => {
+              if (id !== null) this.pendingRequests.delete(id);
+              reject(new Error(`リクエストタイムアウト [${this.name}/${method}]: ${this.timeout}ミリ秒を超えました`));
+            }, this.timeout);
 
-        // リクエスト送信
-        this.process!.stdin!.write(json, (error) => {
-          if (error) {
-            clearTimeout(timeout);
-            if (id !== null) this.pendingRequests.delete(id);
-            logger.error(`リクエスト送信エラー [${this.name}/${method}]:`, error);
-            reject(new Error(`リクエスト送信に失敗しました [${this.name}/${method}]: ${error.message}`));
-            return;
+            // リクエスト送信
+            this.process!.stdin!.write(json, (error) => {
+              if (error) {
+                clearTimeout(timeout);
+                if (id !== null) this.pendingRequests.delete(id);
+                logger.error(`リクエスト送信エラー [${this.name}/${method}]:`, error);
+                reject(new Error(`リクエスト送信に失敗しました [${this.name}/${method}]: ${error.message}`));
+                return;
+              }
+
+              // リクエスト送信成功時のデバッグログ
+              logger.debug(`リクエスト送信完了 [${this.name}/${method}]`);
+            });
+
+            // レスポンスが返ってきたらタイムアウトをクリア
+            const originalResolve = resolve;
+            const originalReject = reject;
+            
+            this.pendingRequests.set(id, {
+              resolve: (value) => {
+                clearTimeout(timeout);
+                originalResolve(value);
+              },
+              reject: (error) => {
+                clearTimeout(timeout);
+                originalReject(error);
+              },
+            });
+
+          } catch (error) {
+            logger.error(`リクエスト準備エラー [${this.name}/${method}]:`, error);
+            reject(new Error(`リクエストの準備に失敗しました [${this.name}/${method}]: ${error instanceof Error ? error.message : String(error)}`));
           }
-
-          // リクエスト送信成功時のデバッグログ
-          logger.debug(`リクエスト送信完了 [${this.name}/${method}]`);
         });
-
-        // レスポンスが返ってきたらタイムアウトをクリア
-        const originalResolve = resolve;
-        const originalReject = reject;
-        
-        this.pendingRequests.set(id, {
-          resolve: (value) => {
-            clearTimeout(timeout);
-            originalResolve(value);
-          },
-          reject: (error) => {
-            clearTimeout(timeout);
-            originalReject(error);
-          },
-        });
-
-      } catch (error) {
-        logger.error(`リクエスト準備エラー [${this.name}/${method}]:`, error);
-        reject(new Error(`リクエストの準備に失敗しました [${this.name}/${method}]: ${error instanceof Error ? error.message : String(error)}`));
+      },
+      {
+        maxRetries: this.maxRetries,
+        delay: 1000,
+        exponentialBackoff: true,
+        timeout: this.timeout,
+        shouldRetry: this.isRetryableError.bind(this),
       }
-    });
+    );
+
+    if (!result.success) {
+      logger.error(`MCPリクエストエラー after retries [${this.name}/${method}]:`, result.error);
+      throw result.error!;
+    }
+
+    return result.result!;
   }
 
   async listTools(): Promise<Tool[]> {
@@ -236,45 +256,56 @@ export class MCPClient extends EventEmitter {
   }
 
   async invokeTool(name: string, params?: Record<string, unknown>): Promise<unknown> {
-    try {
-      // 基本的な検証
-      if (!name || name.trim().length === 0) {
-        throw new Error('ツール名が指定されていません');
+    // 基本的な検証
+    if (!name || name.trim().length === 0) {
+      throw new Error('ツール名が指定されていません');
+    }
+
+    // 接続確認
+    if (!this.connected) {
+      throw new Error(`MCPサーバー [${this.name}] が接続されていません`);
+    }
+
+    // プロセス状態確認
+    if (!this.process || this.process.killed) {
+      throw new Error(`MCPサーバー [${this.name}] のプロセスが無効です`);
+    }
+
+    logger.debug(`ツール実行開始 [${this.name}/${name}]:`, { params });
+
+    // リトライ付きでツール実行
+    const result = await withRetry(
+      async () => {
+        // ツール実行リクエスト
+        const result = await this.sendRequest('tools/call', {
+          name: name.trim(),
+          arguments: params || {},
+        });
+
+        // 結果検証
+        if (result === undefined || result === null) {
+          logger.warn(`ツール実行結果が空です [${this.name}/${name}]`);
+          return { error: false, message: 'ツール実行は成功しましたが、結果は空でした', result: null };
+        }
+
+        return result;
+      },
+      {
+        maxRetries: this.maxRetries,
+        delay: 1000,
+        exponentialBackoff: true,
+        timeout: this.timeout,
+        shouldRetry: this.isRetryableError.bind(this),
       }
+    );
 
-      // 接続確認
-      if (!this.connected) {
-        throw new Error(`MCPサーバー [${this.name}] が接続されていません`);
-      }
-
-      // プロセス状態確認
-      if (!this.process || this.process.killed) {
-        throw new Error(`MCPサーバー [${this.name}] のプロセスが無効です`);
-      }
-
-      logger.debug(`ツール実行開始 [${this.name}/${name}]:`, { params });
-
-      // ツール実行リクエスト
-      const result = await this.sendRequest('tools/call', {
-        name: name.trim(),
-        arguments: params || {},
-      });
-
-      // 結果検証
-      if (result === undefined || result === null) {
-        logger.warn(`ツール実行結果が空です [${this.name}/${name}]`);
-        return { error: false, message: 'ツール実行は成功しましたが、結果は空でした', result: null };
-      }
-
-      logger.debug(`ツール実行完了 [${this.name}/${name}]`);
-      return result;
-
-    } catch (error) {
-      logger.error(`ツール実行エラー [${this.name}/${name}]:`, error);
+    if (!result.success) {
+      logger.error(`ツール実行エラー after retries [${this.name}/${name}]:`, result.error);
 
       // エラーの詳細化とフォールバック
       let errorMessage = 'ツール実行中にエラーが発生しました';
       let shouldRetry = false;
+      const error = result.error!;
 
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
@@ -302,6 +333,8 @@ export class MCPClient extends EventEmitter {
         canRetry: shouldRetry,
         originalError: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
+        attemptCount: result.attemptCount,
+        totalTime: result.totalTime,
       };
 
       // 重大なエラーの場合のみ例外を投げる、それ以外はフォールバック結果を返す
@@ -311,6 +344,12 @@ export class MCPClient extends EventEmitter {
 
       return fallbackResult;
     }
+
+    logger.debug(`ツール実行完了 [${this.name}/${name}]`, {
+      attemptCount: result.attemptCount,
+      totalTime: result.totalTime,
+    });
+    return result.result!;
   }
 
   async disconnect(): Promise<void> {
@@ -403,5 +442,41 @@ export class MCPClient extends EventEmitter {
 
   getMaxRetries(): number {
     return this.maxRetries;
+  }
+
+  /**
+   * MCPのエラーがリトライ可能かを判定
+   */
+  private isRetryableError(error: any): boolean {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      
+      // タイムアウト、接続エラーはリトライ可能
+      if (message.includes('timeout') ||
+          message.includes('connection') ||
+          message.includes('disconnect') ||
+          message.includes('network') ||
+          message.includes('econnrefused') ||
+          message.includes('enotfound')) {
+        return true;
+      }
+
+      // MCP特有のエラー
+      if (message.includes('server not responding') ||
+          message.includes('communication error') ||
+          message.includes('temporary')) {
+        return true;
+      }
+
+      // 権限エラーや見つからないエラーはリトライしない
+      if (message.includes('not found') ||
+          message.includes('permission') ||
+          message.includes('unauthorized') ||
+          message.includes('invalid')) {
+        return false;
+      }
+    }
+
+    return false;
   }
 }

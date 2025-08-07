@@ -2,6 +2,7 @@ import EventEmitter from 'events';
 import type { Config } from '../config/types.js';
 import type { ChatMessage, TaskConfig, TaskResult } from '../types/config.js';
 import { logger, PerformanceLogger, LogLevel } from '../utils/logger.js';
+import { withRetry } from '../utils/retry.js';
 import type { LLMProvider } from '../providers/base.js';
 import { createProviderFromUnifiedConfig } from '../providers/factory.js';
 import { TaskExecutor } from './task-executor.js';
@@ -58,11 +59,11 @@ export class AgentCore extends EventEmitter {
       logger.info('エージェントコアを初期化しました');
     } catch (error) {
       logger.error('初期化エラー:', error);
-      
+
       // 初期化エラーでも基本的な機能は利用可能にする
       this.history = [];
       logger.warn('履歴の読み込みに失敗しましたが、新しいセッションとして開始します');
-      
+
       // 初期化エラーは致命的ではないので例外を投げない
     }
   }
@@ -108,36 +109,43 @@ export class AgentCore extends EventEmitter {
         throw new Error('LLMプロバイダーが初期化されていません');
       }
 
-      // LLMに送信（複数回のリトライ機能付き）
-      let response: string;
-      let lastError: Error | null = null;
-      let retryCount = 0;
-      const maxRetries = this.config.llm.maxRetries;
-
-      while (retryCount < maxRetries) {
-        try {
-          response = await this.provider.chat(this.history, {
+      // withRetryを使用したLLM呼び出し
+      const result = await withRetry(
+        async () => {
+          return await this.provider.chat(this.history, {
             model: this.currentModel,
             temperature: this.config.llm.temperature || 0.7,
             maxTokens: this.config.llm.maxTokens || 2000,
           });
-          break; // 成功した場合はループを抜ける
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error(String(error));
-          retryCount++;
-          
-          logger.warn(`LLMリクエスト失敗 (試行 ${retryCount}/${maxRetries}):`, lastError.message);
+        },
+        {
+          maxRetries: this.config.llm.maxRetries,
+          delay: 1000,
+          exponentialBackoff: true,
+          timeout: this.config.llm.timeout,
+          shouldRetry: (error: Error) => {
+            const message = error.message.toLowerCase();
+            // リトライ可能なエラー: タイムアウト、レート制限、ネットワークエラー、サーバーエラー
+            return (
+              message.includes('timeout') ||
+              message.includes('rate limit') ||
+              message.includes('too many requests') ||
+              message.includes('network') ||
+              message.includes('connection') ||
+              message.includes('server error') ||
+              message.includes('temporary') ||
+              message.includes('service unavailable')
+            );
+          },
+        },
+      );
 
-          if (retryCount < maxRetries) {
-            // リトライ前に少し待機
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-          }
-        }
+      if (!result.success) {
+        logger.error('LLMチャットエラー after retries:', result.error);
+        throw result.error!;
       }
 
-      if (!response!) {
-        throw lastError || new Error('LLMからのレスポンス取得に失敗しました');
-      }
+      const response = result.result!;
 
       // 応答検証
       if (!response || response.trim().length === 0) {
@@ -154,7 +162,7 @@ export class AgentCore extends EventEmitter {
       };
       this.history.push(assistantMessage);
 
-      // 履歴を保存（エラーが発生しても会話は続行）
+      // 履歴を保存（エラーが発生しても会話は継続）
       try {
         await this.memoryManager.saveHistory(this.history);
       } catch (saveError) {
@@ -162,9 +170,8 @@ export class AgentCore extends EventEmitter {
         // 履歴保存失敗は致命的ではない
       }
 
-      perf.end('Chat completed');
+      perf.end(`Chat completed (attempts: ${result.attemptCount}, time: ${result.totalTime}ms)`);
       return trimmedResponse;
-
     } catch (error) {
       logger.error('Chat error:', error);
 
@@ -174,11 +181,20 @@ export class AgentCore extends EventEmitter {
 
       if (error instanceof Error) {
         const errorMsg = error.message.toLowerCase();
-        
-        if (errorMsg.includes('api key') || errorMsg.includes('unauthorized') || errorMsg.includes('authentication')) {
+
+        if (
+          errorMsg.includes('api key') ||
+          errorMsg.includes('unauthorized') ||
+          errorMsg.includes('authentication')
+        ) {
           errorMessage = 'APIキーが無効または期限切れです。設定を確認してください。';
-        } else if (errorMsg.includes('quota') || errorMsg.includes('billing') || errorMsg.includes('payment')) {
-          errorMessage = 'APIの利用枠または請求に問題があります。アカウント状況を確認してください。';
+        } else if (
+          errorMsg.includes('quota') ||
+          errorMsg.includes('billing') ||
+          errorMsg.includes('payment')
+        ) {
+          errorMessage =
+            'APIの利用枠または請求に問題があります。アカウント状況を確認してください。';
         } else if (errorMsg.includes('timeout')) {
           errorMessage = 'リクエストがタイムアウトしました。もう一度お試しください。';
           canRetry = true;
@@ -302,11 +318,16 @@ export class AgentCore extends EventEmitter {
 
   private parseLogLevel(level: string): LogLevel {
     switch (level.toLowerCase()) {
-      case 'error': return LogLevel.ERROR;
-      case 'warn': return LogLevel.WARN;
-      case 'info': return LogLevel.INFO;
-      case 'debug': return LogLevel.DEBUG;
-      default: return LogLevel.INFO;
+      case 'error':
+        return LogLevel.ERROR;
+      case 'warn':
+        return LogLevel.WARN;
+      case 'info':
+        return LogLevel.INFO;
+      case 'debug':
+        return LogLevel.DEBUG;
+      default:
+        return LogLevel.INFO;
     }
   }
 
@@ -425,16 +446,19 @@ export class AgentCore extends EventEmitter {
   /**
    * ステップ実行結果の詳細サマリーを作成
    */
-  private createDetailedSummary(stepResults: Array<{
-    stepIndex: number;
-    description: string;
-    success: boolean;
-    result?: unknown;
-    error?: string;
-    duration?: number;
-  }>, totalSteps: number): string {
-    const successCount = stepResults.filter(r => r.success).length;
-    const errorCount = stepResults.filter(r => !r.success).length;
+  private createDetailedSummary(
+    stepResults: Array<{
+      stepIndex: number;
+      description: string;
+      success: boolean;
+      result?: unknown;
+      error?: string;
+      duration?: number;
+    }>,
+    totalSteps: number,
+  ): string {
+    const successCount = stepResults.filter((r) => r.success).length;
+    const errorCount = stepResults.filter((r) => !r.success).length;
     const totalDuration = stepResults.reduce((sum, r) => sum + (r.duration || 0), 0);
 
     const summaryParts = [
@@ -445,8 +469,8 @@ export class AgentCore extends EventEmitter {
     // エラーがある場合はエラーの詳細を追加
     if (errorCount > 0) {
       const failedSteps = stepResults
-        .filter(r => !r.success)
-        .map(r => `- ${r.description}: ${r.error}`)
+        .filter((r) => !r.success)
+        .map((r) => `- ${r.description}: ${r.error}`)
         .join('\n');
       summaryParts.push(`失敗したステップ:\n${failedSteps}`);
     }
