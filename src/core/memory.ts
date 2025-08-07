@@ -41,16 +41,18 @@ export class MemoryManager {
    */
   public cleanup(): void {
     try {
-      // タイマーのクリア
-      this.timers.forEach(timer => clearTimeout(timer));
+      // タイマーのクリア - forEach + asyncの問題を修正：for...ofループを使用
+      for (const timer of this.timers) {
+        clearTimeout(timer);
+      }
       this.timers.clear();
 
-      // ファイル監視の停止
-      this.fileWatchers.forEach(watcher => {
+      // ファイル監視の停止 - forEach + asyncの問題を修正：for...ofループを使用
+      for (const watcher of this.fileWatchers) {
         if (watcher && typeof watcher.close === 'function') {
           watcher.close();
         }
-      });
+      }
       this.fileWatchers.clear();
 
       logger.debug('MemoryManager のリソースクリーンアップが完了しました');

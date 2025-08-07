@@ -101,11 +101,11 @@ export class MCPManager extends EventEmitter {
     await client.connect(childProcess);
     this.servers.set(serverConfig.name, client);
 
-    // ツールを取得
+    // ツールを取得 - forEach + asyncの問題を修正：for...ofループを使用
     const tools = await client.listTools();
-    tools.forEach((tool) => {
+    for (const tool of tools) {
       this.tools.set(`${serverConfig.name}:${tool.name}`, tool);
-    });
+    }
 
     logger.info(`MCPサーバーが起動しました: ${serverConfig.name} (${tools.length}個のツール)`);
   }

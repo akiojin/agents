@@ -219,12 +219,18 @@ export class MCPToolsHelper {
       // リソース競合がなく、読み取り専用操作の場合は並列実行可能
       if (!hasConflict && this.isReadOnlyOperation(toolCall.name)) {
         independentTasks.push(task);
-        resources.forEach(resource => usedResources.add(resource));
+        // forEach + asyncの問題を修正：for...ofループを使用
+        for (const resource of resources) {
+          usedResources.add(resource);
+        }
       }
       // 書き込み操作でも、異なるリソースなら並列実行可能
       else if (!hasConflict) {
         independentTasks.push(task);
-        resources.forEach(resource => usedResources.add(resource));
+        // forEach + asyncの問題を修正：for...ofループを使用
+        for (const resource of resources) {
+          usedResources.add(resource);
+        }
       }
     }
 

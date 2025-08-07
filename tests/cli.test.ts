@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Command } from 'commander';
-import { ConfigManager } from '../src/config/index.js';
+import { ConfigManager, loadConfig } from '../src/config/index.js';
 import { AgentCore } from '../src/core/agent';
 import { MCPManager } from '../src/mcp/manager';
 

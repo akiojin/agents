@@ -736,7 +736,10 @@ export class AgentCore extends EventEmitter {
         return false;
       }
       
-      files.forEach(file => usedFiles.add(file));
+      // forEach + asyncの問題を修正：for...ofループを使用
+      for (const file of files) {
+        usedFiles.add(file);
+      }
     }
 
     return true;

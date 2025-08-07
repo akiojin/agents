@@ -82,8 +82,18 @@ export class ParallelExecutor {
         }
       });
 
-      const chunkResults = await Promise.all(chunkPromises);
-      results.push(...chunkResults);
+      // Promise.allではなくPromise.allSettledを使用してエラー処理を改善
+      const chunkSettledResults = await Promise.allSettled(chunkPromises);
+      
+      for (const settledResult of chunkSettledResults) {
+        if (settledResult.status === 'fulfilled') {
+          results.push(settledResult.value);
+        } else {
+          // エラーが発生した場合はログに記録し、エラーを再スロー
+          logger.error('並列タスクでエラーが発生:', settledResult.reason);
+          throw settledResult.reason;
+        }
+      }
     }
 
     return results;
@@ -192,12 +202,13 @@ export class ParallelExecutor {
     const dependencyGraph = new Map<string, string[]>();
     const taskMap = new Map<string, ParallelTask<T>>();
 
-    tasks.forEach((task) => {
+    // forEach + asyncの問題を修正：for...ofループを使用
+    for (const task of tasks) {
       const taskId = task.id || `task-${Date.now()}-${Math.random()}`;
       task.id = taskId;
       taskMap.set(taskId, task);
       dependencyGraph.set(taskId, dependencyDetector(task));
-    });
+    }
 
     // トポロジカルソートで実行順序を決定
     const executionLevels = this.topologicalSort(dependencyGraph);
@@ -250,15 +261,18 @@ export class ParallelExecutor {
     const inDegree = new Map<string, number>();
     const nodes = Array.from(dependencyGraph.keys());
 
-    // 入次数を計算
-    nodes.forEach((node) => inDegree.set(node, 0));
-    dependencyGraph.forEach((deps) => {
-      deps.forEach((dep) => {
+    // 入次数を計算 - forEach + asyncの問題を修正：for...ofループを使用
+    for (const node of nodes) {
+      inDegree.set(node, 0);
+    }
+    
+    for (const [, deps] of dependencyGraph) {
+      for (const dep of deps) {
         if (dependencyGraph.has(dep)) {
           inDegree.set(dep, (inDegree.get(dep) || 0) + 1);
         }
-      });
-    });
+      }
+    }
 
     const levels: string[][] = [];
     const remaining = new Set(nodes);
@@ -277,16 +291,16 @@ export class ParallelExecutor {
 
       levels.push(currentLevel);
 
-      // 現在のレベルのノードを処理
-      currentLevel.forEach((node) => {
+      // 現在のレベルのノードを処理 - forEach + asyncの問題を修正：for...ofループを使用
+      for (const node of currentLevel) {
         remaining.delete(node);
         const deps = dependencyGraph.get(node) || [];
-        deps.forEach((dep) => {
+        for (const dep of deps) {
           if (inDegree.has(dep)) {
             inDegree.set(dep, (inDegree.get(dep) || 0) - 1);
           }
-        });
-      });
+        }
+      }
     }
 
     return levels;

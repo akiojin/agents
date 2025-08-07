@@ -142,32 +142,52 @@ export class TaskExecutor extends EventEmitter {
     if (independentTasks.length > 0) {
       globalProgressReporter.showInfo(`${independentTasks.length}個の独立タスクを並列実行中...`);
       
-      const parallelResults = await this.parallelExecutor.executeParallelWithDetails(
-        independentTasks,
-        (completed, total, currentTask) => {
-          globalProgressReporter.showInfo(`並列実行進捗: ${completed}/${total} - ${currentTask}`);
-        }
-      );
+      try {
+        const parallelResults = await this.parallelExecutor.executeParallelWithDetails(
+          independentTasks,
+          (completed, total, currentTask) => {
+            globalProgressReporter.showInfo(`並列実行進捗: ${completed}/${total} - ${currentTask}`);
+          }
+        );
 
-      results = parallelResults.map(pr => pr.success ? {
-        success: true,
-        message: pr.taskId || 'Unknown task',
-        data: pr.data,
-        duration: pr.duration
-      } : {
-        success: false,
-        message: `タスクエラー: ${pr.taskId}`,
-        error: pr.error,
-        duration: pr.duration
-      });
+        results = parallelResults.map(pr => pr.success ? {
+          success: true,
+          message: pr.taskId || 'Unknown task',
+          data: pr.data,
+          duration: pr.duration
+        } : {
+          success: false,
+          message: `タスクエラー: ${pr.taskId}`,
+          error: pr.error,
+          duration: pr.duration
+        });
+      } catch (error) {
+        // 並列実行でエラーが発生した場合のフォールバック処理
+        logger.error('並列実行でエラーが発生しました。順次実行にフォールバックします:', error);
+        globalProgressReporter.showWarning('並列実行でエラーが発生したため、順次実行に切り替えます');
+        
+        // 順次実行にフォールバック
+        const fallbackResults = await this.executeSequentialTasks(independentTasks, provider);
+        results.push(...fallbackResults);
+      }
     }
 
     // 依存関係のあるタスクを順次実行
     if (dependentTasks.length > 0) {
       globalProgressReporter.showInfo(`${dependentTasks.length}個の依存タスクを順次実行中...`);
       
-      const sequentialResults = await this.executeSequentialTasks(dependentTasks, provider);
-      results.push(...sequentialResults);
+      try {
+        const sequentialResults = await this.executeSequentialTasks(dependentTasks, provider);
+        results.push(...sequentialResults);
+      } catch (error) {
+        logger.error('依存タスクの順次実行でエラーが発生:', error);
+        // 依存タスクのエラーは致命的なので、エラー結果を追加
+        results.push({
+          success: false,
+          message: `依存タスク実行エラー: ${error instanceof Error ? error.message : String(error)}`,
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      }
     }
 
     return results;
@@ -256,7 +276,10 @@ export class TaskExecutor extends EventEmitter {
       
       if (!hasConflict) {
         independentTasks.push(task);
-        taskFiles.forEach(file => usedFiles.add(file));
+        // forEach + asyncの問題を修正：for...ofループを使用
+        for (const file of taskFiles) {
+          usedFiles.add(file);
+        }
       }
     }
     
