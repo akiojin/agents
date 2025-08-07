@@ -236,41 +236,20 @@ program
 
 // Argumentsなしの場合は対話モードをStarted
 if (process.argv.length === 2) {
-  const { globalProgressReporter } = await import('./ui/progress.js');
-  
-  globalProgressReporter.startTask('Starting interactive mode', ['Loading config', 'Initializing agent', 'Initializing MCP', 'Starting REPL']);
-  
   try {
-    // ConfigLoad
-    globalProgressReporter.updateSubtask(0);
     const configManager = ConfigManager.getInstance();
     const config = await configManager.load();
-    
-    // AgentInitialize
-    globalProgressReporter.updateSubtask(1);
     const agent = new AgentCore(config);
     const mcpManager = new MCPManager(config);
 
-    // MCPInitialize
-    globalProgressReporter.updateSubtask(2);
     if (config.mcp?.enabled) {
       await mcpManager.initialize();
       agent.setupMCPTools(mcpManager);
-      globalProgressReporter.showInfo('MCP tools enabled');
     }
-
-    // REPLStarted
-    globalProgressReporter.updateSubtask(3);
-    globalProgressReporter.completeTask(true);
-    
-    console.log(chalk.cyan('🤖 Starting agent interactive mode'));
-    console.log(chalk.gray('Type /exit to quit'));
 
     await startREPL(agent, mcpManager);
   } catch (error) {
-    globalProgressReporter.completeTask(false);
-    globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
-    console.error(chalk.red('Failed to start interactive mode:'), error);
+    console.error(chalk.red('Error:'), error);
     process.exit(1);
   }
 } else {

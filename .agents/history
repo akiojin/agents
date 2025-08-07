@@ -18,5 +18,15 @@
     "role": "assistant",
     "content": "<|channel|>commentary to=final <|constrain|>response<|message|>こんにちは！何かお手伝いできることはありますか？",
     "timestamp": "2025-08-07T16:31:19.096Z"
+  },
+  {
+    "role": "user",
+    "content": "こんにちは",
+    "timestamp": "2025-08-07T16:32:20.376Z"
+  },
+  {
+    "role": "assistant",
+    "content": "こんにちは！いつでもどうぞ、質問や話したいことがあれば教えてくださいね。",
+    "timestamp": "2025-08-07T16:32:21.601Z"
   }
 ]

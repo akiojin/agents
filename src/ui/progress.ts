@@ -18,11 +18,6 @@ export class ProgressReporter {
     this.startTime = Date.now();
     this.subtasks = subtasks || [];
     this.currentSubtaskIndex = 0;
-    
-    console.log(`\n🔄 ${name}...`);
-    if (subtasks && subtasks.length > 1) {
-      console.log(`  📝 ${subtasks.length} subtasks`);
-    }
   }
   
   /**
@@ -32,7 +27,6 @@ export class ProgressReporter {
   updateSubtask(index: number): void {
     if (this.subtasks.length > 0 && index < this.subtasks.length) {
       this.currentSubtaskIndex = index;
-      console.log(`  [${index + 1}/${this.subtasks.length}] ${this.subtasks[index]}`);
     }
   }
   
@@ -42,8 +36,6 @@ export class ProgressReporter {
    */
   completeTask(success: boolean = true): void {
     const duration = Date.now() - this.startTime;
-    const emoji = success ? '✅' : '❌';
-    console.log(`${emoji} ${this.currentTask} (${this.formatDuration(duration)})`);
   }
   
   /**

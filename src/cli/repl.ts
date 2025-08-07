@@ -6,10 +6,21 @@ import type { MCPManager } from '../mcp/manager.js';
 import { logger } from '../utils/logger.js';
 
 export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promise<void> {
+  // Clear screen and show title
+  console.clear();
+  console.log('');
+  console.log('   ' + chalk.cyan.bold('AGENTS'));
+  console.log('');
+  console.log(chalk.gray('Tips for getting started:'));
+  console.log(chalk.gray('1. Ask questions or give instructions'));
+  console.log(chalk.gray('2. Type /help for available commands'));
+  console.log(chalk.gray('3. Type /exit to quit'));
+  console.log('');
+  
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: chalk.cyan('agents> '),
+    prompt: chalk.gray('> '),
   });
 
   // スラッシュCommandハンドラー
@@ -33,7 +44,6 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       }
 
       case '/exit': {
-        console.log(chalk.yellow('Goodbye!'));
         rl.close();
         process.exit(0);
         break;
@@ -54,35 +64,35 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
 
       case '/save': {
         if (!args) {
-          console.log(chalk.red('ファイル名を指定してplease'));
+          console.log(chalk.red('Please specify a filename'));
           return true;
         }
         try {
           await agent.saveSession(args);
-          console.log(chalk.green(`セッションをSavedone: ${args}`));
+          console.log(chalk.green(`Session saved: ${args}`));
         } catch (error) {
-          console.log(chalk.red('SaveにFaileddone:', error));
+          console.log(chalk.red('Failed to save:', error));
         }
         return true;
       }
 
       case '/load': {
         if (!args) {
-          console.log(chalk.red('ファイル名を指定してplease'));
+          console.log(chalk.red('Please specify a filename'));
           return true;
         }
         try {
           await agent.loadSession(args);
-          console.log(chalk.green(`セッションをLoadました: ${args}`));
+          console.log(chalk.green(`Session loaded: ${args}`));
         } catch (error) {
-          console.log(chalk.red('LoadにFaileddone:', error));
+          console.log(chalk.red('Failed to load:', error));
         }
         return true;
       }
 
       case '/tools': {
         const tools = await mcpManager.listTools();
-        console.log(chalk.cyan('利用可能なTool:'));
+        console.log(chalk.cyan('Available tools:'));
         tools.forEach((tool) => {
           console.log(`  - ${tool.name}: ${tool.description}`);
         });
@@ -92,10 +102,10 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       case '/mcp': {
         const serverStatus = agent.getMCPServerStatus();
         if (!serverStatus) {
-          console.log(chalk.red('MCPToolがInitializenot initialized'));
+          console.log(chalk.red('MCP tools not initialized'));
           return true;
         }
-        console.log(chalk.cyan('MCPServerステータス:'));
+        console.log(chalk.cyan('MCP server status:'));
         for (const [name, status] of serverStatus) {
           const statusText = status ? chalk.green('Connected') : chalk.red('Disconnected');
           console.log(`  - ${name}: ${statusText}`);
@@ -173,14 +183,15 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       }
 
       // TaskExecute
-      const spinner = ora('Thinking...').start();
+      process.stdout.write(chalk.gray('Thinking...'));
       try {
         const response = await agent.chatWithTaskDecomposition(trimmedInput);
-        spinner.stop();
-        console.log(chalk.green('Agent:'), response);
+        // Clear the "Thinking..." line and show response
+        process.stdout.write('\r' + ' '.repeat(20) + '\r');
+        console.log(response);
       } catch (error) {
-        spinner.fail(chalk.red('An error occurred'));
-        logger.error('Chat error:', error);
+        process.stdout.write('\r' + ' '.repeat(20) + '\r');
+        console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
       }
 
       rl.prompt();
@@ -188,15 +199,10 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   });
 
   rl.on('close', () => {
-    console.log(chalk.yellow('\nExiting...'));
     process.exit(0);
   });
 
   // ウェルカムMessage
-  console.log(chalk.cyan('━'.repeat(50)));
-  console.log(chalk.cyan.bold('  AI Coding Agent - Interactive Mode'));
-  console.log(chalk.gray('  Type /help to show commands'));
-  console.log(chalk.cyan('━'.repeat(50)));
 
   rl.prompt();
 }
