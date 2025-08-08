@@ -240,15 +240,31 @@ program
     console.log(chalk.gray('  ログレベル:'), config.app.logLevel);
   });
 
-// Argumentsなしの場合は対話モードをStarted
+// REPLコマンドを追加
+program
+  .command('repl')
+  .description('対話モードを開始')
+  .option('--continue', '前回のセッションを継続')
+  .action(async (options) => {
+    await startREPLMode(options.continue);
+  });
+
+// Argumentsなしの場合は新しいセッションで対話モードを開始
 if (process.argv.length === 2) {
+  await startREPLMode(false); // 新しいセッション
+} else {
+  program.parse(process.argv);
+}
+
+// REPLモード開始関数
+async function startREPLMode(continueSession: boolean = false) {
   // REPLモードでは環境変数でログを無効化
   process.env.AGENTS_SILENT = 'true';
   
   try {
     const configManager = ConfigManager.getInstance();
     const config = await configManager.load();
-    const agent = new AgentCore(config);
+    const agent = new AgentCore(config, continueSession); // セッション継続フラグを渡す
     const mcpManager = MCPManager.fromUnifiedConfig(config);
 
     // REPL即座起動 - MCPは遅延初期化
@@ -329,20 +345,6 @@ if (process.argv.length === 2) {
     await replPromise;
   } catch (error) {
     console.error(chalk.red('Error:'), error);
-    process.exit(1);
-  }
-} else {
-  // Argumentsありの場合は通常のCommandProcessing
-  try {
-    await program.parseAsync(process.argv);
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('outputHelp')) {
-      // ヘルプ表示の場合は正常Exit
-      process.exit(0);
-    }
-    if (error instanceof Error) {
-      console.error(chalk.red('Error:'), error.message);
-    }
     process.exit(1);
   }
 }

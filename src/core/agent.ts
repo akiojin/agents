@@ -39,7 +39,7 @@ export class AgentCore extends EventEmitter {
   private timers: Set<NodeJS.Timeout> = new Set();
   private eventListeners: WeakMap<object, Function[]> = new WeakMap();
 
-  constructor(config: Config) {
+  constructor(config: Config, continueSession: boolean = false) {
     super();
     this.config = config;
     this.currentModel = config.llm.model || this.getDefaultModel();
@@ -50,7 +50,7 @@ export class AgentCore extends EventEmitter {
     this.parallelExecutor = new ParallelExecutor(config.app.maxParallel || 3);
     
     // Initialize asynchronously (with error handling)
-    void this.initialize();
+    void this.initialize(continueSession);
     
     // Register cleanup handlers for process exit
     this.setupCleanupHandlers();
@@ -75,10 +75,16 @@ export class AgentCore extends EventEmitter {
     };
   }
 
-  private async initialize(): Promise<void> {
+  private async initialize(continueSession: boolean = false): Promise<void> {
     try {
-      // Load history
-      this.history = await this.memoryManager.loadHistory();
+      // Load historyの読み込みはセッション継続フラグによって制御
+      if (continueSession) {
+        this.history = await this.memoryManager.loadHistory();
+        logger.info('Previous session loaded');
+      } else {
+        this.history = [];
+        logger.info('New session started');
+      }
       
       // Optimize memory on startup
       await this.optimizeMemory();
@@ -89,7 +95,11 @@ export class AgentCore extends EventEmitter {
 
       // Basic functionality remains available even with initialization error
       this.history = [];
-      logger.warn('Failed to load history, starting as new session');
+      if (continueSession) {
+        logger.warn('Failed to load history, starting as new session instead');
+      } else {
+        logger.info('New session started');
+      }
 
       // Initialization error is not fatal, so don't throw exception
     }
