@@ -28,7 +28,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
     input: process.stdin,
     output: process.stdout,
     prompt: getPrompt(),
-    terminal: true,
+    terminal: process.stdout.isTTY,
   });
 
   // Fix for multi-byte character handling (Japanese text)
