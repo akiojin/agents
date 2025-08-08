@@ -265,6 +265,10 @@ if (process.argv.length === 2) {
 
       mcpManager.on('server-initialized', (data) => {
         logger.debug(`${data.serverName} initialized (${data.toolCount} tools)`);
+        // サーバーが初期化されたらすぐにツールを更新
+        agent.setupMCPTools(mcpManager).catch((error) => {
+          logger.debug(`Failed to update MCP tools after ${data.serverName} initialization: ${error.message}`);
+        });
       });
 
       mcpManager.on('server-status-updated', (data) => {
