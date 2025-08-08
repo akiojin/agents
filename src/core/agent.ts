@@ -8,6 +8,7 @@ import { TaskExecutor } from './task-executor.js';
 import { MemoryManager } from './memory.js';
 import { MCPToolsHelper, MCPTaskPlanner } from '../mcp/tools.js';
 import type { MCPManager } from '../mcp/manager.js';
+import { MCPFunctionConverter, type FunctionDefinition } from '../mcp/function-converter.js';
 
 import { SimpleTaskDecomposer } from './task-decomposer.js';
 import { ParallelExecutor } from './parallel-executor.js';
@@ -19,6 +20,8 @@ export class AgentCore extends EventEmitter {
   private memoryManager: MemoryManager;
   private mcpToolsHelper?: MCPToolsHelper;
   private mcpTaskPlanner?: MCPTaskPlanner;
+  private mcpFunctionConverter?: MCPFunctionConverter;
+  private availableFunctions: FunctionDefinition[] = [];
   private taskDecomposer: SimpleTaskDecomposer;
   private parallelExecutor: ParallelExecutor;
   private history: ChatMessage[] = [];
@@ -224,34 +227,8 @@ export class AgentCore extends EventEmitter {
         throw new Error('Input is too long (maximum 32,000 characters)');
       }
 
-      // ファイルシステム操作の直接実行をチェック（LLM呼び出し前）
+      // Function Calling準備
       globalProgressReporter.updateSubtask(1);
-      const directAction = await this.checkForDirectFileSystemActions(trimmedInput);
-      if (directAction) {
-        globalProgressReporter.completeTask(true);
-        
-        // UserMessageとResponseをHistoryに追加
-        const userMessage: ChatMessage = {
-          role: 'user',
-          content: trimmedInput,
-          timestamp: new Date(),
-        };
-        const assistantMessage: ChatMessage = {
-          role: 'assistant',
-          content: directAction,
-          timestamp: new Date(),
-        };
-        this.history.push(userMessage, assistantMessage);
-        
-        // HistoryをSave
-        try {
-          await this.memoryManager.saveHistory(this.history);
-        } catch (saveError) {
-          logger.warn('Failed to save history:', saveError);
-        }
-        
-        return directAction;
-      }
 
       // メモリ使用量チェック（定期的）
       this.chatCount++;
@@ -277,14 +254,23 @@ export class AgentCore extends EventEmitter {
       // LLM呼び出し
       globalProgressReporter.updateSubtask(2);
       
-      // withRetryを使用したLLM呼び出し
+      // withRetryを使用したLLM呼び出し（Function Calling対応）
       const result = await withRetry(
         async () => {
-          return await this.provider.chat(this.history, {
+          const chatOptions = {
             model: this.currentModel,
             temperature: this.config.llm.temperature || 0.7,
             maxTokens: this.config.llm.maxTokens || 2000,
+            tools: this.availableFunctions.length > 0 ? this.availableFunctions : undefined,
+            tool_choice: this.availableFunctions.length > 0 ? 'auto' as const : undefined
+          };
+          
+          logger.debug('Chat request with function calling', {
+            toolsCount: this.availableFunctions.length,
+            hasTools: !!chatOptions.tools
           });
+          
+          return await this.provider.chat(this.history, chatOptions);
         },
         {
           maxRetries: this.config.llm.maxRetries,
@@ -314,42 +300,157 @@ export class AgentCore extends EventEmitter {
         throw result.error!;
       }
 
-      const response = result.result!;
+      const llmResponse = result.result!;
 
       // ResponseProcessing
       globalProgressReporter.updateSubtask(3);
-      
-      // 応答Validation
-      if (!response || response.trim().length === 0) {
-        globalProgressReporter.completeTask(false);
-        throw new Error('Response from LLM is empty');
+
+      // Function Calling対応のレスポンス処理
+      if (typeof llmResponse === 'object' && llmResponse.tool_calls && llmResponse.tool_calls.length > 0) {
+        // Tool callsがある場合の処理
+        logger.info(`Processing ${llmResponse.tool_calls.length} tool calls`);
+        
+        // Assistant message（tool callsを含む）をhistoryに追加
+        const assistantMessage: ChatMessage = {
+          role: 'assistant',
+          content: llmResponse.content || '',
+          timestamp: new Date(),
+        };
+        this.history.push(assistantMessage);
+
+        // 各ツールを実行
+        const toolResults: string[] = [];
+        for (const toolCall of llmResponse.tool_calls) {
+          try {
+            const mcpToolName = this.mcpFunctionConverter?.getMCPToolName(toolCall.function.name);
+            if (!mcpToolName || !this.mcpToolsHelper) {
+              throw new Error(`Unknown tool: ${toolCall.function.name}`);
+            }
+
+            logger.debug(`Executing tool: ${mcpToolName}`, {
+              functionName: toolCall.function.name,
+              arguments: toolCall.function.arguments
+            });
+
+            const params = JSON.parse(toolCall.function.arguments);
+            const toolResult = await this.mcpToolsHelper.executeTool(mcpToolName, params);
+            
+            toolResults.push(`Tool ${toolCall.function.name} result: ${JSON.stringify(toolResult)}`);
+            
+            // Tool result messageをhistoryに追加
+            const toolMessage: ChatMessage = {
+              role: 'tool',
+              content: JSON.stringify(toolResult),
+              timestamp: new Date(),
+            };
+            this.history.push(toolMessage);
+
+          } catch (error) {
+            const errorMessage = `Tool ${toolCall.function.name} failed: ${error instanceof Error ? error.message : String(error)}`;
+            logger.error(errorMessage);
+            toolResults.push(errorMessage);
+            
+            // Tool error messageをhistoryに追加
+            const toolMessage: ChatMessage = {
+              role: 'tool',
+              content: errorMessage,
+              timestamp: new Date(),
+            };
+            this.history.push(toolMessage);
+          }
+        }
+
+        // LLMに最終レスポンスを生成させる
+        const finalResult = await withRetry(
+          async () => {
+            return await this.provider.chat(this.history, {
+              model: this.currentModel,
+              temperature: this.config.llm.temperature || 0.7,
+              maxTokens: this.config.llm.maxTokens || 2000,
+            });
+          },
+          {
+            maxRetries: this.config.llm.maxRetries,
+            delay: 1000,
+            exponentialBackoff: true,
+            timeout: this.config.llm.timeout,
+            shouldRetry: (error: Error) => {
+              const message = error.message.toLowerCase();
+              return (
+                message.includes('timeout') ||
+                message.includes('rate limit') ||
+                message.includes('network') ||
+                message.includes('connection') ||
+                message.includes('server error')
+              );
+            },
+          }
+        );
+
+        if (!finalResult.success) {
+          logger.error('Final LLM response error:', finalResult.error);
+          throw finalResult.error!;
+        }
+
+        const finalResponse = typeof finalResult.result === 'string' 
+          ? finalResult.result 
+          : finalResult.result!.content || 'Tool execution completed.';
+        
+        const trimmedFinalResponse = finalResponse.trim();
+
+        // Final assistant messageをhistoryに追加
+        const finalAssistantMessage: ChatMessage = {
+          role: 'assistant',
+          content: trimmedFinalResponse,
+          timestamp: new Date(),
+        };
+        this.history.push(finalAssistantMessage);
+
+        // HistorySave
+        globalProgressReporter.updateSubtask(4);
+        try {
+          await this.memoryManager.saveHistory(this.history);
+        } catch (saveError) {
+          logger.warn('Failed to save history:', saveError);
+        }
+
+        globalProgressReporter.completeTask(true);
+        return trimmedFinalResponse;
+      } else {
+        // 通常のテキストレスポンスの場合
+        const response = typeof llmResponse === 'string' ? llmResponse : llmResponse.content;
+        
+        if (!response || response.trim().length === 0) {
+          globalProgressReporter.completeTask(false);
+          throw new Error('Response from LLM is empty');
+        }
+
+        const trimmedResponse = response.trim();
+
+        // AssistantMessageをHistoryに追加
+        const assistantMessage: ChatMessage = {
+          role: 'assistant',
+          content: trimmedResponse,
+          timestamp: new Date(),
+        };
+        this.history.push(assistantMessage);
+
+        // HistorySave
+        globalProgressReporter.updateSubtask(4);
+        
+        // HistoryをSave（Erroroccurredしても会話は継続）
+        try {
+          await this.memoryManager.saveHistory(this.history);
+        } catch (saveError) {
+          logger.warn('Failed to save history:', saveError);
+          globalProgressReporter.showWarning('Failed to save history, but conversation continues');
+          // HistorySaveFailedは致命的ではない
+        }
+
+        globalProgressReporter.completeTask(true);
+        // perf.end(`Chat completed (attempts: ${result.attemptCount}, time: ${result.totalTime}ms)`);
+        return trimmedResponse;
       }
-
-      const trimmedResponse = response.trim();
-
-      // AssistantMessageをHistoryに追加
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: trimmedResponse,
-        timestamp: new Date(),
-      };
-      this.history.push(assistantMessage);
-
-      // HistorySave
-      globalProgressReporter.updateSubtask(4);
-      
-      // HistoryをSave（Erroroccurredしても会話は継続）
-      try {
-        await this.memoryManager.saveHistory(this.history);
-      } catch (saveError) {
-        logger.warn('Failed to save history:', saveError);
-        globalProgressReporter.showWarning('Failed to save history, but conversation continues');
-        // HistorySaveFailedは致命的ではない
-      }
-
-      globalProgressReporter.completeTask(true);
-      // perf.end(`Chat completed (attempts: ${result.attemptCount}, time: ${result.totalTime}ms)`);
-      return trimmedResponse;
     } catch (error) {
       logger.error('Chat error:', error);
       globalProgressReporter.completeTask(false);
@@ -582,10 +683,19 @@ export class AgentCore extends EventEmitter {
   /**
    * MCPManagerをConfigしてToolヘルパーをInitialize
    */
-  setupMCPTools(mcpManager: MCPManager): void {
+  async setupMCPTools(mcpManager: MCPManager): Promise<void> {
     this.mcpToolsHelper = new MCPToolsHelper(mcpManager);
     this.mcpTaskPlanner = new MCPTaskPlanner(this.mcpToolsHelper);
-    logger.info('MCP tools initialized');
+    this.mcpFunctionConverter = new MCPFunctionConverter(mcpManager);
+    
+    // MCPツールをFunction定義に変換
+    try {
+      this.availableFunctions = await this.mcpFunctionConverter.convertAllTools();
+      logger.info(`MCP tools initialized: ${this.availableFunctions.length} functions available`);
+    } catch (error) {
+      logger.error('Failed to convert MCP tools to functions:', error);
+      this.availableFunctions = [];
+    }
   }
 
   /**
@@ -860,47 +970,4 @@ export class AgentCore extends EventEmitter {
     return results;
   }
 
-  /**
-   * 直接的なファイルシステム操作をチェック
-   */
-  private async checkForDirectFileSystemActions(input: string): Promise<string | null> {
-    const lowerInput = input.toLowerCase();
-    
-    // ファイル一覧表示のパターン
-    if (lowerInput.includes('ファイル') && (lowerInput.includes('一覧') || lowerInput.includes('リスト') || lowerInput.includes('表示'))) {
-      return await this.listCurrentDirectory();
-    }
-    
-    // ディレクトリ一覧表示のパターン
-    if (lowerInput.includes('ディレクトリ') || lowerInput.includes('フォルダ') || lowerInput.includes('ls') || lowerInput.includes('dir')) {
-      return await this.listCurrentDirectory();
-    }
-    
-    return null;
-  }
-  
-  /**
-   * 現在のディレクトリのファイル一覧を取得
-   */
-  private async listCurrentDirectory(): Promise<string> {
-    if (!this.mcpToolsHelper) {
-      return 'ファイルシステムアクセス機能が初期化されていません。MCPサーバーが起動しているか確認してください。';
-    }
-    
-    try {
-      logger.info('Listing current directory using MCP tools...');
-      const result = await this.mcpToolsHelper.executeTool('serena:list_dir', {
-        relative_path: '.'
-      });
-      
-      if (typeof result === 'object' && result !== null) {
-        return `現在のディレクトリの内容:</p><p>${JSON.stringify(result, null, 2)}`;
-      }
-      
-      return `現在のディレクトリの内容:</p><p>${String(result)}`;
-    } catch (error) {
-      logger.error('Failed to list directory:', error);
-      return `ファイル一覧の取得に失敗しました: ${error instanceof Error ? error.message : String(error)}`;
-    }
-  }
 }

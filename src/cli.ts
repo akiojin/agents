@@ -155,7 +155,7 @@ program
       globalProgressReporter.updateSubtask(2);
       if (config.mcp?.enabled) {
         await mcpManager.initialize();
-        agent.setupMCPTools(mcpManager);
+        await agent.setupMCPTools(mcpManager);
         globalProgressReporter.showInfo('MCP tools initialized');
       }
 
@@ -244,7 +244,7 @@ if (process.argv.length === 2) {
 
     if (config.mcp?.enabled) {
       await mcpManager.initialize();
-      agent.setupMCPTools(mcpManager);
+      await agent.setupMCPTools(mcpManager);
     }
 
     await startREPL(agent, mcpManager);

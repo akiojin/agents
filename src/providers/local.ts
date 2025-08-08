@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../config/types.js';
-import { LLMProvider, type ChatOptions, type CompletionOptions } from './base.js';
+import { LLMProvider, type ChatOptions, type CompletionOptions, type ChatResponse, type ToolCall } from './base.js';
 import { logger } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
 
@@ -10,12 +10,18 @@ interface LocalAPIRequest {
   temperature?: number;
   max_tokens?: number;
   stream?: boolean;
+  tools?: any[];
+  tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
 }
 
 interface LocalAPIResponse {
   choices: Array<{
-    message?: { content: string };
+    message?: { 
+      content: string;
+      tool_calls?: ToolCall[];
+    };
     text?: string;
+    finish_reason?: 'stop' | 'length' | 'tool_calls';
   }>;
 }
 
@@ -149,7 +155,7 @@ export class LocalProvider extends LLMProvider {
     return result.result!;
   }
 
-  async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string> {
+  async chat(messages: ChatMessage[], options?: ChatOptions): Promise<string | ChatResponse> {
     try {
       // 入力Validation
       if (!messages || messages.length === 0) {
@@ -184,6 +190,26 @@ export class LocalProvider extends LLMProvider {
         body.model = options.model;
       }
 
+      // Function Calling対応
+      if (options?.tools && options.tools.length > 0) {
+        body.tools = options.tools.map(tool => ({
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.parameters
+          }
+        }));
+        
+        if (options.tool_choice) {
+          body.tool_choice = options.tool_choice;
+        }
+        
+        logger.debug(`Function calling enabled: ${options.tools.length} tools`, {
+          tools: options.tools.map(t => t.name)
+        });
+      }
+
       logger.debug(`LocalProvider chat started: ${this.providerType}`, {
         messageCount: localMessages.length,
         model: body.model,
@@ -193,13 +219,32 @@ export class LocalProvider extends LLMProvider {
 
       const response = await this.makeRequest(body);
 
-      // Response内容をGet（OpenAI互換APIを想定）
-      const content = response.choices[0]?.message?.content;
+      const choice = response.choices[0];
+      if (!choice?.message) {
+        throw new Error('Local API returned invalid response format');
+      }
 
+      const message = choice.message;
+      const content = message.content || '';
+      const tool_calls = message.tool_calls;
+      const finish_reason = choice.finish_reason;
+
+      // Function Calling レスポンスの場合
+      if (tool_calls && tool_calls.length > 0) {
+        logger.debug(`Tool calls detected: ${tool_calls.length} calls`);
+        
+        const chatResponse: ChatResponse = {
+          content: content.trim(),
+          tool_calls,
+          finish_reason: finish_reason || 'tool_calls'
+        };
+        
+        return chatResponse;
+      }
+
+      // 通常のテキストレスポンスの場合
       if (!content) {
-        // よりDetailsなErrorInfo
-        const choice = response.choices[0];
-        if (choice?.finish_reason === 'length') {
+        if (finish_reason === 'length') {
           throw new Error('Response reached maximum token limit. Please increase max_tokens.');
         } else {
           throw new Error('Local API returned empty response');
@@ -211,7 +256,7 @@ export class LocalProvider extends LLMProvider {
         throw new Error('Local API returned empty content');
       }
 
-      logger.debug(`LocalProvider chat completed: ${trimmedContent.length}characters`);
+      logger.debug(`LocalProvider chat completed: ${trimmedContent.length} characters`);
       return trimmedContent;
 
     } catch (error) {

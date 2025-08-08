@@ -36,7 +36,7 @@ export interface MCPJsonServerEntry {
 
 // ChatMessage
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
   timestamp: Date;
   metadata?: Record<string, unknown>;
