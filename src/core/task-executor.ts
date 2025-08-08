@@ -197,12 +197,13 @@ export class TaskExecutor extends EventEmitter {
     try {
       this.emit('subtask:start', task);
 
-      // TaskをプロンプトにConvert
+      // Taskをプロンプトに変換
       const prompt = this.buildPrompt(task);
 
-      // LLMにExecuteを依頼
-      const response = await provider.complete({
-        prompt,
+      // LLMにchatで実行を依頼（システムプロンプトが適用される）
+      const response = await provider.chat([
+        { role: 'user', content: prompt }
+      ], {
         temperature: 0.3,
         maxTokens: 4000,
       });
@@ -210,7 +211,7 @@ export class TaskExecutor extends EventEmitter {
       const result: TaskResult = {
         success: true,
         message: task.description,
-        data: response,
+        data: typeof response === 'string' ? response : response.content,
       };
 
       this.emit('subtask:complete', result);

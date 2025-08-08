@@ -29,7 +29,7 @@ const ConfigSchema = z.object({
   historyPath: z.string().default('.agents-history'),
 });
 
-const const DEFAULT_CONFIG_FILENAME = 'settings.json';;
+const DEFAULT_CONFIG_FILENAME = 'settings.json';
 
 class ConfigLoader {
   private config: Config | null = null;
