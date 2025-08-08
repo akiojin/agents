@@ -28,7 +28,7 @@ interface LocalAPIResponse {
 export class LocalProvider extends LLMProvider {
   private providerType: 'local-gptoss' | 'local-lmstudio';
 
-  constructor(endpoint: string = 'http://127.0.0.1:1234', providerType: 'local-gptoss' | 'local-lmstudio' = 'local-gptoss', options?: {
+  constructor(endpoint: string = 'http://host.docker.internal:1234', providerType: 'local-gptoss' | 'local-lmstudio' = 'local-gptoss', options?: {
     timeout?: number;
     maxRetries?: number;
     temperature?: number;

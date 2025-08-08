@@ -86,7 +86,7 @@ program
           type: 'input',
           name: 'localEndpoint',
           message: 'LocalエンドポイントURL:',
-          default: 'http://127.0.0.1:1234',
+          default: 'http://host.docker.internal:1234',
           when: (answers: InitAnswers) => answers.provider.startsWith('local-'),
         },
         {

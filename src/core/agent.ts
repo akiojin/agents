@@ -293,6 +293,18 @@ export class AgentCore extends EventEmitter {
               tool_choice: this.availableFunctions.length > 0 ? 'auto' as const : undefined
             };
             
+            // GPT-OSSは強制ツール指定をサポートしないためautoのみ使用
+            // 代わりにserenaツールを上位に配置して優先度を上げる
+            if (chatOptions.tools && chatOptions.tools.length > 0) {
+              if (input.includes('ディレクトリ') || input.includes('ファイル一覧') || input.includes('構造') || input.includes('解析')) {
+                // serenaツールを配列の先頭に移動
+                const serenaTools = chatOptions.tools.filter(t => t.name.startsWith('serena_'));
+                const otherTools = chatOptions.tools.filter(t => !t.name.startsWith('serena_'));
+                chatOptions.tools = [...serenaTools, ...otherTools];
+                logger.debug('Prioritized serena tools for directory analysis');
+              }
+            }
+            
             // Function Callingの状態をログに記録
             if (this.availableFunctions.length > 0) {
               logger.debug(`Function Calling enabled: ${this.availableFunctions.length} functions available`);

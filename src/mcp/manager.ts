@@ -232,7 +232,7 @@ export class MCPManager extends EventEmitter {
   async invokeTool(toolName: string, params?: Record<string, unknown>): Promise<unknown> {
     const [serverName, name] = toolName.includes(':')
       ? toolName.split(':', 2)
-      : [this.getDefaultServer(), toolName];
+      : [this.getServerForTool(toolName), toolName];
 
     const client = this.servers.get(serverName || '');
     if (!client) {
@@ -240,6 +240,39 @@ export class MCPManager extends EventEmitter {
     }
 
     return client.invokeTool(name || '', params);
+  }
+
+  /**
+   * ツール名に基づいて適切なサーバーを特定
+   */
+  private getServerForTool(toolName: string): string {
+    // serenaプレフィックスのツールはserenaサーバーに送信
+    if (toolName.startsWith('serena_')) {
+      const serenaServer = Array.from(this.servers.keys()).find(name => 
+        name.includes('serena') || name === 'serena'
+      );
+      if (serenaServer) {
+        logger.debug(`Routing ${toolName} to serena server: ${serenaServer}`);
+        return serenaServer;
+      }
+    }
+
+    // mcp__で始まるツールは対応するサーバーを検索
+    if (toolName.startsWith('mcp__')) {
+      const serverHint = toolName.split('__')[1]; // mcp__filesystem__ -> filesystem
+      const matchingServer = Array.from(this.servers.keys()).find(name => 
+        name.includes(serverHint)
+      );
+      if (matchingServer) {
+        logger.debug(`Routing ${toolName} to MCP server: ${matchingServer}`);
+        return matchingServer;
+      }
+    }
+
+    // フォールバック: デフォルトサーバーを使用
+    const defaultServer = this.getDefaultServer();
+    logger.debug(`Routing ${toolName} to default server: ${defaultServer}`);
+    return defaultServer;
   }
 
   private getDefaultServer(): string {
