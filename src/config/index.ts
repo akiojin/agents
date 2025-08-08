@@ -46,7 +46,7 @@ const ConfigSchema = z.object({
   paths: z.object({
     cache: z.string().default('.agents-cache'),
     history: z.string().default('.agents-history'),
-    config: z.string().default('.agents.yaml'),
+    config: z.string().default('settings.json'),
   }),
   localEndpoint: z.string().url().optional(),
 });

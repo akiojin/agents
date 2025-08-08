@@ -31,7 +31,7 @@ describe('AgentCore', () => {
     paths: {
       cache: './cache',
       history: './test-history',
-      config: '.agents.yaml',
+      config: 'settings.json',
     },
   };
 

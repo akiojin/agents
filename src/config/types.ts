@@ -167,7 +167,7 @@ export const DEFAULT_CONFIG: Config = {
   paths: {
     cache: '.agents-cache',
     history: '.agents-history',
-    config: '.agents.yaml',
+    config: 'settings.json',
   },
   functions: {
     filesystem: {

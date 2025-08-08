@@ -39,7 +39,7 @@
 
 ```bash
 -m, --model <model>         # LLMモデル指定（デフォルト: gpt-4）
--c, --config <path>         # 設定ファイルパス（デフォルト: .agents.yaml）
+-c, --config <path>         # 設定ファイルパス（デフォルト: settings.json）
 -v, --verbose               # 詳細ログ出力
 --no-color                  # カラー出力無効化
 --max-parallel <number>     # 並列タスク実行数（デフォルト: 5）

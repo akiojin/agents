@@ -66,7 +66,7 @@ const config: Config = {
 ### 5. 設定管理の混乱
 **問題箇所**:
 - 環境変数: `.env`, `process.env`
-- 設定ファイル: `.agents.yaml`, `config.json`
+- 設定ファイル: `settings.json` (統一済み)
 - ハードコード: 各所に散在
 ```typescript
 // 例: 同じ設定が複数箇所に

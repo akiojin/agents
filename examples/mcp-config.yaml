@@ -1,5 +1,5 @@
 # MCP ツール統合のサンプル設定ファイル
-# このファイルは、.agents.yaml の mcpServers セクションで参照される設定例です
+# このファイルは、settings.json の mcp.servers セクションで参照される設定例です
 
 # Claude Code と互換性のあるサーバー設定例
 provider: openai

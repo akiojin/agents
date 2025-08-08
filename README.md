@@ -72,7 +72,7 @@ agents task "テストを追加" --parallel
 agents watch src/ --task "変更されたファイルをフォーマット"
 ```
 
-### 設定ファイル（.agents.yaml）
+### 設定ファイル（settings.json）
 
 ```yaml
 provider: openai
