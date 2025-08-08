@@ -306,6 +306,334 @@ program
     console.log(chalk.gray('  ログレベル:'), config.app.logLevel);
   });
 
+// docsCommand - Serenaベースドキュメント管理
+program
+  .command('docs')
+  .description('Serenaベースドキュメント管理システム')
+  .addCommand(
+    new Command('create')
+      .description('新しいドキュメントを作成')
+      .option('-t, --type <type>', 'ドキュメントタイプ (adr|spec|howto|runbook|note)', 'note')
+      .option('-T, --title <title>', 'ドキュメントタイトル')
+      .option('--no-duplicate-check', '重複チェックをスキップ')
+      .action(async (options) => {
+        const { globalProgressReporter } = await import('./ui/progress.js');
+        
+        try {
+          globalProgressReporter.startTask('ドキュメント作成', ['設定読み込み', 'Serena初期化', 'タイトル入力', 'ドキュメント作成', 'Serenaに保存']);
+          
+          // 設定読み込み
+          globalProgressReporter.updateSubtask(0);
+          const configManager = ConfigManager.getInstance();
+          const config = await configManager.load();
+          
+          // Agent & Serena初期化
+          globalProgressReporter.updateSubtask(1);
+          const agent = new AgentCore(config);
+          const mcpManager = MCPManager.fromUnifiedConfig(config);
+          await mcpManager.initialize();
+          await agent.setupMCPTools(mcpManager);
+          
+          // ドキュメント情報の入力
+          globalProgressReporter.updateSubtask(2);
+          let title = options.title;
+          
+          if (!title) {
+            if (!process.stdin.isTTY) {
+              throw new Error('対話環境が必要です。--titleオプションを使用してください。');
+            }
+            
+            const titleAnswer = await inquirer.prompt([{
+              type: 'input',
+              name: 'title',
+              message: 'ドキュメントタイトルを入力:',
+              validate: (input: string) => input.trim().length > 0 || 'タイトルは必須です'
+            }]);
+            title = titleAnswer.title;
+          }
+          
+          // DocumentManager初期化
+          const { DocumentManager } = await import('./core/document-manager.js');
+          const { SerenaDocumentAdapter } = await import('./core/serena-document-adapter.js');
+          const { configureSerenaAdapter } = await import('./utils/serena-helper.js');
+          const docManager = new DocumentManager();
+          const serenaAdapter = new SerenaDocumentAdapter(docManager);
+          
+          // SerenaAdapterにMCPインターフェースを設定
+          configureSerenaAdapter(serenaAdapter, agent);
+          
+          // 重複チェック
+          if (options.duplicateCheck !== false) {
+            const duplicates = await serenaAdapter.checkDuplicatesInSerenaMemory(
+              title,
+              '',
+              options.type
+            );
+            
+            if (duplicates.isDuplicate && duplicates.similarDocuments.length > 0) {
+              console.log(chalk.yellow(`⚠️  類似ドキュメントが${duplicates.similarDocuments.length}件見つかりました:`));
+              for (const similar of duplicates.similarDocuments.slice(0, 3)) {
+                console.log(chalk.gray(`  - ${similar.frontMatter.title} (${similar.frontMatter.doc_id})`));
+              }
+              
+              if (process.stdin.isTTY) {
+                const continueAnswer = await inquirer.prompt([{
+                  type: 'confirm',
+                  name: 'continue',
+                  message: 'それでも新しいドキュメントを作成しますか？',
+                  default: false
+                }]);
+                
+                if (!continueAnswer.continue) {
+                  console.log(chalk.gray('ドキュメント作成をキャンセルしました。'));
+                  return;
+                }
+              }
+            }
+          }
+          
+          // ドキュメント作成
+          globalProgressReporter.updateSubtask(3);
+          const document = await docManager.createDocument(
+            options.type,
+            title,
+            '',
+            {
+              autoTagging: true,
+              duplicateThreshold: options.duplicateCheck !== false ? 0.8 : undefined
+            }
+          );
+          
+          // Serenaに保存
+          globalProgressReporter.updateSubtask(4);
+          await serenaAdapter.saveToSerenaMemory(document);
+          
+          globalProgressReporter.completeTask(true);
+          console.log(chalk.green('✅ ドキュメントを作成しました'));
+          console.log(chalk.gray(`  ID: ${document.frontMatter.doc_id}`));
+          console.log(chalk.gray(`  タイトル: ${document.frontMatter.title}`));
+          console.log(chalk.gray(`  タイプ: ${document.frontMatter.type}`));
+          console.log(chalk.gray(`  タグ: ${document.frontMatter.tags.join(', ')}`));
+          
+        } catch (error) {
+          globalProgressReporter.completeTask(false);
+          globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+          console.error(chalk.red('❌ ドキュメント作成に失敗しました'));
+          logger.error('Document creation failed:', error);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new Command('list')
+      .description('ドキュメント一覧を表示')
+      .option('-t, --type <type>', 'ドキュメントタイプでフィルタ')
+      .option('-s, --status <status>', 'ステータスでフィルタ')
+      .option('--limit <number>', '表示件数制限', '10')
+      .action(async (options) => {
+        const { globalProgressReporter } = await import('./ui/progress.js');
+        
+        try {
+          globalProgressReporter.startTask('ドキュメント一覧取得', ['設定読み込み', 'Serena初期化', 'ドキュメント一覧取得']);
+          
+          // 設定読み込み
+          globalProgressReporter.updateSubtask(0);
+          const configManager = ConfigManager.getInstance();
+          const config = await configManager.load();
+          
+          // Serena初期化
+          globalProgressReporter.updateSubtask(1);
+          const agent = new AgentCore(config);
+          const mcpManager = MCPManager.fromUnifiedConfig(config);
+          await mcpManager.initialize();
+          await agent.setupMCPTools(mcpManager);
+          
+          // ドキュメント一覧取得
+          globalProgressReporter.updateSubtask(2);
+          const { DocumentManager } = await import('./core/document-manager.js');
+          const { SerenaDocumentAdapter } = await import('./core/serena-document-adapter.js');
+          const { configureSerenaAdapter } = await import('./utils/serena-helper.js');
+          const docManager = new DocumentManager();
+          const serenaAdapter = new SerenaDocumentAdapter(docManager);
+          
+          // SerenaAdapterにMCPインターフェースを設定
+          configureSerenaAdapter(serenaAdapter, agent);
+          
+          const memoryList = await serenaAdapter.listAllDocuments();
+          globalProgressReporter.completeTask(true);
+          
+          console.log(chalk.cyan(`📄 Serenaドキュメント一覧 (${memoryList.length}件)`));
+          console.log('');
+          
+          if (memoryList.length === 0) {
+            console.log(chalk.gray('ドキュメントが見つかりません。'));
+            return;
+          }
+          
+          // 制限数でスライス
+          const limit = parseInt(options.limit, 10);
+          const displayList = memoryList.slice(0, limit);
+          
+          for (const memoryName of displayList) {
+            console.log(chalk.blue(`• ${memoryName}`));
+          }
+          
+          if (memoryList.length > limit) {
+            console.log(chalk.gray(`  ... 他${memoryList.length - limit}件`));
+          }
+          
+        } catch (error) {
+          globalProgressReporter.completeTask(false);
+          globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+          console.error(chalk.red('❌ ドキュメント一覧取得に失敗しました'));
+          logger.error('Document listing failed:', error);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new Command('search')
+      .description('ドキュメントを検索')
+      .argument('<query>', '検索クエリ')
+      .option('--limit <number>', '表示件数制限', '5')
+      .action(async (query: string, options) => {
+        const { globalProgressReporter } = await import('./ui/progress.js');
+        
+        try {
+          globalProgressReporter.startTask('ドキュメント検索', ['設定読み込み', 'Serena初期化', '検索実行']);
+          
+          // 設定読み込み
+          globalProgressReporter.updateSubtask(0);
+          const configManager = ConfigManager.getInstance();
+          const config = await configManager.load();
+          
+          // Serena初期化  
+          globalProgressReporter.updateSubtask(1);
+          const agent = new AgentCore(config);
+          const mcpManager = MCPManager.fromUnifiedConfig(config);
+          await mcpManager.initialize();
+          await agent.setupMCPTools(mcpManager);
+          
+          // 検索実行
+          globalProgressReporter.updateSubtask(2);
+          const { DocumentManager } = await import('./core/document-manager.js');
+          const { SerenaDocumentAdapter } = await import('./core/serena-document-adapter.js');
+          const { configureSerenaAdapter } = await import('./utils/serena-helper.js');
+          const docManager = new DocumentManager();
+          const serenaAdapter = new SerenaDocumentAdapter(docManager);
+          
+          // SerenaAdapterにMCPインターフェースを設定
+          configureSerenaAdapter(serenaAdapter, agent);
+          
+          const searchResults = await serenaAdapter.searchInSerenaMemories(query);
+          globalProgressReporter.completeTask(true);
+          
+          console.log(chalk.cyan(`🔍 検索結果: "${query}" (${searchResults.length}件)`));
+          console.log('');
+          
+          if (searchResults.length === 0) {
+            console.log(chalk.gray('検索結果が見つかりません。'));
+            return;
+          }
+          
+          const limit = parseInt(options.limit, 10);
+          const displayResults = searchResults.slice(0, limit);
+          
+          for (const result of displayResults) {
+            const doc = result.document;
+            const similarity = (result.similarity * 100).toFixed(1);
+            
+            console.log(chalk.green(`📄 ${doc.frontMatter.title}`));
+            console.log(chalk.gray(`  ID: ${doc.frontMatter.doc_id}`));
+            console.log(chalk.gray(`  タイプ: ${doc.frontMatter.type}`));
+            console.log(chalk.gray(`  類似度: ${similarity}%`));
+            console.log('');
+          }
+          
+          if (searchResults.length > limit) {
+            console.log(chalk.gray(`  ... 他${searchResults.length - limit}件`));
+          }
+          
+        } catch (error) {
+          globalProgressReporter.completeTask(false);
+          globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+          console.error(chalk.red('❌ ドキュメント検索に失敗しました'));
+          logger.error('Document search failed:', error);
+          process.exit(1);
+        }
+      })
+  )
+  .addCommand(
+    new Command('stats')
+      .description('ドキュメント統計を表示')
+      .action(async () => {
+        const { globalProgressReporter } = await import('./ui/progress.js');
+        
+        try {
+          globalProgressReporter.startTask('統計取得', ['設定読み込み', 'Serena初期化', '統計計算']);
+          
+          // 設定読み込み
+          globalProgressReporter.updateSubtask(0);
+          const configManager = ConfigManager.getInstance();
+          const config = await configManager.load();
+          
+          // Serena初期化
+          globalProgressReporter.updateSubtask(1);
+          const agent = new AgentCore(config);
+          const mcpManager = MCPManager.fromUnifiedConfig(config);
+          await mcpManager.initialize();
+          await agent.setupMCPTools(mcpManager);
+          
+          // 統計計算
+          globalProgressReporter.updateSubtask(2);
+          const { DocumentManager } = await import('./core/document-manager.js');
+          const { SerenaDocumentAdapter } = await import('./core/serena-document-adapter.js');
+          const { configureSerenaAdapter } = await import('./utils/serena-helper.js');
+          const docManager = new DocumentManager();
+          const serenaAdapter = new SerenaDocumentAdapter(docManager);
+          
+          // SerenaAdapterにMCPインターフェースを設定
+          configureSerenaAdapter(serenaAdapter, agent);
+          
+          const memoryList = await serenaAdapter.listAllDocuments();
+          const stats = docManager.getDocumentStats();
+          
+          globalProgressReporter.completeTask(true);
+          
+          console.log(chalk.cyan('📊 ドキュメント統計'));
+          console.log('');
+          console.log(chalk.blue('全体統計:'));
+          console.log(chalk.gray(`  Serenaメモリ数: ${memoryList.length}件`));
+          console.log(chalk.gray(`  メモリ内ドキュメント数: ${stats.total}件`));
+          console.log('');
+          console.log(chalk.blue('タイプ別:'));
+          for (const [type, count] of Object.entries(stats.byType)) {
+            if (count > 0) {
+              console.log(chalk.gray(`  ${type.toUpperCase()}: ${count}件`));
+            }
+          }
+          console.log('');
+          console.log(chalk.blue('ステータス別:'));
+          for (const [status, count] of Object.entries(stats.byStatus)) {
+            if (count > 0) {
+              console.log(chalk.gray(`  ${status}: ${count}件`));
+            }
+          }
+          console.log('');
+          console.log(chalk.blue('その他:'));
+          console.log(chalk.gray(`  期限切れレビュー: ${stats.expiredReviews}件`));
+          console.log(chalk.gray(`  最近の更新: ${stats.recentUpdates}件`));
+          
+        } catch (error) {
+          globalProgressReporter.completeTask(false);
+          globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+          console.error(chalk.red('❌ 統計取得に失敗しました'));
+          logger.error('Statistics failed:', error);
+          process.exit(1);
+        }
+      })
+  );
+
 // REPLコマンドを追加
 program
   .command('repl')

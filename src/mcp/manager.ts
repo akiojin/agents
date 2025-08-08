@@ -61,12 +61,13 @@ export class MCPManager extends EventEmitter {
    */
   static fromUnifiedConfig(config: import('../config/types.js').Config): MCPManager {
     // 統一ConfigをSerena組み込み対応の従来Configに変換
-    const mcpServers = { ...config.mcp.servers };
+    const mcpServers = [...config.mcp.servers];
     
     // Serenaサーバーを自動追加（存在しない場合）
-    if (!mcpServers.serena) {
-      mcpServers.serena = {
-        type: 'stdio',
+    const hasSerena = mcpServers.some(server => server.name === 'serena');
+    if (!hasSerena) {
+      mcpServers.push({
+        name: 'serena',
         command: 'uvx',
         args: [
           '--from',
@@ -77,7 +78,7 @@ export class MCPManager extends EventEmitter {
           '--project',
           process.cwd()
         ]
-      };
+      });
       logger.debug('Serena MCP server automatically added as built-in component');
     }
     
