@@ -127,7 +127,7 @@ export const DEFAULT_CONFIG: Config = {
         args: ['-y', '@modelcontextprotocol/server-filesystem'],
       },
     ],
-    timeout: 30000, // 30seconds
+    timeout: 120000, // 2minutes for complex queries with MCP tools
     enabled: true,
     maxRetries: 2,
   },

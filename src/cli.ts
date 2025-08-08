@@ -106,12 +106,12 @@ program
         llm: {
           provider: answers.provider,
           apiKey: answers.apiKey,
-          timeout: 30000,
+          timeout: 120000, // 2minutes for complex queries
           maxRetries: 3,
         },
         mcp: {
           servers: [],
-          timeout: 30000,
+          timeout: 120000, // 2minutes for MCP operations
           enabled: answers.useMCP,
           maxRetries: 3,
         },
