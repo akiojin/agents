@@ -355,10 +355,11 @@ export class AgentCore extends EventEmitter {
             
             toolResults.push(`Tool ${toolCall.function.name} result: ${JSON.stringify(toolResult)}`);
             
-            // Tool result messageをhistoryに追加
+            // Tool result messageをassistantメッセージとしてhistoryに追加
+            // Note: Anthropicは'tool'ロールをサポートしないため、assistantメッセージとして扱う
             const toolMessage: ChatMessage = {
-              role: 'tool',
-              content: JSON.stringify(toolResult),
+              role: 'assistant',
+              content: `[Tool Result: ${toolCall.function.name}]\n${JSON.stringify(toolResult)}`,
               timestamp: new Date(),
             };
             this.history.push(toolMessage);
@@ -368,10 +369,11 @@ export class AgentCore extends EventEmitter {
             logger.error(errorMessage);
             toolResults.push(errorMessage);
             
-            // Tool error messageをhistoryに追加
+            // Tool error messageをassistantメッセージとしてhistoryに追加
+            // Note: Anthropicは'tool'ロールをサポートしないため、assistantメッセージとして扱う
             const toolMessage: ChatMessage = {
-              role: 'tool',
-              content: errorMessage,
+              role: 'assistant',
+              content: `[Tool Error: ${toolCall.function.name}]\n${errorMessage}`,
               timestamp: new Date(),
             };
             this.history.push(toolMessage);

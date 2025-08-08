@@ -337,7 +337,7 @@ export class MCPClient extends EventEmitter {
       
       // ToolExecute
       globalProgressReporter.updateSubtask(1);
-      globalProgressReporter.showInfo(`${this.name}Serverで${name}ToolをExecute中...`);
+      globalProgressReporter.showInfo(`Executing ${name} tool on ${this.name} server...`);
 
       // Retry付きでToolExecute
       const result = await withRetry(
@@ -418,7 +418,7 @@ export class MCPClient extends EventEmitter {
       }
 
       globalProgressReporter.completeTask(true);
-      globalProgressReporter.showInfo(`ToolExecuteCompleted: ${name} (試行回数: ${result.attemptCount}, 所要時間: ${result.totalTime}ms)`);
+      globalProgressReporter.showInfo(`Tool completed: ${name} (attempts: ${result.attemptCount}, duration: ${result.totalTime}ms)`);
       
       logger.debug(`ToolExecuteCompleted [${this.name}/${name}]`, {
         attemptCount: result.attemptCount,

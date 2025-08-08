@@ -43,7 +43,8 @@ export class ProgressReporter {
    * @param error ErrorMessage
    */
   showError(error: string): void {
-    console.log(`❌ Error: ${error}`);
+    // Avoid emoji in console output to prevent encoding issues
+    console.log(`[ERROR] ${error}`);
   }
   
   /**
@@ -51,7 +52,8 @@ export class ProgressReporter {
    * @param warning WarningMessage
    */
   showWarning(warning: string): void {
-    console.log(`⚠️ Warning: ${warning}`);
+    // Avoid emoji in console output to prevent encoding issues
+    console.log(`[WARNING] ${warning}`);
   }
   
   /**
@@ -59,7 +61,9 @@ export class ProgressReporter {
    * @param info InfoMessage
    */
   showInfo(info: string): void {
-    console.log(`ℹ️ ${info}`);
+    // Avoid emoji in console output to prevent encoding issues
+    // console.log(`[INFO] ${info}`);
+    // Silent mode for REPL - info messages can interfere with output
   }
   
   /**

@@ -25,9 +25,10 @@ export class AnthropicProvider extends LLMProvider {
       throw new Error('No messages specified');
     }
 
-    // システムMessageとその他のMessageをminutes離
+    // システムMessageとその他のMessageを分離
+    // 'tool'ロールのメッセージも除外（Anthropicがサポートしていないため）
     const systemMessage = messages.find((msg) => msg.role === 'system');
-    const otherMessages = messages.filter((msg) => msg.role !== 'system');
+    const otherMessages = messages.filter((msg) => msg.role !== 'system' && msg.role !== 'tool');
 
     if (otherMessages.length === 0) {
       throw new Error('UserまたはAssistantMessageが必要です');
