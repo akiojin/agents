@@ -123,6 +123,17 @@ export interface Config {
         restrictToStartupDirectory: boolean;
       };
     };
+    bash?: {
+      enabled: boolean;
+      security: {
+        allowedCommands: string[];
+        blockedCommands: string[];
+        timeout: number;
+        restrictWorkingDirectory: boolean;
+        allowedEnvVars: string[];
+        allowedShells: string[];
+      };
+    };
   };
 
   // LocalConfig（後方互換性のため）
@@ -165,6 +176,17 @@ export const DEFAULT_CONFIG: Config = {
         allowedPaths: [process.cwd()],
         allowCurrentDirectoryChange: true,
         restrictToStartupDirectory: true
+      }
+    },
+    bash: {
+      enabled: true,
+      security: {
+        allowedCommands: [],
+        blockedCommands: ['rm -rf /', 'shutdown', 'reboot', 'halt', 'poweroff', 'mkfs', 'fdisk'],
+        timeout: 30000,
+        restrictWorkingDirectory: true,
+        allowedEnvVars: [],
+        allowedShells: ['/bin/bash', '/bin/sh']
       }
     }
   },

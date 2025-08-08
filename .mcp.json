@@ -1,10 +1,5 @@
 {
   "mcpServers": {
-    "filesystem": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/agents"]
-    },
     "microsoft.docs.mcp": {
       "type": "http",
       "url": "https://learn.microsoft.com/api/mcp"

@@ -2,6 +2,8 @@ import type { ChatMessage } from '../config/types.js';
 import { LLMProvider, type ChatOptions, type CompletionOptions, type ChatResponse, type ToolCall } from './base.js';
 import { logger } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
+import { DynamicToolSelector } from '../mcp/tool-selector.js';
+import { ToolLimitDetector } from '../mcp/tool-limit-detector.js';
 
 interface LocalAPIRequest {
   model?: string;
@@ -34,6 +36,8 @@ export class LocalProvider extends LLMProvider {
     avoidTables?: boolean;
     minimizeEmojis?: boolean;
   };
+  private toolSelector: DynamicToolSelector;
+  private toolLimitDetector: ToolLimitDetector;
 
   constructor(endpoint: string, providerType: 'local-gptoss' | 'local-lmstudio' = 'local-gptoss', options?: {
     timeout?: number;
@@ -54,6 +58,12 @@ export class LocalProvider extends LLMProvider {
     super(undefined, endpoint, options);
     this.providerType = providerType;
     this.responseFormatConfig = options?.responseFormat;
+    this.toolSelector = new DynamicToolSelector();
+    this.toolLimitDetector = new ToolLimitDetector();
+    
+    // プロバイダー設定をツール選択器に設定
+    this.toolSelector.setProvider(providerType);
+    
     logger.debug(`LocalProvider initialized with endpoint: ${this.endpoint}`);
   }
 
@@ -224,23 +234,36 @@ export class LocalProvider extends LLMProvider {
         }
         
         formatRules.push(
-          '- 引用ブロック(>)は最小限に',
-          '- コードブロックは```で囲む',
-          '- セクションは # ## ### で階層化',
-          '- 箇条書きは - または 1. 2. 3. を使用'
+          '- マークダウン形式は完全禁止（**太字**、*斜体*、`コード`、```コードブロック```すべて禁止）',
+          '- ヘッダー記号（#、##）は使用禁止',  
+          '- 引用ブロック(>)は使用禁止',
+          '- コードを示す場合は通常のテキスト内で「関数は "def hello(): print(hello)" のように書く」と説明',
+          '- 箇条書きは番号付きリスト（1. 2. 3.）のみ使用可能'
         );
 
         const systemPrompt = {
           role: 'system' as const,
-          content: `ABSOLUTE CRITICAL RULE: NEVER USE TABLES OR PIPE CHARACTERS (|)
+          content: `🚫 CRITICAL SYSTEM ALERT 🚫
 
-You are STRICTLY FORBIDDEN from using:
-- Markdown tables with | pipe characters
-- HTML tables
-- Tab-separated columns
-- ANY format that uses | pipe symbols
+YOU ARE FORBIDDEN FROM USING ANY SPECIAL CHARACTERS FOR FORMATTING:
 
-INSTEAD, use hierarchical lists:
+⛔ NO ASTERISKS (*) IN ANY CONTEXT
+⛔ NO HASH SYMBOLS (#) FOR HEADERS  
+⛔ NO BACKTICKS (\`) FOR CODE
+⛔ NO PIPES (|) FOR TABLES
+⛔ NO BRACKETS [] FOR LINKS
+⛔ NO ANGLE BRACKETS > FOR QUOTES
+⛔ NO UNDERSCORES (_) FOR EMPHASIS
+
+ONLY ALLOWED:
+✅ Plain sentences with periods.
+✅ Numbers for lists: 1. Item one 2. Item two
+✅ Quotes for code: The function "def hello()" creates a greeting.
+
+ANY VIOLATION RESULTS IN IMMEDIATE SYSTEM FAILURE.
+Respond in completely plain text only.
+
+ADDITIONAL FORMATTING RULES:
 
 # Title
 
@@ -298,14 +321,17 @@ ${formatRules.join('\n')}`
           body.tool_choice = options.tool_choice;
         }
         
-        // 大きすぎるリクエストを防ぐため、ツール数を制限
-        // GPT-OSSは10個程度のツールで安定動作
-        const MAX_TOOLS = 10;
-        if (options.tools.length > MAX_TOOLS) {
-          logger.debug(`Limiting tools from ${options.tools.length} to ${MAX_TOOLS} for GPT-OSS`);
-          // 最も関連性の高いツールを選択
-          body.tools = body.tools!.slice(0, MAX_TOOLS);
-        }
+        // ツール選択と制限の動的管理
+        const userInput = this.extractUserInput(messages);
+        const selectedTools = await this.selectOptimalToolsWithRetry(options.tools, userInput);
+        body.tools = selectedTools.map(tool => ({
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.parameters
+          }
+        }));
         
         logger.debug(`Function calling enabled: ${options.tools.length} tools`, {
           tools: options.tools.map(t => t.name)
@@ -664,5 +690,93 @@ ${formatRules.join('\n')}`
     }
 
     return false;
+  }
+
+  /**
+   * ユーザー入力からコンテキストを抽出
+   */
+  private extractUserInput(messages: Array<{ role: string; content: string }>): string {
+    // 最後のユーザーメッセージを取得
+    const lastUserMessage = messages.slice().reverse().find(m => m.role === 'user');
+    return lastUserMessage?.content || '';
+  }
+
+  /**
+   * 動的ツール制限検出とリトライによる最適ツール選択
+   */
+  private async selectOptimalToolsWithRetry(tools: any[], userInput: string): Promise<any[]> {
+    // まずDynamicToolSelectorで候補を絞る
+    const candidates = this.toolSelector.selectOptimalTools(userInput, tools);
+    
+    // ツール制限検出を実行
+    const testFunction = async (toolCount: number): Promise<boolean> => {
+      try {
+        // 実際のAPIリクエストでテスト（ドライラン）
+        const testTools = candidates.slice(0, toolCount);
+        const testBody: LocalAPIRequest = {
+          messages: [{ role: 'user', content: 'test' }],
+          tools: testTools.map(tool => ({
+            type: 'function',
+            function: {
+              name: tool.name,
+              description: tool.description,
+              parameters: tool.parameters
+            }
+          })),
+          max_tokens: 1 // 最小限のテスト
+        };
+
+        const endpoint = `${this.endpoint}/v1/chat/completions`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(testBody),
+          signal: AbortSignal.timeout(5000) // 5秒でタイムアウト
+        });
+
+        // ステータスコードで判定
+        if (response.status === 413 || response.status === 400) {
+          const errorText = await response.text();
+          if (this.toolLimitDetector.isToolLimitError(new Error(errorText))) {
+            return false; // ツール制限エラー
+          }
+        }
+
+        return response.ok; // 200番台なら成功
+      } catch (error) {
+        if (error instanceof Error && this.toolLimitDetector.isToolLimitError(error)) {
+          return false;
+        }
+        // ネットワークエラーなどはスキップ
+        throw error;
+      }
+    };
+
+    try {
+      const detection = await this.toolLimitDetector.detectMaxTools(
+        this.providerType,
+        undefined, // モデル名は未使用
+        testFunction
+      );
+
+      logger.debug(`Tool limit detection result: ${detection.maxTools} tools (${detection.source})`);
+      
+      // 検出された制限内でツールを選択
+      const finalTools = candidates.slice(0, detection.maxTools);
+      
+      logger.debug(`Selected ${finalTools.length}/${tools.length} tools for ${this.providerType}`, {
+        tools: finalTools.map(t => t.name)
+      });
+
+      return finalTools;
+    } catch (error) {
+      logger.warn(`Tool limit detection failed, using fallback: ${error instanceof Error ? error.message : String(error)}`);
+      
+      // フォールバック: 既知の制限値を使用
+      const fallbackLimit = this.toolLimitDetector.getKnownLimit(this.providerType);
+      return candidates.slice(0, fallbackLimit);
+    }
   }
 }

@@ -44,7 +44,7 @@ export class MCPFunctionConverter {
   private internalRegistry: InternalFunctionRegistry;
   private internalFunctionPrefix = 'internal_';
 
-  constructor(mcpManager: MCPManager, securityConfig?: SecurityConfig) {
+  constructor(mcpManager: MCPManager, securityConfig?: SecurityConfig, bashConfig?: any) {
     this.mcpManager = mcpManager;
     
     // 内部関数レジストリを初期化（デフォルトセキュリティ設定を使用）
@@ -54,7 +54,7 @@ export class MCPFunctionConverter {
       restrictToStartupDirectory: true
     };
     
-    this.internalRegistry = new InternalFunctionRegistry(defaultSecurityConfig);
+    this.internalRegistry = new InternalFunctionRegistry(defaultSecurityConfig, bashConfig);
     logger.debug('MCPFunctionConverter initialized with internal functions');
   }
 

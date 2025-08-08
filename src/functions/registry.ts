@@ -1,5 +1,6 @@
 import { InternalFileSystem } from './filesystem.js';
-import { SecurityConfig } from './security.js';
+import { InternalBash, BashSecurityConfig } from './bash.js';
+import { SecurityConfig, FileSystemSecurity } from './security.js';
 import { logger } from '../utils/logger.js';
 import type { FunctionDefinition } from '../mcp/function-converter.js';
 
@@ -36,9 +37,16 @@ export interface FunctionExecutionResult {
 export class InternalFunctionRegistry {
   private functions: Map<string, InternalFunction> = new Map();
   private fileSystem: InternalFileSystem;
+  private bash?: InternalBash;
 
-  constructor(securityConfig: SecurityConfig) {
+  constructor(securityConfig: SecurityConfig, bashConfig?: BashSecurityConfig) {
     this.fileSystem = new InternalFileSystem(securityConfig);
+    
+    // Bash機能の初期化
+    if (bashConfig && bashConfig.enabled) {
+      this.bash = new InternalBash(new FileSystemSecurity(securityConfig), bashConfig);
+    }
+    
     this.registerDefaultFunctions();
     logger.debug('InternalFunctionRegistry initialized');
   }
@@ -295,6 +303,123 @@ export class InternalFunctionRegistry {
       },
       handler: async () => {
         return this.fileSystem.getSecurityInfo();
+      }
+    });
+
+    // Bashコマンド実行
+    this.registerFunction({
+      name: 'execute_command',
+      description: 'Bashコマンドを実行する（セキュリティ制限あり）',
+      parameters: {
+        type: 'object',
+        properties: {
+          command: {
+            type: 'string',
+            description: '実行するコマンド'
+          },
+          cwd: {
+            type: 'string',
+            description: '作業ディレクトリ（オプション）'
+          },
+          timeout: {
+            type: 'number',
+            description: 'タイムアウト時間（ミリ秒、オプション）'
+          },
+          shell: {
+            type: 'string',
+            description: '使用するシェル（オプション）'
+          }
+        },
+        required: ['command']
+      },
+      handler: async (params) => {
+        if (!this.bash) {
+          throw new Error('Bash execution is not available');
+        }
+        
+        const result = await this.bash.executeCommand(params.command, {
+          cwd: params.cwd,
+          timeout: params.timeout,
+          shell: params.shell
+        });
+        
+        if (result.success) {
+          return {
+            success: true,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            exit_code: result.exitCode,
+            duration: result.duration
+          };
+        } else {
+          return {
+            success: false,
+            error: result.error,
+            stderr: result.stderr,
+            exit_code: result.exitCode,
+            duration: result.duration
+          };
+        }
+      }
+    });
+
+    // Bash対話式コマンド実行
+    this.registerFunction({
+      name: 'execute_command_interactive',
+      description: 'Bashコマンドを対話式で実行する（リアルタイム出力）',
+      parameters: {
+        type: 'object',
+        properties: {
+          command: {
+            type: 'string',
+            description: '実行するコマンド'
+          },
+          cwd: {
+            type: 'string',
+            description: '作業ディレクトリ（オプション）'
+          },
+          timeout: {
+            type: 'number',
+            description: 'タイムアウト時間（ミリ秒、オプション）'
+          }
+        },
+        required: ['command']
+      },
+      handler: async (params) => {
+        if (!this.bash) {
+          throw new Error('Bash execution is not available');
+        }
+        
+        const result = await this.bash.executeCommandInteractive(params.command, {
+          cwd: params.cwd,
+          timeout: params.timeout
+        });
+        
+        return {
+          success: result.success,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          exit_code: result.exitCode,
+          error: result.error,
+          duration: result.duration
+        };
+      }
+    });
+
+    // Bashセキュリティ情報取得
+    this.registerFunction({
+      name: 'get_bash_security_info',
+      description: 'Bash実行のセキュリティ設定情報を取得する',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: []
+      },
+      handler: async () => {
+        if (!this.bash) {
+          return { enabled: false, reason: 'Bash execution is not available' };
+        }
+        return this.bash.getSecurityInfo();
       }
     });
 

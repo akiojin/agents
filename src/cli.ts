@@ -21,6 +21,72 @@ const require = createRequire(import.meta.url);
 const packageJson = require('../package.json') as { version: string };
 
 const program = new Command();
+// continuousCommand - 継続実行エンジンを使用したコマンド
+program
+  .command('auto <prompt>')
+  .description('プロンプト1つでタスクを最後まで自動実行')
+  .option('-m, --max-iterations <number>', '最大実行回数', '30')
+  .option('-h, --human-approval', '人間の承認を求める', false)
+  .option('-s, --session-id <id>', 'セッションIDを指定')
+  .action(async (prompt: string, options) => {
+    const { globalProgressReporter } = await import('./ui/progress.js');
+    
+    try {
+      globalProgressReporter.startTask('継続実行エンジンの準備', ['設定読み込み', 'エージェント初期化', 'MCP初期化', '継続実行開始']);
+      
+      // 設定読み込み
+      globalProgressReporter.updateSubtask(0);
+      const configManager = ConfigManager.getInstance();
+      const config = await configManager.load();
+      
+      // エージェント初期化
+      globalProgressReporter.updateSubtask(1);
+      const agent = new AgentCore(config);
+      const mcpManager = MCPManager.fromUnifiedConfig(config);
+      
+      // MCP初期化
+      globalProgressReporter.updateSubtask(2);
+      if (config.mcp?.enabled) {
+        await mcpManager.initialize();
+        await agent.setupMCPTools(mcpManager);
+      }
+      
+      // 継続実行エンジンを初期化
+      const ContinuousExecutionEngine = (AgentCore as any).ContinuousExecutionEngine;
+      const engine = new ContinuousExecutionEngine(agent);
+      
+      // 継続実行開始
+      globalProgressReporter.updateSubtask(3);
+      globalProgressReporter.completeTask(true);
+      
+      console.log(chalk.cyan('🚀 継続実行エンジンを開始します...'));
+      console.log(chalk.gray(`プロンプト: ${prompt}`));
+      console.log(chalk.gray(`最大反復回数: ${options.maxIterations}`));
+      console.log(chalk.gray(`人間承認: ${options.humanApproval ? '有効' : '無効'}`));
+      console.log('');
+      
+      const result = await engine.executeUntilComplete(prompt, {
+        maxIterations: parseInt(options.maxIterations, 10),
+        requireHumanApproval: options.humanApproval,
+        sessionId: options.sessionId
+      });
+      
+      console.log('');
+      console.log(chalk.green('✅ 継続実行が完了しました'));
+      console.log(chalk.gray(`実行回数: ${result.iterations}`));
+      console.log(chalk.gray(`完了理由: ${result.completionReason}`));
+      console.log('');
+      console.log(chalk.yellow('最終結果:'));
+      console.log(result.finalResult);
+      
+    } catch (error) {
+      globalProgressReporter.completeTask(false);
+      globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+      console.error(chalk.red('❌ 継続実行中にエラーが発生しました'));
+      logger.error('Continuous execution failed:', error);
+      process.exit(1);
+    }
+  });
 
 program
   .name('agents')
