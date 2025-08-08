@@ -139,6 +139,7 @@ export const DEFAULT_CONFIG: Config = {
     history: '.agents-history',
     config: '.agents.yaml',
   },
+  localEndpoint: 'http://host.docker.internal:1234',
 };
 
 /**

@@ -28,12 +28,15 @@ interface LocalAPIResponse {
 export class LocalProvider extends LLMProvider {
   private providerType: 'local-gptoss' | 'local-lmstudio';
 
-  constructor(endpoint: string = 'http://host.docker.internal:1234', providerType: 'local-gptoss' | 'local-lmstudio' = 'local-gptoss', options?: {
+  constructor(endpoint: string, providerType: 'local-gptoss' | 'local-lmstudio' = 'local-gptoss', options?: {
     timeout?: number;
     maxRetries?: number;
     temperature?: number;
     maxTokens?: number;
   }) {
+    if (!endpoint) {
+      throw new Error('endpoint が指定されていません');
+    }
     super(undefined, endpoint, options);
     this.providerType = providerType;
     logger.debug(`LocalProvider initialized with endpoint: ${this.endpoint}`);

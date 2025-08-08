@@ -88,20 +88,24 @@ export class ConfigManager {
     }
 
     try {
-      // 1. デフォルトConfigからStarted
-      let config = this.deepClone(DEFAULT_CONFIG);
-
-      // 2. ConfigファイルのLoad
-      if (existsSync(this.configPath)) {
-        const fileConfig = await this.loadFromFile();
-        config = this.deepMerge(config, fileConfig);
+      // 1. Configファイルが存在しない場合はデフォルトで作成
+      if (!existsSync(this.configPath)) {
+        logger.info(`Settings file not found: ${this.configPath}. Creating with default values.`);
+        await this.createDefaultConfigFile();
       }
 
-      // 3. 環境変数のLoad
+      // 2. デフォルトConfigからStarted
+      let config = this.deepClone(DEFAULT_CONFIG);
+
+      // 3. Configファイルからロード（必ず存在する）
+      const fileConfig = await this.loadFromFile();
+      config = this.deepMerge(config, fileConfig);
+
+      // 4. 環境変数のLoad
       const envConfig = this.loadFromEnv();
       config = this.deepMerge(config, envConfig);
 
-      // 4. .mcp.jsonからMCPサーバー設定をLoad
+      // 5. .mcp.jsonからMCPサーバー設定をLoad
       const mcpServers = await MCPLoader.loadMCPConfig();
       if (mcpServers.length > 0) {
         logger.info(`Loaded ${mcpServers.length} MCP servers from .mcp.json`);
@@ -113,16 +117,32 @@ export class ConfigManager {
         }
       }
 
-      // 5. ConfigのValidation
+      // 6. ConfigのValidation
       this.config = ConfigSchema.parse(config);
 
-      logger.debug('ConfigをLoadました:', this.config);
+      logger.debug('Configをロード完了:', this.config);
       return this.config;
     } catch (error) {
-      logger.error('ConfigのLoadにFaileddone:', error);
-      this.config = DEFAULT_CONFIG;
-      return this.config;
+      logger.error('ConfigのLoadに失敗:', error);
+      throw new Error(`Failed to load configuration: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  /**
+   * デフォルト設定でConfigファイルを作成
+   */
+  private async createDefaultConfigFile(): Promise<void> {
+    // ディレクトリが存在しない場合は作成
+    const configDir = join(process.cwd(), '.agents');
+    if (!existsSync(configDir)) {
+      await import('fs/promises').then(fs => fs.mkdir(configDir, { recursive: true }));
+      logger.info(`Created config directory: ${configDir}`);
+    }
+
+    // デフォルト設定をファイルに保存
+    const content = JSON.stringify(DEFAULT_CONFIG, null, 2);
+    await writeFile(this.configPath, content, 'utf-8');
+    logger.info(`Created default settings file: ${this.configPath}`);
   }
 
   /**

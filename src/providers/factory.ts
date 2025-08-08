@@ -31,8 +31,11 @@ export function createProvider(config: Config): LLMProvider {
 
     case 'local-gptoss':
     case 'local-lmstudio':
-      // Localエンドポイントは環境変数またはデフォルト値を使用
-      const endpoint = process.env.AGENTS_LOCAL_ENDPOINT || 'http://host.docker.internal:1234';
+      // LocalエンドポイントはConfigから取得（必須）
+      if (!config.localEndpoint) {
+        throw new Error('localEndpoint が設定ファイルに定義されていません');
+      }
+      const endpoint = config.localEndpoint;
       return new LocalProvider(endpoint, config.llm.provider, {
         timeout: config.llm.timeout,
         maxRetries: config.llm.maxRetries,
@@ -73,14 +76,11 @@ export function createProviderFromUnifiedConfig(
 
     case 'local-gptoss':
     case 'local-lmstudio': {
-      // Localエンドポイントは設定ファイル、環境変数、デフォルト値の順で優先
-      const configEndpoint = config.localEndpoint;
-      const envEndpoint = process.env.AGENTS_LOCAL_ENDPOINT;
-      
-      const endpoint = 
-        (isDefined(configEndpoint) && isValidUrl(configEndpoint)) ? configEndpoint :
-        (isDefined(envEndpoint) && isValidUrl(envEndpoint)) ? envEndpoint :
-        'http://host.docker.internal:1234';
+      // LocalエンドポイントはConfigから取得（必須）
+      if (!config.localEndpoint) {
+        throw new Error('localEndpoint が設定ファイルに定義されていません');
+      }
+      const endpoint = config.localEndpoint;
       
       return new LocalProvider(endpoint, config.llm.provider, providerOptions);
     }
