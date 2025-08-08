@@ -61,10 +61,21 @@ export class ProgressReporter {
    * @param info InfoMessage
    */
   showInfo(info: string): void {
-    // Suppress verbose tool execution messages
-    // Only log debug level messages
-    const logger = require('../utils/logger.js').logger;
-    logger.debug(info);
+    // MCPツール実行のみコンソールに表示
+    if (info.includes('Executing') && info.includes('tool')) {
+      // ツール実行開始メッセージを簡潔に表示
+      const toolMatch = info.match(/Executing (\w+) tool/);
+      if (toolMatch) {
+        process.stdout.write('\r\x1b[K'); // 現在の行をクリア
+        console.log(`\n⚡ ${toolMatch[1]} tool executing...`);
+      }
+    } else if (info.includes('Tool completed')) {
+      // ツール完了は表示しない（Thinkingインジケーターに戻る）
+    } else {
+      // その他のメッセージはdebugログへ
+      const logger = require('../utils/logger.js').logger;
+      logger.debug(info);
+    }
   }
   
   /**
