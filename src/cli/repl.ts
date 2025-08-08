@@ -54,6 +54,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         console.log('  /load <file> - Load conversation');
         console.log('  /tools       - Show available tools');
         console.log('  /mcp         - Show MCP server status');
+        console.log('  /mcperror    - Show MCP server error details');
         console.log('  /mcptools    - Show MCP tools list');
         console.log('  /model <name>- Change model');
         console.log('  /parallel    - Toggle parallel execution mode');
@@ -121,20 +122,90 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       }
 
       case '/mcp': {
-        const serverStatus = agent.getMCPServerStatus();
-        if (!serverStatus) {
-          console.log(chalk.red('MCP tools not initialized'));
-          return true;
-        }
-        console.log(chalk.cyan('MCP server status:'));
-        if (serverStatus.size === 0) {
-          console.log(chalk.yellow('  No MCP servers configured'));
-        } else {
-          for (const [name, status] of serverStatus) {
-            const statusText = status ? chalk.green('Connected') : chalk.red('Disconnected');
-            console.log(`  - ${name}: ${statusText}`);
+        // まずMCPManagerから直接進捗を取得
+        let progress = agent.getMCPInitializationProgress();
+        
+        if (!progress) {
+          // agent経由で取得できない場合は、MCPManager自体の状態をチェック
+          console.log(chalk.red('MCP manager not available through agent'));
+          console.log(chalk.gray('  Attempting to get status directly from MCPManager...'));
+          
+          // MCPManagerから直接進捗を取得する試み
+          try {
+            progress = mcpManager.getInitializationProgress();
+            if (progress && progress.servers.length > 0) {
+              console.log(chalk.yellow('  ✓ MCPManager is available but not connected to agent'));
+              console.log(chalk.yellow('  This suggests setupMCPTools() was not called or failed'));
+            } else {
+              console.log(chalk.red('  ✗ MCPManager has no servers configured'));
+              return true;
+            }
+          } catch (error) {
+            console.log(chalk.red(`  ✗ Error accessing MCPManager: ${error instanceof Error ? error.message : String(error)}`));
+            return true;
           }
         }
+
+        console.log(chalk.cyan('=== MCP Server Status ==='));
+        
+        if (progress.isInitializing) {
+          console.log(chalk.yellow(`🔄 Initializing... (${progress.completed}/${progress.total} completed)`));
+        } else {
+          console.log(chalk.green(`[OK] Initialization completed (${progress.completed}/${progress.total} servers)`));
+        }
+
+        if (progress.failed > 0) {
+          console.log(chalk.red(`❌ ${progress.failed} server(s) failed`));
+        }
+
+        console.log('');
+
+        // エラーが発生したサーバーのリストを収集
+        const failedServers: Array<{ name: string; error: string; type: string }> = [];
+        
+        for (const server of progress.servers) {
+          const typeIndicator = server.type === 'http' ? '🌐' : server.type === 'sse' ? '⚡' : '📡';
+          const statusColor = 
+            server.status === 'completed' ? chalk.green :
+            server.status === 'failed' ? chalk.red :
+            server.status === 'pending' ? chalk.gray :
+            chalk.yellow;
+
+          const statusText = server.status.charAt(0).toUpperCase() + server.status.slice(1);
+          const duration = server.duration ? `(${server.duration}ms)` : '';
+          const toolCount = server.toolCount !== undefined ? `[${server.toolCount} tools]` : '';
+
+          console.log(`  ${typeIndicator} ${server.name}: ${statusColor(statusText)} ${toolCount} ${duration}`);
+
+          // エラーサーバーをリストに追加（エラー詳細は非表示）
+          if (server.status === 'failed' && server.error) {
+            failedServers.push({
+              name: server.name,
+              error: server.error,
+              type: server.type
+            });
+            console.log(`    ${chalk.red('⚠ Error occurred')} ${chalk.gray('(use /mcperror to view details)')}`);
+          }
+
+          if (server.status !== 'pending' && server.status !== 'failed' && server.startedAt) {
+            const elapsed = server.completedAt
+              ? server.completedAt.getTime() - server.startedAt.getTime()
+              : Date.now() - server.startedAt.getTime();
+            console.log(`    ${chalk.gray(`Started: ${server.startedAt.toLocaleTimeString()} (${elapsed}ms)`)}`);
+          }
+        }
+
+        console.log('');
+        console.log(chalk.gray('Legend: 📡=stdio, 🌐=http, ⚡=sse'));
+        
+        if (failedServers.length > 0) {
+          console.log('');
+          console.log(chalk.yellow(`💡 ${failedServers.length} server(s) have errors. Use /mcperror to view error details.`));
+        }
+        
+        // エラーサーバー情報を一時保存（次のmcperrorコマンド用）
+        (global as any).__failedMCPServers = failedServers;
+        
         return true;
       }
 
@@ -168,6 +239,28 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       case '/parallel': {
         const isParallel = agent.toggleParallelMode();
         console.log(chalk.yellow(`Parallel execution mode: ${isParallel ? 'Enabled' : 'Disabled'}`));
+        return true;
+      }
+
+      case '/mcperror': {
+        const failedServers = (global as any).__failedMCPServers as Array<{ name: string; error: string; type: string }> | undefined;
+        
+        if (!failedServers || failedServers.length === 0) {
+          console.log(chalk.yellow('No MCP server errors to display'));
+          console.log(chalk.gray('Use /mcp to check server status first'));
+          return true;
+        }
+
+        console.log(chalk.cyan('=== MCP Server Error Details ==='));
+        console.log('');
+
+        for (const server of failedServers) {
+          const typeIndicator = server.type === 'http' ? '🌐' : server.type === 'sse' ? '⚡' : '📡';
+          console.log(`${typeIndicator} ${chalk.red(server.name)}`);
+          console.log(`  ${chalk.red('Error:')} ${server.error}`);
+          console.log('');
+        }
+
         return true;
       }
 

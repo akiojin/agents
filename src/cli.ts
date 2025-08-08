@@ -106,12 +106,12 @@ program
         llm: {
           provider: answers.provider,
           apiKey: answers.apiKey,
-          timeout: 120000, // 2minutes for complex queries
+          timeout: 30000, // 2minutes for complex queries
           maxRetries: 3,
         },
         mcp: {
           servers: [],
-          timeout: 120000, // 2minutes for MCP operations
+          timeout: 30000, // 2minutes for MCP operations
           enabled: answers.useMCP,
           maxRetries: 3,
         },
@@ -257,14 +257,58 @@ if (process.argv.length === 2) {
     // MCP初期化をバックグラウンドで実行
     if (config.mcp?.enabled) {
       console.log(chalk.gray('● Loading MCP tools in background...'));
+      
+      // 初期化進捗イベントをリスニング
+      mcpManager.on('initialization-started', (progress) => {
+        console.log(chalk.gray(`  🔄 Starting initialization of ${progress.total} servers...`));
+      });
+
+      mcpManager.on('server-initialized', (data) => {
+        console.log(chalk.gray(`  ✅ ${data.serverName} initialized (${data.toolCount} tools)`));
+      });
+
+      mcpManager.on('server-status-updated', (data) => {
+        if (data.status.status === 'failed') {
+          const serverType = data.status.type === 'http' ? '🌐' : data.status.type === 'sse' ? '⚡' : '📡';
+                    // エラー表示を抑制 - ログにのみ記録
+          logger.debug(`MCP server ${data.serverName} failed`);
+          if (data.status.error) {
+            // エラーメッセージをクリーンアップ
+            let cleanError = data.status.error;
+            if (cleanError.includes('MCPServer')) {
+              cleanError = cleanError.replace(/MCPServer \[.*?\] /g, '');
+            }
+            // エラー詳細もログにのみ記録
+            logger.debug(`MCP server ${data.serverName} error: ${cleanError}`);
+          }
+        }
+      });
+
       mcpManager.initialize()
-        .then(() => agent.setupMCPTools(mcpManager))
         .then(() => {
-          console.log(chalk.green('● MCP tools ready'));
+          console.log(chalk.gray('  📋 Setting up MCP tools helper...'));
+          return agent.setupMCPTools(mcpManager);
+        })
+        .then(() => {
+          console.log(chalk.gray('  ✅ MCP tools helper setup completed'));
+          const progress = mcpManager.getInitializationProgress();
+          console.log(chalk.green(`[MCP] ${progress.completed}/${progress.total} servers ready, ${progress.failed} failed`));
         })
         .catch((error) => {
-          console.log(chalk.yellow('● MCP initialization failed:', error.message));
+          console.log(chalk.red('● MCP initialization failed:'));
+          console.log(chalk.red(`  Error: ${error.message}`));
+          console.log(chalk.red(`  Stack: ${error.stack}`));
+          
+          // 個別サーバーの状態を表示
+          const progress = mcpManager.getInitializationProgress();
+          for (const server of progress.servers) {
+            if (server.status === 'failed' && server.error) {
+              console.log(chalk.red(`  ${server.name}: ${server.error}`));
+            }
+          }
         });
+    } else {
+      console.log(chalk.gray('● MCP disabled in configuration'));
     }
 
     await replPromise;

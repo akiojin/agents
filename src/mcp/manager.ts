@@ -2,7 +2,19 @@ import { spawn, type ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import type { Config, MCPServerConfig } from '../types/config.js';
 import { logger } from '../utils/logger.js';
-import { MCPClient } from './client.js';
+import { MCPClient, HTTPMCPClient, SSEMCPClient } from './client.js';
+
+// MCP クライアントの共通インターフェース
+interface MCPClientInterface {
+  connect(process?: any): Promise<void>;
+  listTools(): Promise<Tool[]>;
+  invokeTool(name: string, params?: Record<string, unknown>): Promise<unknown>;
+  disconnect(): Promise<void>;
+  isConnected(): boolean;
+  getName(): string;
+  getTimeout(): number;
+  getMaxRetries(): number;
+}
 
 export interface Tool {
   name: string;
@@ -12,7 +24,7 @@ export interface Tool {
 
 export class MCPManager extends EventEmitter {
   private config: import('../types/config.js').Config;
-  private servers: Map<string, MCPClient> = new Map();
+  private servers: Map<string, MCPClientInterface> = new Map();
   private processes: Map<string, ChildProcess> = new Map();
   private tools: Map<string, Tool> = new Map();
   private mcpConfig: {
@@ -21,13 +33,24 @@ export class MCPManager extends EventEmitter {
     enabled: boolean;
   };
 
+  // 初期化進捗追跡
+  private initializationStatus: Map<string, {
+    status: 'pending' | 'connecting' | 'initializing' | 'listing-tools' | 'completed' | 'failed';
+    error?: string;
+    startedAt?: Date;
+    completedAt?: Date;
+    toolCount?: number;
+    type: 'stdio' | 'http' | 'sse';
+  }> = new Map();
+  private isInitializing: boolean = false;
+
   constructor(config: import('../types/config.js').Config) {
     super();
     this.config = config;
 
     // MCPConfigを抽出（統一Configまたは従来Configから）
     this.mcpConfig = {
-      timeout: 120000, // デフォルト2minutes for MCP operations
+      timeout: 30000, // デフォルト30seconds for MCP operations
       maxRetries: 2, // デフォルト2回
       enabled: config.useMCP ?? true,
     };
@@ -70,60 +93,121 @@ export class MCPManager extends EventEmitter {
       return;
     }
 
+    this.isInitializing = true;
     logger.info('Initializing MCP servers...');
+
+    // 全サーバーの初期化状態をpendingに設定
+    for (const serverConfig of this.config.mcpServers) {
+      this.initializationStatus.set(serverConfig.name, {
+        status: 'pending',
+        type: (serverConfig.type as 'stdio' | 'http' | 'sse') || 'stdio',
+      });
+    }
+
+    // 進捗更新イベントを発行
+    this.emit('initialization-started', this.getInitializationProgress());
 
     for (const serverConfig of this.config.mcpServers) {
       try {
+            // サーバー開始のログを詳細レベルに変更（コンソール表示を抑制）
+        logger.debug(`Starting server ${serverConfig.name} (${serverConfig.type || 'stdio'})`);
         await this.startServer(serverConfig);
+        // 成功メッセージもログレベルを下げる
+        logger.debug(`Server ${serverConfig.name} started successfully`);
       } catch (error) {
-        logger.error(`Failed to start MCP server: ${serverConfig.name}`, error);
+        // エラーをコンソールに即座に表示せず、ログとステータスのみ更新
+        logger.debug(`Failed to start MCP server: ${serverConfig.name}`, error);
+        this.updateServerStatus(serverConfig.name, 'failed', error instanceof Error ? error.message : String(error));
+        this.emit('server-status-updated', { 
+          serverName: serverConfig.name, 
+          status: this.initializationStatus.get(serverConfig.name)!
+        });
       }
     }
+
+    // 初期化完了メッセージもログレベルを下げる
+    logger.debug(`MCP initialization completed: ${this.initializationStatus.size} servers processed`);
+
+    this.isInitializing = false;
+    this.emit('initialization-completed', this.getInitializationProgress());
   }
 
   private async startServer(serverConfig: MCPServerConfig): Promise<void> {
-    logger.info(`Starting MCP server: ${serverConfig.name} (${serverConfig.type || 'stdio'})`);
+    const serverName = serverConfig.name;
+    
+    try {
+      this.updateServerStatus(serverName, 'connecting');
+      logger.info(`Starting MCP server: ${serverName} (${serverConfig.type || 'stdio'})`);
 
-    // HTTP/SSEタイプの場合は子プロセスを起動しない
-    if (serverConfig.type === 'http' || serverConfig.type === 'sse') {
-      logger.info(`${serverConfig.type.toUpperCase()} server ${serverConfig.name} will connect to: ${serverConfig.url}`);
+      let client: MCPClientInterface;
+
+      // サーバータイプ別にクライアントを作成
+      if (serverConfig.type === 'http') {
+        if (!serverConfig.url) {
+          throw new Error(`HTTP server ${serverName}: URL is required`);
+        }
+        
+        logger.info(`HTTP server ${serverName} will connect to: ${serverConfig.url}`);
+        client = new HTTPMCPClient(serverName, serverConfig.url, {
+          timeout: this.mcpConfig.timeout,
+          maxRetries: this.mcpConfig.maxRetries,
+        });
+        
+        this.updateServerStatus(serverName, 'initializing');
+        await client.connect();
+        
+      } else if (serverConfig.type === 'sse') {
+        if (!serverConfig.url) {
+          throw new Error(`SSE server ${serverName}: URL is required`);
+        }
+        
+        logger.info(`SSE server ${serverName} will connect to: ${serverConfig.url}`);
+        client = new SSEMCPClient(serverName, serverConfig.url, {
+          timeout: this.mcpConfig.timeout,
+          maxRetries: this.mcpConfig.maxRetries,
+        });
+        
+        this.updateServerStatus(serverName, 'initializing');
+        await client.connect();
+        
+      } else {
+        // STDIOタイプの処理（既存の実装）
+        const childProcess = spawn(serverConfig.command, serverConfig.args || [], {
+          env: { ...process.env, ...serverConfig.env },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+
+        this.processes.set(serverName, childProcess);
+
+        client = new MCPClient(serverName, {
+          timeout: this.mcpConfig.timeout,
+          maxRetries: this.mcpConfig.maxRetries,
+        });
+
+        this.updateServerStatus(serverName, 'initializing');
+        await client.connect(childProcess);
+      }
+
+      this.servers.set(serverName, client);
+
+      // ツール一覧取得
+      this.updateServerStatus(serverName, 'listing-tools');
+      const tools = await client.listTools();
+      for (const tool of tools) {
+        this.tools.set(`${serverName}:${tool.name}`, tool);
+      }
+
+      // 完了状態に更新
+      this.updateServerStatus(serverName, 'completed', undefined, tools.length);
+      logger.info(`MCP server started: ${serverName} (${tools.length} tools)`);
       
-      // MCPクライアントを作成
-      const client = new MCPClient(serverConfig.name, {
-        timeout: this.mcpConfig.timeout,
-        maxRetries: this.mcpConfig.maxRetries,
-      });
+      // 進捗更新イベントを発行
+      this.emit('server-initialized', { serverName, toolCount: tools.length });
 
-      // HTTP/SSE接続（将来の実装）
-      // 現在はstdioタイプのみ実装されているため、警告を表示
-      logger.warn(`${serverConfig.type.toUpperCase()} type servers are not yet implemented. Server ${serverConfig.name} will be skipped.`);
-      return;
+    } catch (error) {
+      this.updateServerStatus(serverName, 'failed', error instanceof Error ? error.message : String(error));
+      throw error;
     }
-
-    // STDIOタイプの処理（既存の実装）
-    const childProcess = spawn(serverConfig.command, serverConfig.args || [], {
-      env: { ...process.env, ...serverConfig.env },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-
-    this.processes.set(serverConfig.name, childProcess);
-
-    // MCPクライアントを作成（統一Configを使用）
-    const client = new MCPClient(serverConfig.name, {
-      timeout: this.mcpConfig.timeout,
-      maxRetries: this.mcpConfig.maxRetries,
-    });
-
-    await client.connect(childProcess);
-    this.servers.set(serverConfig.name, client);
-
-    // ToolをGet - forEach + asyncの問題を修正：for...ofループを使用
-    const tools = await client.listTools();
-    for (const tool of tools) {
-      this.tools.set(`${serverConfig.name}:${tool.name}`, tool);
-    }
-
-    logger.info(`MCP server started: ${serverConfig.name} (${tools.length} tools)`);
   }
 
   async listTools(): Promise<Tool[]> {
@@ -233,5 +317,85 @@ export class MCPManager extends EventEmitter {
   updateMCPConfig(newConfig: Partial<typeof this.mcpConfig>): void {
     this.mcpConfig = { ...this.mcpConfig, ...newConfig };
     logger.info('MCPConfigをUpdatedone:', this.mcpConfig);
+  }
+
+  /**
+   * サーバーの初期化状態を更新
+   */
+  private updateServerStatus(
+    serverName: string,
+    status: 'pending' | 'connecting' | 'initializing' | 'listing-tools' | 'completed' | 'failed',
+    error?: string,
+    toolCount?: number
+  ): void {
+    const currentStatus = this.initializationStatus.get(serverName);
+    if (!currentStatus) return;
+
+    const updatedStatus = {
+      ...currentStatus,
+      status,
+      error,
+      toolCount,
+      ...(status === 'connecting' && { startedAt: new Date() }),
+      ...(status === 'completed' || status === 'failed' && { completedAt: new Date() }),
+    };
+
+    this.initializationStatus.set(serverName, updatedStatus);
+    this.emit('server-status-updated', { serverName, status: updatedStatus });
+  }
+
+  /**
+   * 初期化進捗を取得
+   */
+  getInitializationProgress(): {
+    isInitializing: boolean;
+    total: number;
+    completed: number;
+    failed: number;
+    servers: Array<{
+      name: string;
+      type: 'stdio' | 'http' | 'sse';
+      status: 'pending' | 'connecting' | 'initializing' | 'listing-tools' | 'completed' | 'failed';
+      error?: string;
+      startedAt?: Date;
+      completedAt?: Date;
+      toolCount?: number;
+      duration?: number;
+    }>;
+  } {
+    const servers = Array.from(this.initializationStatus.entries()).map(([name, status]) => {
+      const duration = status.startedAt && status.completedAt
+        ? status.completedAt.getTime() - status.startedAt.getTime()
+        : undefined;
+
+      return {
+        name,
+        type: status.type,
+        status: status.status,
+        error: status.error,
+        startedAt: status.startedAt,
+        completedAt: status.completedAt,
+        toolCount: status.toolCount,
+        duration,
+      };
+    });
+
+    const completed = servers.filter(s => s.status === 'completed').length;
+    const failed = servers.filter(s => s.status === 'failed').length;
+
+    return {
+      isInitializing: this.isInitializing,
+      total: servers.length,
+      completed,
+      failed,
+      servers,
+    };
+  }
+
+  /**
+   * 初期化が完了しているかチェック
+   */
+  isInitializationCompleted(): boolean {
+    return !this.isInitializing && this.initializationStatus.size > 0;
   }
 }
