@@ -324,13 +324,27 @@ export class AgentCore extends EventEmitter {
       globalProgressReporter.updateSubtask(3);
 
       // Function Callingのチェック
-      if (llmResponse.functionCall) {
-        logger.info('Function call detected:', llmResponse.functionCall);
+      if (llmResponse.functionCall || (llmResponse.tool_calls && llmResponse.tool_calls.length > 0)) {
+        logger.info('Function call detected:', llmResponse.functionCall || llmResponse.tool_calls);
         
-        // Tool呼び出しをExecute
-        const toolCalls = Array.isArray(llmResponse.functionCall) 
-          ? llmResponse.functionCall 
-          : [llmResponse.functionCall];
+        // Tool呼び出しをExecute - 新しい形式と古い形式の両方に対応
+        let toolCalls;
+        if (llmResponse.tool_calls && llmResponse.tool_calls.length > 0) {
+          // 新しい形式（local.tsから）
+          toolCalls = llmResponse.tool_calls.map(call => ({
+            function: {
+              name: call.function?.name || call.name,
+              arguments: typeof call.function?.arguments === 'string' 
+                ? call.function.arguments 
+                : JSON.stringify(call.function?.arguments || call.arguments || {})
+            }
+          }));
+        } else {
+          // 古い形式
+          toolCalls = Array.isArray(llmResponse.functionCall) 
+            ? llmResponse.functionCall 
+            : [llmResponse.functionCall];
+        }
         
         const toolResults: string[] = [];
         
@@ -423,45 +437,15 @@ export class AgentCore extends EventEmitter {
         // 通常のテキストレスポンスの場合
         const response = typeof llmResponse === 'string' ? llmResponse : llmResponse.content;
         
-        // Function Callingが期待されたが実際にはツールが利用できない場合の対処
         if (!response || response.trim().length === 0) {
-          // MCPツールが期待されている場合のフォールバック処理
-          if (this.availableFunctions.length > 0 && (input.includes('ネット') || input.includes('検索') || input.includes('調べ'))) {
-            logger.warn('Function Calling expected but got empty response, falling back to normal chat');
-            const fallbackResponse = `申し訳ありませんが、現在ウェブ検索機能が利用できません。利用可能な情報に基づいてお答えします。
-
-古事記について：
-古事記は日本最古の歴史書で、712年に太安万侶によって編纂されました。神話から始まり、神武天皇から推古天皇までの歴史を記録しています。
-
-詳細な情報については、ウェブ検索機能を有効にするためにMCPサーバーの設定が必要です。`;
-            
-            // AssistantMessageをHistoryに追加
-            const assistantMessage: ChatMessage = {
-              role: 'assistant',
-              content: fallbackResponse,
-              timestamp: new Date(),
-            };
-            this.history.push(assistantMessage);
-            
-            // HistorySave
-            try {
-              await this.memoryManager.saveHistory(this.history);
-            } catch (saveError) {
-              logger.warn('Failed to save history:', saveError);
-            }
-            
-            globalProgressReporter.completeTask(true);
-            return fallbackResponse;
-          }
-          
           logger.error('LLM returned empty response:', {
             llmResponse,
             responseType: typeof llmResponse,
             hasContent: !!(llmResponse && typeof llmResponse === 'object' && 'content' in llmResponse),
             model: this.currentModel,
             provider: this.config.llm.provider,
-            inputRequiredTools: input.includes('ネット') || input.includes('検索') || input.includes('調べ'),
-            availableFunctionsCount: this.availableFunctions.length
+            availableFunctionsCount: this.availableFunctions.length,
+            functionCallAttempted: !!(llmResponse && typeof llmResponse === 'object' && 'functionCall' in llmResponse)
           });
           globalProgressReporter.completeTask(false);
           throw new Error(`Response from LLM is empty (model: ${this.currentModel}, provider: ${this.config.llm.provider})`);
