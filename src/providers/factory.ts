@@ -77,19 +77,10 @@ export function createProviderFromUnifiedConfig(
       const configEndpoint = config.localEndpoint;
       const envEndpoint = process.env.AGENTS_LOCAL_ENDPOINT;
       
-      // デバッグ: エンドポイント選択のログ
-      console.log('[Debug] LocalProvider endpoint selection:');
-      console.log('  configEndpoint:', configEndpoint);
-      console.log('  envEndpoint:', envEndpoint);
-      console.log('  configEndpoint valid?:', isDefined(configEndpoint) && isValidUrl(configEndpoint));
-      console.log('  envEndpoint valid?:', isDefined(envEndpoint) && isValidUrl(envEndpoint));
-      
       const endpoint = 
         (isDefined(configEndpoint) && isValidUrl(configEndpoint)) ? configEndpoint :
         (isDefined(envEndpoint) && isValidUrl(envEndpoint)) ? envEndpoint :
         'http://127.0.0.1:1234';
-      
-      console.log('  Selected endpoint:', endpoint);
       
       return new LocalProvider(endpoint, config.llm.provider, providerOptions);
     }

@@ -283,11 +283,11 @@ export class AgentCore extends EventEmitter {
               tool_choice: this.availableFunctions.length > 0 ? 'auto' as const : undefined
             };
             
-            // Function Callingの状態をコンソールに表示（デバッグ用）
+            // Function Callingの状態をログに記録
             if (this.availableFunctions.length > 0) {
-              console.log(chalk.gray(`[Debug] Function Calling enabled: ${this.availableFunctions.length} functions available`));
+              logger.debug(`Function Calling enabled: ${this.availableFunctions.length} functions available`);
             } else {
-              console.log(chalk.gray('[Debug] Function Calling disabled: No functions available'));
+              logger.debug('Function Calling disabled: No functions available');
             }
             
             logger.debug('Chat request with function calling', {
@@ -298,7 +298,7 @@ export class AgentCore extends EventEmitter {
             const response = await this.provider.chat(this.history, chatOptions);
             
             // LLMレスポンスをデバッグ出力
-            console.log(chalk.gray('[Debug] LLM Response type:', typeof response));
+            logger.debug('LLM Response type:', typeof response);
             if (typeof response === 'object' && response !== null) {
               console.log(chalk.gray('[Debug] Response object keys:', Object.keys(response)));
               if ('tool_calls' in response) {

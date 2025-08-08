@@ -36,21 +36,18 @@ export class LocalProvider extends LLMProvider {
   }) {
     super(undefined, endpoint, options);
     this.providerType = providerType;
-    console.log(`[Debug] LocalProvider initialized with endpoint: ${this.endpoint}`);
+    logger.debug(`LocalProvider initialized with endpoint: ${this.endpoint}`);
   }
 
   private async makeRequest(body: LocalAPIRequest): Promise<LocalAPIResponse> {
     // specifiedエンドポイントを使用
     const endpoint = `${this.endpoint}/v1/chat/completions`;
-    console.log(`[Debug] Making request to: ${endpoint}`);
 
     logger.debug(`Local API request started: ${endpoint}`, { 
       providerType: this.providerType,
       hasModel: !!body.model,
       timeout: this.providerOptions.timeout,
     });
-    
-    console.log(`[Debug] Request timeout: ${this.providerOptions.timeout}ms`);
 
     // Execute API call with retry
     const result = await withRetry(
@@ -126,10 +123,11 @@ export class LocalProvider extends LLMProvider {
         } catch (fetchError) {
           clearTimeout(timeout);
           
-          console.log(`[Debug] Fetch error occurred`);
-          console.log(`[Debug] Error name:`, fetchError instanceof Error ? fetchError.name : 'unknown');
-          console.log(`[Debug] Error message:`, fetchError instanceof Error ? fetchError.message : fetchError);
-          logger.error('Fetch error details:', fetchError);
+          logger.error('Fetch error details:', {
+            name: fetchError instanceof Error ? fetchError.name : 'unknown',
+            message: fetchError instanceof Error ? fetchError.message : fetchError,
+            endpoint
+          });
           
           if (fetchError instanceof Error) {
             if (fetchError.name === 'AbortError') {
@@ -215,14 +213,12 @@ export class LocalProvider extends LLMProvider {
           body.tool_choice = options.tool_choice;
         }
         
-        console.log(`[Debug] Function calling enabled with ${options.tools.length} tools`);
-        console.log('[Debug] Tool names:', options.tools.map(t => t.name).slice(0, 5).join(', '), '...');
-        
         // 大きすぎるリクエストを防ぐため、ツール数を制限
-        // GPT-OSSは5個程度のツールでテスト
-        const MAX_TOOLS = 5;
+        // GPT-OSSは10個程度のツールで安定動作
+        const MAX_TOOLS = 10;
         if (options.tools.length > MAX_TOOLS) {
-          console.log(`[Debug] WARNING: Too many tools (${options.tools.length}). Limiting to ${MAX_TOOLS} for GPT-OSS.`);
+          logger.debug(`Limiting tools from ${options.tools.length} to ${MAX_TOOLS} for GPT-OSS`);
+          // 最も関連性の高いツールを選択
           body.tools = body.tools!.slice(0, MAX_TOOLS);
         }
         
@@ -233,7 +229,9 @@ export class LocalProvider extends LLMProvider {
 
       // リクエストサイズを確認
       const requestSize = JSON.stringify(body).length;
-      console.log(`[Debug] Request size: ${requestSize} bytes (${Math.round(requestSize/1024)}KB)`);
+      if (requestSize > 10000) {
+        console.log(`[Debug] Large request: ${requestSize} bytes (${Math.round(requestSize/1024)}KB)`);
+      }
       
       logger.debug(`LocalProvider chat started: ${this.providerType}`, {
         messageCount: localMessages.length,
@@ -249,7 +247,6 @@ export class LocalProvider extends LLMProvider {
       const response = await this.makeRequest(body);
 
       // デバッグ: レスポンス構造を確認
-      console.log('[Debug] Response received, analyzing structure...');
       logger.debug('Local API raw response structure:', {
         hasChoices: !!response.choices,
         choicesLength: response.choices?.length,
@@ -274,7 +271,6 @@ export class LocalProvider extends LLMProvider {
 
       // Function Calling レスポンスの場合
       if (tool_calls && tool_calls.length > 0) {
-        console.log(`[Debug] Tool calls detected: ${tool_calls.length} calls`);
         logger.debug(`Tool calls detected: ${tool_calls.length} calls`);
         
         const chatResponse: ChatResponse = {
@@ -285,8 +281,6 @@ export class LocalProvider extends LLMProvider {
         
         return chatResponse;
       }
-      
-      console.log('[Debug] No tool calls detected, returning plain text response');
 
       // 通常のテキストレスポンスの場合
       if (!content) {
@@ -302,7 +296,6 @@ export class LocalProvider extends LLMProvider {
         throw new Error('Local API returned empty content');
       }
 
-      console.log(`[Debug] Returning text response: ${trimmedContent.substring(0, 100)}...`);
       logger.debug(`LocalProvider chat completed: ${trimmedContent.length} characters`);
       return trimmedContent;
 
