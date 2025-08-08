@@ -49,7 +49,7 @@ export class MCPFunctionConverter {
    */
   async convertAllTools(): Promise<FunctionDefinition[]> {
     try {
-      logger.info('Converting MCP tools to function definitions...');
+      logger.debug('Converting MCP tools to function definitions...');
       
       // MCPマネージャーから全ツールをサーバー情報付きで取得
       const toolsWithInfo = await this.mcpManager.listToolsWithServerInfo();
@@ -80,7 +80,7 @@ export class MCPFunctionConverter {
         }
       }
 
-      logger.info(`Successfully converted ${functions.length} MCP tools to functions`);
+      logger.debug(`Successfully converted ${functions.length} MCP tools to functions`);
       return functions;
     } catch (error) {
       logger.error('Failed to convert MCP tools:', error);

@@ -283,14 +283,7 @@ async function startREPLMode(continueSession: boolean = false) {
         logger.debug(`${data.serverName} initialized (${data.toolCount} tools)`);
         // サーバーが初期化されたらすぐにツールを更新
         agent.setupMCPTools(mcpManager)
-          .then(() => {
-            console.log(chalk.green(`[MCP] ${data.serverName} tools registered (${data.toolCount} tools)`));
-            // デバッグ: 現在の関数数を表示
-            const functionCount = agent.getAvailableFunctionCount();
-            console.log(chalk.gray(`[MCP] Total functions available: ${functionCount}`));
-          })
           .catch((error) => {
-            console.log(chalk.red(`[MCP] Failed to register ${data.serverName} tools: ${error.message}`));
             logger.debug(`Failed to update MCP tools after ${data.serverName} initialization: ${error.message}`);
           });
       });
@@ -314,29 +307,16 @@ async function startREPLMode(continueSession: boolean = false) {
 
       mcpManager.initialize()
         .then(() => {
-          logger.debug('All MCP servers initialized, setting up tools...');
           return agent.setupMCPTools(mcpManager);
         })
         .then(() => {
-          logger.debug('MCP tools helper setup completed');
           const progress = mcpManager.getInitializationProgress();
           const functionCount = agent.getAvailableFunctionCount();
-          logger.debug(`MCP: ${progress.completed}/${progress.total} servers ready, ${progress.failed} failed`);
           // 成功時にコンソールに通知
           console.log(chalk.green(`[MCP] Ready: ${progress.completed}/${progress.total} servers, ${functionCount} functions available`));
         })
         .catch((error) => {
-          // エラーをコンソールに表示して問題を明確にする
-          console.log(chalk.red('[MCP] Setup failed: ' + error.message));
           logger.debug('MCP initialization failed:', error.message);
-          
-          // 個別サーバーの状態をログに記録
-          const progress = mcpManager.getInitializationProgress();
-          for (const server of progress.servers) {
-            if (server.status === 'failed' && server.error) {
-              logger.debug(`${server.name}: ${server.error}`);
-            }
-          }
         });
     } else {
       console.log(chalk.gray('● MCP disabled in configuration'));

@@ -782,7 +782,7 @@ export class AgentCore extends EventEmitter {
     // Function Callingで利用可能なツールを更新
     this.availableFunctions = await this.mcpFunctionConverter.convertAllTools();
     
-    logger.info(`Function definitions loaded: ${this.availableFunctions.length} functions available`);
+    logger.debug(`Function definitions loaded: ${this.availableFunctions.length} functions available`);
     logger.debug('Available functions:', this.availableFunctions.map(f => f.name));
   }
 

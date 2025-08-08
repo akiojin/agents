@@ -85,7 +85,7 @@ export class MCPToolsHelper {
    */
   async executeTool(toolName: string, params: Record<string, unknown>): Promise<unknown> {
     try {
-      logger.info(`MCPToolをExecute中: ${toolName}`, { params });
+      logger.debug(`MCPToolをExecute中: ${toolName}`);
       
       // Function Calling名からMCPツール名に変換
       let mcpToolName = toolName;
@@ -100,10 +100,10 @@ export class MCPToolsHelper {
       }
       
       const result = await this.mcpManager.invokeTool(mcpToolName, params);
-      logger.info(`MCPToolExecuteCompleted: ${toolName}`);
+      logger.debug(`MCPToolExecuteCompleted: ${toolName}`);
       return result;
     } catch (error) {
-      logger.error(`MCPToolExecuteError: ${toolName}`, error);
+      logger.debug(`MCPToolExecuteError: ${toolName}`, error);
       throw error;
     }
   }

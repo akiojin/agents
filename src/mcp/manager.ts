@@ -89,12 +89,12 @@ export class MCPManager extends EventEmitter {
 
   async initialize(): Promise<void> {
     if (!this.mcpConfig.enabled || !this.config.mcpServers) {
-      logger.info('MCP is disabled');
+      logger.debug('MCP is disabled');
       return;
     }
 
     this.isInitializing = true;
-    logger.info('Initializing MCP servers...');
+    logger.debug('Initializing MCP servers...');
 
     // 全サーバーの初期化状態をpendingに設定
     for (const serverConfig of this.config.mcpServers) {
@@ -141,7 +141,7 @@ export class MCPManager extends EventEmitter {
     
     try {
       this.updateServerStatus(serverName, 'connecting');
-      logger.info(`Starting MCP server: ${serverName} (${serverConfig.type || 'stdio'})`);
+      logger.debug(`Starting MCP server: ${serverName} (${serverConfig.type || 'stdio'})`);
 
       let client: MCPClientInterface;
 
@@ -151,7 +151,7 @@ export class MCPManager extends EventEmitter {
           throw new Error(`HTTP server ${serverName}: URL is required`);
         }
         
-        logger.info(`HTTP server ${serverName} will connect to: ${serverConfig.url}`);
+        logger.debug(`HTTP server ${serverName} will connect to: ${serverConfig.url}`);
         client = new HTTPMCPClient(serverName, serverConfig.url, {
           timeout: this.mcpConfig.timeout,
           maxRetries: this.mcpConfig.maxRetries,
@@ -165,7 +165,7 @@ export class MCPManager extends EventEmitter {
           throw new Error(`SSE server ${serverName}: URL is required`);
         }
         
-        logger.info(`SSE server ${serverName} will connect to: ${serverConfig.url}`);
+        logger.debug(`SSE server ${serverName} will connect to: ${serverConfig.url}`);
         client = new SSEMCPClient(serverName, serverConfig.url, {
           timeout: this.mcpConfig.timeout,
           maxRetries: this.mcpConfig.maxRetries,
@@ -203,7 +203,7 @@ export class MCPManager extends EventEmitter {
 
       // 完了状態に更新
       this.updateServerStatus(serverName, 'completed', undefined, tools.length);
-      logger.info(`MCP server started: ${serverName} (${tools.length} tools)`);
+      logger.debug(`MCP server started: ${serverName} (${tools.length} tools)`);
       
       // 進捗更新イベントを発行
       this.emit('server-initialized', { serverName, toolCount: tools.length });
@@ -284,7 +284,7 @@ export class MCPManager extends EventEmitter {
   }
 
   async shutdown(): Promise<void> {
-    logger.info('MCPServerをシャットダウン中...');
+    logger.debug('MCPServerをシャットダウン中...');
 
     // すべてのクライアントをDisconnect
     for (const [name, client] of this.servers) {
@@ -353,7 +353,7 @@ export class MCPManager extends EventEmitter {
    */
   updateMCPConfig(newConfig: Partial<typeof this.mcpConfig>): void {
     this.mcpConfig = { ...this.mcpConfig, ...newConfig };
-    logger.info('MCPConfigをUpdatedone:', this.mcpConfig);
+    logger.debug('MCPConfigをUpdatedone:', this.mcpConfig);
   }
 
   /**
