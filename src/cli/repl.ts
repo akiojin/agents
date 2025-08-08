@@ -238,14 +238,13 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         tokenCounter.addApiDuration(apiDuration);
         
         spinner.stop();
-        console.log('\n' + response + '\n');
+        console.log('\n' + response);
         
         // Show context usage below response
         const stats = tokenCounter.getStats();
         const contextUsage = Math.round((stats.totalTokens / 200000) * 100);
         const remaining = 100 - Math.min(100, contextUsage);
-        console.log(chalk.dim.gray(`[Context: ${remaining}% remaining | ${stats.totalTokens.toLocaleString()} tokens used]`));
-        console.log();
+        console.log(chalk.dim.gray(`\n[Context: ${remaining}% remaining | ${stats.totalTokens.toLocaleString()} tokens used]\n`));
       } catch (error) {
         spinner.stop();
         console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
