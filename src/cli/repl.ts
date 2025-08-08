@@ -24,19 +24,6 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   // Simple prompt
   const getPrompt = (): string => chalk.gray('> ');
   
-  // Function to show context status line
-  const showContextStatus = (): void => {
-    const stats = tokenCounter.getStats();
-    const contextUsage = Math.round((stats.totalTokens / 200000) * 100);
-    const remaining = 100 - Math.min(100, contextUsage);
-    const tokensFormatted = stats.totalTokens.toLocaleString();
-    
-    console.log('');
-    console.log(chalk.dim.gray(`───────────────────────────────────────────────────────────────────────────────`));
-    console.log(chalk.dim.gray(`Context: ${remaining}% remaining (${tokensFormatted} tokens used)`));
-    console.log('');
-  };
-  
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -251,10 +238,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         tokenCounter.addApiDuration(apiDuration);
         
         spinner.stop();
-        console.log('\n' + response);
-        
-        // Show context status at bottom
-        showContextStatus();
+        console.log('\n' + response + '\n');
       } catch (error) {
         spinner.stop();
         console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
