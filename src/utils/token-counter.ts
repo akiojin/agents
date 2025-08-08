@@ -148,7 +148,7 @@ export class TokenCounter {
       `│  Input Tokens       ${stats.totalInputTokens.toString().padStart(tokenWidth)}    │`,
       `│  Output Tokens      ${stats.totalOutputTokens.toString().padStart(tokenWidth)}    │`,
       `│  Thoughts Tokens    ${stats.totalThoughtsTokens.toString().padStart(tokenWidth)}    │`,
-      '│  ───────────────────────────    │',
+      '│  ---------------------------    │',
       `│  Total Tokens       ${stats.totalTokens.toString().padStart(tokenWidth)}    │`,
       '│                                 │',
       `│  Total duration (API)   ${apiSeconds.padStart(4)}s    │`,

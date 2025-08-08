@@ -188,5 +188,15 @@
     "role": "assistant",
     "content": "これはモックレスポンスです。Function Callingは検出されませんでした。",
     "timestamp": "2025-08-08T00:47:23.775Z"
+  },
+  {
+    "role": "user",
+    "content": "aaa",
+    "timestamp": "2025-08-08T01:33:38.362Z"
+  },
+  {
+    "role": "assistant",
+    "content": "「aaa」とだけおっしゃっていただきましたが、何かご質問やリクエストがありますでしょうか？気になることがあれば遠慮なく教えてください！",
+    "timestamp": "2025-08-08T01:33:49.984Z"
   }
 ]
