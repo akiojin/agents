@@ -202,74 +202,69 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   };
 
   // 入力Processing
-  rl.on('line', (input) => {
-    void (async () => {
-      const trimmedInput = input.trim();
+  rl.on('line', async (input) => {
+    const trimmedInput = input.trim();
 
-      // 空行はスキップ
-      if (!trimmedInput) {
-        rl.prompt();
-        return;
-      }
+    // 空行はスキップ
+    if (!trimmedInput) {
+      rl.prompt();
+      return;
+    }
 
-      // スラッシュCommandのチェック
-      if (trimmedInput.startsWith('/')) {
-        const parts = trimmedInput.split(' ');
-        const command = parts[0];
-        if (!command) return;
-        const args = parts.slice(1);
-        await handleSlashCommand(command, args.join(' '));
-        rl.prompt();
-        return;
-      }
+    // スラッシュCommandのチェック
+    if (trimmedInput.startsWith('/')) {
+      const parts = trimmedInput.split(' ');
+      const command = parts[0];
+      if (!command) return;
+      const args = parts.slice(1);
+      await handleSlashCommand(command, args.join(' '));
+      rl.prompt();
+      return;
+    }
 
-      // TaskExecute
-      const spinner = ora({
-        text: 'Thinking',
-        spinner: 'dots',
-        color: 'gray'
-      }).start();
+    // TaskExecute
+    const spinner = ora({
+      text: 'Thinking',
+      spinner: 'dots',
+      color: 'gray'
+    }).start();
+    
+    try {
+      // Count input tokens
+      tokenCounter.addInput(trimmedInput);
+      tokenCounter.incrementTurn();
       
-      try {
-        // Count input tokens
-        tokenCounter.addInput(trimmedInput);
-        tokenCounter.incrementTurn();
-        
-        const apiStartTime = Date.now();
-        const response = await agent.chatWithTaskDecomposition(trimmedInput);
-        const apiDuration = Date.now() - apiStartTime;
-        
-        // Count output tokens and API duration
-        tokenCounter.addOutput(response);
-        tokenCounter.addApiDuration(apiDuration);
-        
-        spinner.stop();
-        // Format response with bullet and indentation
-        const formattedResponse = response.split('\n').map((line, index) => {
-          if (index === 0) {
-            return chalk.cyan('● ') + line;
-          }
-          return '  ' + line; // 2 spaces for indentation
-        }).join('\n');
-        console.log('\n' + formattedResponse);
-        
-        // Show context usage below response
-        const stats = tokenCounter.getStats();
-        const contextUsage = Math.round((stats.totalTokens / 200000) * 100);
-        const remaining = 100 - Math.min(100, contextUsage);
-        console.log(chalk.gray(`\n[Context: ${remaining}% remaining | ${stats.totalTokens.toLocaleString()} tokens used]\n`))
-      } catch (error) {
-        spinner.stop();
-        console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
-        console.log(); // Add newline for clarity
-      }
+      const apiStartTime = Date.now();
+      const response = await agent.chatWithTaskDecomposition(trimmedInput);
+      const apiDuration = Date.now() - apiStartTime;
+      
+      // Count output tokens and API duration
+      tokenCounter.addOutput(response);
+      tokenCounter.addApiDuration(apiDuration);
+      
+      spinner.stop();
+      // Format response with bullet and indentation
+      const formattedResponse = response.split('\n').map((line, index) => {
+        if (index === 0) {
+          return chalk.cyan('● ') + line;
+        }
+        return '  ' + line; // 2 spaces for indentation
+      }).join('\n');
+      console.log('\n' + formattedResponse);
+      
+      // Show context usage below response
+      const stats = tokenCounter.getStats();
+      const contextUsage = Math.round((stats.totalTokens / 200000) * 100);
+      const remaining = 100 - Math.min(100, contextUsage);
+      console.log(chalk.gray(`\n[Context: ${remaining}% remaining | ${stats.totalTokens.toLocaleString()} tokens used]\n`))
+    } catch (error) {
+      spinner.stop();
+      console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
+      console.log(); // Add newline for clarity
+    }
 
-      // Ensure prompt is shown after both success and error
-      // Use setImmediate to ensure console output is flushed before prompt
-      setImmediate(() => {
-        rl.prompt();
-      });
-    })();
+    // Show prompt immediately after output
+    rl.prompt();
   });
 
   rl.on('close', () => {
