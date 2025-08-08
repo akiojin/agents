@@ -36,6 +36,70 @@ export class AgentCore extends EventEmitter {
   private currentModel: string;
   private parallelMode: boolean = false;
   private verboseMode: boolean = false;
+  // プロジェクトコンテキスト管理
+  private projectContext: string | null = null;
+
+  /**
+   * プロジェクト固有のコンテキスト情報を設定
+   */
+  setProjectContext(context: string): void {
+    this.projectContext = context;
+    logger.debug('Project context updated', { contextLength: context.length });
+  }
+
+  /**
+   * 現在のプロジェクトコンテキストを取得
+   */
+  getProjectContext(): string | null {
+    return this.projectContext;
+  }
+
+  /**
+   * プロジェクトの基本情報を自動収集してコンテキストを構築
+   */
+  async buildProjectContext(): Promise<string> {
+    try {
+      const contextParts: string[] = [];
+      
+      // プロジェクト基本情報
+      contextParts.push("# プロジェクト情報");
+      contextParts.push("これは agents プロジェクトです - オープンソースで完全無料の自律型コーディングAgent");
+      contextParts.push("");
+      
+      // bash実装に関する重要な情報
+      contextParts.push("## 重要: bash実装について");
+      contextParts.push("このプロジェクトでは、bash機能は src/functions/bash.ts の InternalBash クラスで実装されています。");
+      contextParts.push("InternalBash クラスには以下の主要メソッドがあります:");
+      contextParts.push("- executeCommand: 基本的なコマンド実行");  
+      contextParts.push("- executeCommandInteractive: 対話的コマンド実行");
+      contextParts.push("- validateCommand: コマンドの検証");
+      contextParts.push("- getCurrentDirectory: 現在のディレクトリ取得");
+      contextParts.push("- getSecurityInfo: セキュリティ情報の取得");
+      contextParts.push("");
+      
+      // その他の主要コンポーネント
+      contextParts.push("## 主要コンポーネント");
+      contextParts.push("- src/core/agent.ts: メインのAgentCoreクラス");
+      contextParts.push("- src/cli/repl.ts: 対話モード実装");
+      contextParts.push("- src/providers/: LLMプロバイダー実装");
+      contextParts.push("- src/mcp/: MCP (Model Context Protocol) 統合");
+      contextParts.push("");
+      
+      // 設定情報
+      contextParts.push("## 設定");
+      contextParts.push("- 統一設定ファイル: .agents/settings.json");
+      contextParts.push("- サポートするLLMプロバイダー: OpenAI、Anthropic、Local (LM Studio、GPT-OSS)");
+      contextParts.push("");
+      
+      const context = contextParts.join("\n");
+      this.setProjectContext(context);
+      
+      return context;
+    } catch (error) {
+      logger.warn('Failed to build project context:', error);
+      return "";
+    }
+  }
   
   // Memory management configuration
   private readonly MAX_HISTORY_SIZE = 100; // Maximum history size
@@ -97,6 +161,9 @@ export class AgentCore extends EventEmitter {
       
       // Optimize memory on startup
       await this.optimizeMemory();
+      
+      // プロジェクトコンテキストを構築
+      await this.buildProjectContext();
       
       // logger.info('Agent core initialized');
     } catch (error) {
@@ -257,10 +324,25 @@ export class AgentCore extends EventEmitter {
         await this.optimizeMemory();
       }
 
-      // UserMessageをHistoryに追加
+      // プロジェクトコンテキストの適用
+      if (!this.projectContext) {
+        await this.buildProjectContext();
+      }
+
+      // UserMessage作成（プロジェクトコンテキストを考慮）
+      let enhancedContent = trimmedInput;
+      
+      // bashに関する質問の場合、プロジェクトコンテキストを強調
+      if (trimmedInput.includes('bash') && (trimmedInput.includes('実装') || trimmedInput.includes('どのように'))) {
+        enhancedContent = `${trimmedInput}
+
+[CONTEXT: このプロジェクトのbash実装について質問されています。src/functions/bash.ts の InternalBash クラスについて回答してください。]`;
+        logger.debug('Enhanced user message with bash implementation context');
+      }
+      
       const userMessage: ChatMessage = {
         role: 'user',
-        content: trimmedInput,
+        content: enhancedContent,
         timestamp: new Date(),
       };
       this.history.push(userMessage);
