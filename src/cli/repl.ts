@@ -226,6 +226,14 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
     // TaskExecute
     // Process asynchronously but handle readline synchronously
     (async () => {
+      // Show simple processing indicator
+      const dots = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+      let dotIndex = 0;
+      const indicatorInterval = setInterval(() => {
+        process.stdout.write(`\r${chalk.gray(dots[dotIndex])} ${chalk.gray('Thinking...')}`);
+        dotIndex = (dotIndex + 1) % dots.length;
+      }, 80);
+      
       try {
         // Count input tokens
         tokenCounter.addInput(trimmedInput);
@@ -239,6 +247,10 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         tokenCounter.addOutput(response);
         tokenCounter.addApiDuration(apiDuration);
         
+        // Clear the indicator line
+        clearInterval(indicatorInterval);
+        process.stdout.write('\r' + ' '.repeat(20) + '\r');
+        
         // Format response with bullet and indentation
         const formattedResponse = response.split('\n').map((line, index) => {
           if (index === 0) {
@@ -246,7 +258,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
           }
           return '  ' + line; // 2 spaces for indentation
         }).join('\n');
-        console.log('\n' + formattedResponse);
+        console.log(formattedResponse);
         
         // Show context usage below response
         const stats = tokenCounter.getStats();
@@ -255,7 +267,10 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         console.log(chalk.gray(`\n[Context: ${remaining}% remaining | ${stats.totalTokens.toLocaleString()} tokens used]`))
         console.log(); // Add blank line before prompt
       } catch (error) {
-        console.log(chalk.red('\nError: ') + (error instanceof Error ? error.message : 'Unknown error'));
+        // Clear the indicator
+        clearInterval(indicatorInterval);
+        process.stdout.write('\r' + ' '.repeat(20) + '\r');
+        console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
         console.log(); // Add newline for clarity
       } finally {
         // Always show prompt after processing

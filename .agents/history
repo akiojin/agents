@@ -368,5 +368,25 @@
     "role": "assistant",
     "content": "Mock response to: \"test3\". This is a test response for REPL debugging.",
     "timestamp": "2025-08-08T02:19:35.523Z"
+  },
+  {
+    "role": "user",
+    "content": "こんにちは",
+    "timestamp": "2025-08-08T02:24:49.674Z"
+  },
+  {
+    "role": "assistant",
+    "content": "こんにちは！もし何かご相談や質問があれば、遠慮なく教えてくださいね。どんなことでもお手伝いします。",
+    "timestamp": "2025-08-08T02:24:54.400Z"
+  },
+  {
+    "role": "user",
+    "content": "こんにちは",
+    "timestamp": "2025-08-08T02:24:58.653Z"
+  },
+  {
+    "role": "assistant",
+    "content": "こんにちは！今日はどんなことについて話したいですか？何か質問や試してみたいことがあれば、遠慮なく教えてくださいね。",
+    "timestamp": "2025-08-08T02:25:01.596Z"
   }
 ]
