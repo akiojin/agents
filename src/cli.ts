@@ -256,35 +256,31 @@ console.log('Process argv:', process.argv);
 if (process.argv.length === 2) {
   console.log('No args, starting new session');
   await startREPLMode(false);
-  process.exit(0);
-}
-
-// -c または --continue が指定された場合の直接処理
-if (process.argv.includes('-c') || process.argv.includes('--continue')) {
+} else if (process.argv.includes('-c') || process.argv.includes('--continue')) {
+  // -c または --continue が指定された場合の直接処理
   if (process.argv.length === 3 && (process.argv[2] === '-c' || process.argv[2] === '--continue')) {
     console.log('Continue option detected, starting REPL with session continuation');
     await startREPLMode(true);
-    process.exit(0);
   }
-}
+} else {
+  // その他のコマンドの場合は通常の処理
+  try {
+    program.parse(process.argv);
+    const opts = program.opts();
+    const args = program.args;
+    
+    console.log('Parsed opts:', opts);
+    console.log('Parsed args:', args);
 
-// その他のコマンドの場合は通常の処理
-try {
-  program.parse(process.argv);
-  const opts = program.opts();
-  const args = program.args;
-  
-  console.log('Parsed opts:', opts);
-  console.log('Parsed args:', args);
-
-  // コマンドが指定されていない場合は対話モードを開始
-  if (args.length === 0) {
-    console.log('No commands, starting REPL with continue:', opts.continue);
-    await startREPLMode(opts.continue || false);
+    // コマンドが指定されていない場合は対話モードを開始
+    if (args.length === 0) {
+      console.log('No commands, starting REPL with continue:', opts.continue);
+      await startREPLMode(opts.continue || false);
+    }
+  } catch (error) {
+    console.error('Error parsing command line arguments:', error);
+    process.exit(1);
   }
-} catch (error) {
-  console.error('Error parsing command line arguments:', error);
-  process.exit(1);
 }
 
 // REPLモード開始関数
