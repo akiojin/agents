@@ -395,8 +395,13 @@ export class AgentCore extends EventEmitter {
           logger.info(`Executing tool: ${toolCall.function.name}`);
           
           try {
+            // MCPツールの初期化チェック
+            if (!this.mcpToolsHelper) {
+              throw new Error('MCP tools not initialized yet. Please wait for initialization to complete.');
+            }
+            
             // Tool呼び出し
-            const toolResult = await this.mcpToolsHelper?.executeTool(
+            const toolResult = await this.mcpToolsHelper.executeTool(
               toolCall.function.name,
               toolCall.function.arguments ? JSON.parse(toolCall.function.arguments) : {}
             );
@@ -454,14 +459,17 @@ export class AgentCore extends EventEmitter {
 
         const finalResponse = typeof finalResult.result === 'string' 
           ? finalResult.result 
-          : finalResult.result!.content || 'Tool execution completed.';
+          : finalResult.result!.content || '';
         
         const trimmedFinalResponse = finalResponse.trim();
+        
+        // 最終レスポンスが空の場合はツール結果を返す
+        const responseToReturn = trimmedFinalResponse || toolResults.join('\n\n');
 
         // Final assistant messageをhistoryに追加
         const finalAssistantMessage: ChatMessage = {
           role: 'assistant',
-          content: trimmedFinalResponse,
+          content: responseToReturn,
           timestamp: new Date(),
         };
         this.history.push(finalAssistantMessage);
@@ -476,7 +484,7 @@ export class AgentCore extends EventEmitter {
         }
 
         globalProgressReporter.completeTask(true);
-        return trimmedFinalResponse;
+        return responseToReturn;
       } else {
         // 通常のテキストレスポンスの場合
         const response = typeof llmResponse === 'string' ? llmResponse : llmResponse.content;
@@ -600,6 +608,16 @@ export class AgentCore extends EventEmitter {
       }
 
       const trimmedInput = input.trim();
+      
+      // MCPツールの初期化を最大5秒間待機
+      if (this.config.mcp?.enabled && this.availableFunctions.length === 0) {
+        const maxWait = 5000; // 5秒
+        const startTime = Date.now();
+        while (Date.now() - startTime < maxWait && this.availableFunctions.length === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms待機
+        }
+        logger.debug(`MCP tools wait completed: ${this.availableFunctions.length} functions available`);
+      }
       
       // Taskの複雑度を判定
       if (this.taskDecomposer.isComplexTask(trimmedInput)) {
