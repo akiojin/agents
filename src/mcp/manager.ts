@@ -107,9 +107,10 @@ export class MCPManager extends EventEmitter {
     // 進捗更新イベントを発行
     this.emit('initialization-started', this.getInitializationProgress());
 
-    for (const serverConfig of this.config.mcpServers) {
+    // 全サーバーを並列で初期化
+    const initPromises = this.config.mcpServers.map(async (serverConfig) => {
       try {
-            // サーバー開始のログを詳細レベルに変更（コンソール表示を抑制）
+        // サーバー開始のログを詳細レベルに変更（コンソール表示を抑制）
         logger.debug(`Starting server ${serverConfig.name} (${serverConfig.type || 'stdio'})`);
         await this.startServer(serverConfig);
         // 成功メッセージもログレベルを下げる
@@ -123,7 +124,10 @@ export class MCPManager extends EventEmitter {
           status: this.initializationStatus.get(serverConfig.name)!
         });
       }
-    }
+    });
+
+    // すべての初期化が完了するまで待機
+    await Promise.allSettled(initPromises);
 
     // 初期化完了メッセージもログレベルを下げる
     logger.debug(`MCP initialization completed: ${this.initializationStatus.size} servers processed`);
