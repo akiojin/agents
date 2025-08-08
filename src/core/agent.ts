@@ -773,18 +773,17 @@ export class AgentCore extends EventEmitter {
    * MCPManagerをConfigしてToolヘルパーをInitialize
    */
   async setupMCPTools(mcpManager: MCPManager): Promise<void> {
-    this.mcpToolsHelper = new MCPToolsHelper(mcpManager);
-    this.mcpTaskPlanner = new MCPTaskPlanner(this.mcpToolsHelper);
+    // MCPFunctionConverterを作成
     this.mcpFunctionConverter = new MCPFunctionConverter(mcpManager);
     
-    // MCPツールをFunction定義に変換
-    try {
-      this.availableFunctions = await this.mcpFunctionConverter.convertAllTools();
-      logger.info(`MCP tools initialized: ${this.availableFunctions.length} functions available`);
-    } catch (error) {
-      logger.error('Failed to convert MCP tools to functions:', error);
-      this.availableFunctions = [];
-    }
+    // MCPToolsHelperを初期化（FunctionConverterを渡す）
+    this.mcpToolsHelper = new MCPToolsHelper(mcpManager, this.mcpFunctionConverter);
+    
+    // Function Callingで利用可能なツールを更新
+    this.availableFunctions = await this.mcpFunctionConverter.convertAllTools();
+    
+    logger.info(`Function definitions loaded: ${this.availableFunctions.length} functions available`);
+    logger.debug('Available functions:', this.availableFunctions.map(f => f.name));
   }
 
   /**

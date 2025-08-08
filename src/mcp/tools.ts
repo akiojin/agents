@@ -8,7 +8,10 @@ import { ParallelExecutor, ParallelTask } from '../core/parallel-executor.js';
 export class MCPToolsHelper {
   private parallelExecutor: ParallelExecutor;
 
-  constructor(private mcpManager: MCPManager) {
+  constructor(
+    private mcpManager: MCPManager, 
+    private functionConverter?: import('./function-converter.js').MCPFunctionConverter
+  ) {
     this.parallelExecutor = new ParallelExecutor(5); // デフォルトで最大5Parallel
   }
 
@@ -83,7 +86,20 @@ export class MCPToolsHelper {
   async executeTool(toolName: string, params: Record<string, unknown>): Promise<unknown> {
     try {
       logger.info(`MCPToolをExecute中: ${toolName}`, { params });
-      const result = await this.mcpManager.invokeTool(toolName, params);
+      
+      // Function Calling名からMCPツール名に変換
+      let mcpToolName = toolName;
+      if (this.functionConverter) {
+        const convertedName = this.functionConverter.getMCPToolName(toolName);
+        if (convertedName) {
+          mcpToolName = convertedName;
+          logger.debug(`Tool name converted: ${toolName} -> ${mcpToolName}`);
+        } else {
+          logger.debug(`No mapping found for tool: ${toolName}, using as-is`);
+        }
+      }
+      
+      const result = await this.mcpManager.invokeTool(mcpToolName, params);
       logger.info(`MCPToolExecuteCompleted: ${toolName}`);
       return result;
     } catch (error) {
