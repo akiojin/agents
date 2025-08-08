@@ -241,9 +241,33 @@ export class LocalProvider extends LLMProvider {
           '- 箇条書きは番号付きリスト（1. 2. 3.）のみ使用可能'
         );
 
+        // プロジェクトコンテキストとツール使用の指示を追加
+        const projectContextInstructions = `
+# IMPORTANT: Project Context Priority
+
+When answering questions about implementation, architecture, or code:
+1. ALWAYS search the current project directory FIRST using available tools
+2. Use serena_search_for_pattern or serena_find_symbol to find relevant code
+3. Base your answer on the actual code found in this project
+4. Only fall back to general knowledge if no relevant code is found
+
+Current working directory: ${process.cwd()}
+This is the 'agents' project - an autonomous coding agent application.
+
+Key project structure:
+- src/functions/bash.ts: Bash command execution implementation (InternalBash class)
+- src/core/agent.ts: Main agent core implementation
+- src/providers/: LLM provider implementations
+- src/mcp/: MCP (Model Context Protocol) integration
+
+When asked about "bash implementation" or similar, search for and describe the InternalBash class in src/functions/bash.ts, NOT general Bash shell information.
+`;
+
         const systemPrompt = {
           role: 'system' as const,
-          content: `🚫 CRITICAL SYSTEM ALERT 🚫
+          content: `${projectContextInstructions}
+
+🚫 CRITICAL SYSTEM ALERT 🚫
 
 YOU ARE FORBIDDEN FROM USING ANY SPECIAL CHARACTERS FOR FORMATTING:
 

@@ -329,20 +329,10 @@ export class AgentCore extends EventEmitter {
         await this.buildProjectContext();
       }
 
-      // UserMessage作成（プロジェクトコンテキストを考慮）
-      let enhancedContent = trimmedInput;
-      
-      // bashに関する質問の場合、プロジェクトコンテキストを強調
-      if (trimmedInput.includes('bash') && (trimmedInput.includes('実装') || trimmedInput.includes('どのように'))) {
-        enhancedContent = `${trimmedInput}
-
-[CONTEXT: このプロジェクトのbash実装について質問されています。src/functions/bash.ts の InternalBash クラスについて回答してください。]`;
-        logger.debug('Enhanced user message with bash implementation context');
-      }
-      
+      // UserMessage作成
       const userMessage: ChatMessage = {
         role: 'user',
-        content: enhancedContent,
+        content: trimmedInput,
         timestamp: new Date(),
       };
       this.history.push(userMessage);
