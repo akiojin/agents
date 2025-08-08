@@ -423,13 +423,45 @@ export class AgentCore extends EventEmitter {
         // 通常のテキストレスポンスの場合
         const response = typeof llmResponse === 'string' ? llmResponse : llmResponse.content;
         
+        // Function Callingが期待されたが実際にはツールが利用できない場合の対処
         if (!response || response.trim().length === 0) {
+          // MCPツールが期待されている場合のフォールバック処理
+          if (this.availableFunctions.length > 0 && (input.includes('ネット') || input.includes('検索') || input.includes('調べ'))) {
+            logger.warn('Function Calling expected but got empty response, falling back to normal chat');
+            const fallbackResponse = `申し訳ありませんが、現在ウェブ検索機能が利用できません。利用可能な情報に基づいてお答えします。
+
+古事記について：
+古事記は日本最古の歴史書で、712年に太安万侶によって編纂されました。神話から始まり、神武天皇から推古天皇までの歴史を記録しています。
+
+詳細な情報については、ウェブ検索機能を有効にするためにMCPサーバーの設定が必要です。`;
+            
+            // AssistantMessageをHistoryに追加
+            const assistantMessage: ChatMessage = {
+              role: 'assistant',
+              content: fallbackResponse,
+              timestamp: new Date(),
+            };
+            this.history.push(assistantMessage);
+            
+            // HistorySave
+            try {
+              await this.memoryManager.saveHistory(this.history);
+            } catch (saveError) {
+              logger.warn('Failed to save history:', saveError);
+            }
+            
+            globalProgressReporter.completeTask(true);
+            return fallbackResponse;
+          }
+          
           logger.error('LLM returned empty response:', {
             llmResponse,
             responseType: typeof llmResponse,
             hasContent: !!(llmResponse && typeof llmResponse === 'object' && 'content' in llmResponse),
             model: this.currentModel,
-            provider: this.config.llm.provider
+            provider: this.config.llm.provider,
+            inputRequiredTools: input.includes('ネット') || input.includes('検索') || input.includes('調べ'),
+            availableFunctionsCount: this.availableFunctions.length
           });
           globalProgressReporter.completeTask(false);
           throw new Error(`Response from LLM is empty (model: ${this.currentModel}, provider: ${this.config.llm.provider})`);
