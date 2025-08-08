@@ -418,5 +418,15 @@
     "role": "assistant",
     "content": "Mock response to: \"古事記について詳しく教えて\". This is a test response for REPL debugging.",
     "timestamp": "2025-08-08T02:33:13.862Z"
+  },
+  {
+    "role": "user",
+    "content": "こんにちは",
+    "timestamp": "2025-08-08T02:43:35.355Z"
+  },
+  {
+    "role": "assistant",
+    "content": "こんにちは！何かお手伝いできることがありますか？気になる質問や試したいことがあれば、遠慮なく教えてくださいね。",
+    "timestamp": "2025-08-08T02:43:39.970Z"
   }
 ]

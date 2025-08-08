@@ -138,23 +138,23 @@ export class TokenCounter {
     const tokenWidth = Math.max(5, maxTokens.toString().length);
 
     const lines = [
-      '╭─────────────────────────────────╮',
-      '│                                 │',
-      '│  Agent powering down. Goodbye!  │',
-      '│                                 │',
-      '│                                 │',
-      `│  Cumulative Stats (${stats.turns} Turns)${' '.repeat(Math.max(0, 5 - stats.turns.toString().length))}    │`,
-      '│                                 │',
-      `│  Input Tokens       ${stats.totalInputTokens.toString().padStart(tokenWidth)}    │`,
-      `│  Output Tokens      ${stats.totalOutputTokens.toString().padStart(tokenWidth)}    │`,
-      `│  Thoughts Tokens    ${stats.totalThoughtsTokens.toString().padStart(tokenWidth)}    │`,
-      '│  ---------------------------    │',
-      `│  Total Tokens       ${stats.totalTokens.toString().padStart(tokenWidth)}    │`,
-      '│                                 │',
-      `│  Total duration (API)   ${apiSeconds.padStart(4)}s    │`,
-      `│  Total duration (wall)  ${wallSeconds.padStart(4)}s    │`,
-      '│                                 │',
-      '╰─────────────────────────────────╯'
+      '+-----------------------------------+',
+      '|                                   |',
+      '|  Agent powering down. Goodbye!    |',
+      '|                                   |',
+      '|                                   |',
+      `|  Cumulative Stats (${stats.turns} Turns)${' '.repeat(Math.max(0, 7 - stats.turns.toString().length))}    |`,
+      '|                                   |',
+      `|  Input Tokens       ${stats.totalInputTokens.toString().padStart(tokenWidth)}      |`,
+      `|  Output Tokens      ${stats.totalOutputTokens.toString().padStart(tokenWidth)}      |`,
+      `|  Thoughts Tokens    ${stats.totalThoughtsTokens.toString().padStart(tokenWidth)}      |`,
+      '|  -----------------------------    |',
+      `|  Total Tokens       ${stats.totalTokens.toString().padStart(tokenWidth)}      |`,
+      '|                                   |',
+      `|  Total duration (API)   ${apiSeconds.padStart(4)}s      |`,
+      `|  Total duration (wall)  ${wallSeconds.padStart(4)}s      |`,
+      '|                                   |',
+      '+-----------------------------------+'
     ];
 
     return lines.join('\n');

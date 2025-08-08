@@ -226,13 +226,13 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
     // TaskExecute
     // Process asynchronously but handle readline synchronously
     (async () => {
-      // Show simple processing indicator
-      const dots = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+      // Show simple processing indicator using ASCII characters
+      const dots = ['.  ', '.. ', '...', '   '];
       let dotIndex = 0;
       const indicatorInterval = setInterval(() => {
-        process.stdout.write(`\r${chalk.gray(dots[dotIndex])} ${chalk.gray('Thinking...')}`);
+        process.stdout.write(`\r${chalk.gray('Thinking' + dots[dotIndex])}`);
         dotIndex = (dotIndex + 1) % dots.length;
-      }, 80);
+      }, 200);
       
       try {
         // Count input tokens
@@ -251,10 +251,10 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         clearInterval(indicatorInterval);
         process.stdout.write('\r' + ' '.repeat(20) + '\r');
         
-        // Format response with bullet and indentation
+        // Format response with ASCII bullet and indentation
         const formattedResponse = response.split('\n').map((line, index) => {
           if (index === 0) {
-            return chalk.cyan('● ') + line;
+            return chalk.cyan('> ') + line;
           }
           return '  ' + line; // 2 spaces for indentation
         }).join('\n');
