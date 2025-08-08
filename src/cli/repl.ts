@@ -244,7 +244,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         tokenCounter.addApiDuration(apiDuration);
         
         spinner.stop();
-        console.log('\n' + response);
+        console.log('\n' + chalk.cyan('● ') + response);
         
         // Show context usage below response
         const stats = tokenCounter.getStats();
