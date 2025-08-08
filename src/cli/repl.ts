@@ -212,13 +212,18 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       case '/mcptools': {
         try {
           const mcpTools = await agent.getAvailableMCPTools();
+          const functionCount = agent.getAvailableFunctionCount();
+          
+          console.log(chalk.cyan('MCP Tools Status:'));
+          console.log(`  Function Calling: ${functionCount > 0 ? chalk.green(`Enabled (${functionCount} functions)`) : chalk.red('Disabled')}`);
+          
           if (mcpTools.length === 0) {
-            console.log(chalk.yellow('No MCP tools available'));
+            console.log(chalk.yellow('  No MCP tools available'));
             return true;
           }
-          console.log(chalk.cyan('Available MCP tools:'));
+          console.log(chalk.cyan('  Available MCP tools:'));
           mcpTools.forEach((tool) => {
-            console.log(`  - ${chalk.green(tool.name)}: ${tool.description}`);
+            console.log(`    - ${chalk.green(tool.name)}: ${tool.description}`);
           });
         } catch (error) {
           console.log(chalk.red('Failed to get MCP tools list:', error));

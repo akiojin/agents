@@ -1,4 +1,5 @@
 import EventEmitter from 'events';
+import chalk from 'chalk';
 import type { Config, ChatMessage, TaskConfig, TaskResult } from '../config/types.js';
 import { logger, PerformanceLogger, LogLevel } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
@@ -281,6 +282,13 @@ export class AgentCore extends EventEmitter {
               tools: this.availableFunctions.length > 0 ? this.availableFunctions : undefined,
               tool_choice: this.availableFunctions.length > 0 ? 'auto' as const : undefined
             };
+            
+            // Function Callingの状態をコンソールに表示（デバッグ用）
+            if (this.availableFunctions.length > 0) {
+              console.log(chalk.gray(`[Debug] Function Calling enabled: ${this.availableFunctions.length} functions available`));
+            } else {
+              console.log(chalk.gray('[Debug] Function Calling disabled: No functions available'));
+            }
             
             logger.debug('Chat request with function calling', {
               toolsCount: this.availableFunctions.length,
@@ -815,6 +823,13 @@ export class AgentCore extends EventEmitter {
       logger.error('Error getting MCP tool list:', error);
       return [];
     }
+  }
+
+  /**
+   * 登録されているFunction Calling用関数の数を取得
+   */
+  getAvailableFunctionCount(): number {
+    return this.availableFunctions.length;
   }
 
   /**
