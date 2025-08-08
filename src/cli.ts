@@ -95,7 +95,7 @@ program
 
 // グローバルOptions
 program
-  .option('-m, --model <model>', 'LLMModelを指定', 'gpt-4')
+  .option('-m, --model <model>', 'LLMModelを指定')
   .option('-v, --verbose', 'Detailsログ出力')
   .option('--no-color', 'カラー出力を無効化')
   .option('--max-parallel <number>', 'ParallelTaskExecute数', '5')
