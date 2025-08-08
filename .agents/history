@@ -278,5 +278,95 @@
     "role": "assistant",
     "content": "こんにちは！どういったご用件でしょうか？お気軽に教えてくださいね。",
     "timestamp": "2025-08-08T02:01:08.630Z"
+  },
+  {
+    "role": "user",
+    "content": "こんにちは",
+    "timestamp": "2025-08-08T02:06:47.315Z"
+  },
+  {
+    "role": "assistant",
+    "content": "こんにちは！何か聞きたいことや試したいことがあれば、遠慮なくどうぞ。",
+    "timestamp": "2025-08-08T02:06:51.014Z"
+  },
+  {
+    "role": "user",
+    "content": "hello",
+    "timestamp": "2025-08-08T02:13:21.976Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"hello\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:13:21.976Z"
+  },
+  {
+    "role": "user",
+    "content": "hello",
+    "timestamp": "2025-08-08T02:15:07.499Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"hello\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:15:07.499Z"
+  },
+  {
+    "role": "user",
+    "content": "test1",
+    "timestamp": "2025-08-08T02:16:40.076Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"test1\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:16:40.076Z"
+  },
+  {
+    "role": "user",
+    "content": "test1",
+    "timestamp": "2025-08-08T02:17:33.069Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"test1\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:17:33.069Z"
+  },
+  {
+    "role": "user",
+    "content": "test1",
+    "timestamp": "2025-08-08T02:18:47.073Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"test1\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:18:47.073Z"
+  },
+  {
+    "role": "user",
+    "content": "test1",
+    "timestamp": "2025-08-08T02:19:32.494Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"test1\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:19:32.494Z"
+  },
+  {
+    "role": "user",
+    "content": "test2",
+    "timestamp": "2025-08-08T02:19:34.013Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"test2\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:19:34.013Z"
+  },
+  {
+    "role": "user",
+    "content": "test3",
+    "timestamp": "2025-08-08T02:19:35.523Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"test3\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:19:35.523Z"
   }
 ]

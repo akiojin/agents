@@ -254,45 +254,63 @@ export class AgentCore extends EventEmitter {
       // LLM呼び出し
       globalProgressReporter.updateSubtask(2);
       
-      // withRetryを使用したLLM呼び出し（Function Calling対応）
-      const result = await withRetry(
-        async () => {
-          const chatOptions = {
-            model: this.currentModel,
-            temperature: this.config.llm.temperature || 0.7,
-            maxTokens: this.config.llm.maxTokens || 2000,
-            tools: this.availableFunctions.length > 0 ? this.availableFunctions : undefined,
-            tool_choice: this.availableFunctions.length > 0 ? 'auto' as const : undefined
-          };
-          
-          logger.debug('Chat request with function calling', {
-            toolsCount: this.availableFunctions.length,
-            hasTools: !!chatOptions.tools
-          });
-          
-          return await this.provider.chat(this.history, chatOptions);
-        },
-        {
-          maxRetries: this.config.llm.maxRetries,
-          delay: 1000,
-          exponentialBackoff: true,
-          timeout: this.config.llm.timeout,
-          shouldRetry: (error: Error) => {
-            const message = error.message.toLowerCase();
-            // Retry可能なError: Timeout、Rate limit、ネットワークError、ServerError
-            return (
-              message.includes('timeout') ||
-              message.includes('rate limit') ||
-              message.includes('too many requests') ||
-              message.includes('network') ||
-              message.includes('connection') ||
-              message.includes('server error') ||
-              message.includes('temporary') ||
-              message.includes('service unavailable')
-            );
+      // Mock mode check
+      let result;
+      if (process.env.MOCK_LLM_RESPONSE === 'true') {
+        // Return mock response for testing
+        result = {
+          success: true,
+          result: {
+            content: `Mock response to: "${trimmedInput}". This is a test response for REPL debugging.`,
+            usage: {
+              promptTokens: 10,
+              completionTokens: 15,
+              totalTokens: 25
+            },
+            functionCall: undefined
+          }
+        };
+      } else {
+        // withRetryを使用したLLM呼び出し（Function Calling対応）
+        result = await withRetry(
+          async () => {
+            const chatOptions = {
+              model: this.currentModel,
+              temperature: this.config.llm.temperature || 0.7,
+              maxTokens: this.config.llm.maxTokens || 2000,
+              tools: this.availableFunctions.length > 0 ? this.availableFunctions : undefined,
+              tool_choice: this.availableFunctions.length > 0 ? 'auto' as const : undefined
+            };
+            
+            logger.debug('Chat request with function calling', {
+              toolsCount: this.availableFunctions.length,
+              hasTools: !!chatOptions.tools
+            });
+            
+            return await this.provider.chat(this.history, chatOptions);
           },
-        },
-      );
+          {
+            maxRetries: this.config.llm.maxRetries,
+            delay: 1000,
+            exponentialBackoff: true,
+            timeout: this.config.llm.timeout,
+            shouldRetry: (error: Error) => {
+              const message = error.message.toLowerCase();
+              // Retry可能なError: Timeout、Rate limit、ネットワークError、ServerError
+              return (
+                message.includes('timeout') ||
+                message.includes('rate limit') ||
+                message.includes('too many requests') ||
+                message.includes('network') ||
+                message.includes('connection') ||
+                message.includes('server error') ||
+                message.includes('temporary') ||
+                message.includes('service unavailable')
+              );
+            },
+          },
+        );
+      }
 
       if (!result.success) {
         logger.error('LLMChatError after retries:', result.error);

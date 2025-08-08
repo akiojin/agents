@@ -1,6 +1,6 @@
 import readline from 'readline';
 import chalk from 'chalk';
-import ora from 'ora';
+// import ora from 'ora'; // Removed to fix REPL response display issue
 import type { AgentCore } from '../core/agent.js';
 import type { MCPManager } from '../mcp/manager.js';
 import { logger } from '../utils/logger.js';
@@ -202,7 +202,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   };
 
   // 入力Processing
-  rl.on('line', async (input) => {
+  rl.on('line', (input) => {
     const trimmedInput = input.trim();
 
     // 空行はスキップ
@@ -217,54 +217,51 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       const command = parts[0];
       if (!command) return;
       const args = parts.slice(1);
-      await handleSlashCommand(command, args.join(' '));
-      rl.prompt();
+      handleSlashCommand(command, args.join(' ')).then(() => {
+        rl.prompt();
+      });
       return;
     }
 
     // TaskExecute
-    const spinner = ora({
-      text: 'Thinking',
-      spinner: 'dots',
-      color: 'gray'
-    }).start();
-    
-    try {
-      // Count input tokens
-      tokenCounter.addInput(trimmedInput);
-      tokenCounter.incrementTurn();
-      
-      const apiStartTime = Date.now();
-      const response = await agent.chatWithTaskDecomposition(trimmedInput);
-      const apiDuration = Date.now() - apiStartTime;
-      
-      // Count output tokens and API duration
-      tokenCounter.addOutput(response);
-      tokenCounter.addApiDuration(apiDuration);
-      
-      spinner.stop();
-      // Format response with bullet and indentation
-      const formattedResponse = response.split('\n').map((line, index) => {
-        if (index === 0) {
-          return chalk.cyan('● ') + line;
-        }
-        return '  ' + line; // 2 spaces for indentation
-      }).join('\n');
-      console.log('\n' + formattedResponse);
-      
-      // Show context usage below response
-      const stats = tokenCounter.getStats();
-      const contextUsage = Math.round((stats.totalTokens / 200000) * 100);
-      const remaining = 100 - Math.min(100, contextUsage);
-      console.log(chalk.gray(`\n[Context: ${remaining}% remaining | ${stats.totalTokens.toLocaleString()} tokens used]\n`))
-    } catch (error) {
-      spinner.stop();
-      console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
-      console.log(); // Add newline for clarity
-    }
-
-    // Show prompt immediately after output
-    rl.prompt();
+    // Process asynchronously but handle readline synchronously
+    (async () => {
+      try {
+        // Count input tokens
+        tokenCounter.addInput(trimmedInput);
+        tokenCounter.incrementTurn();
+        
+        const apiStartTime = Date.now();
+        const response = await agent.chatWithTaskDecomposition(trimmedInput);
+        const apiDuration = Date.now() - apiStartTime;
+        
+        // Count output tokens and API duration
+        tokenCounter.addOutput(response);
+        tokenCounter.addApiDuration(apiDuration);
+        
+        // Format response with bullet and indentation
+        const formattedResponse = response.split('\n').map((line, index) => {
+          if (index === 0) {
+            return chalk.cyan('● ') + line;
+          }
+          return '  ' + line; // 2 spaces for indentation
+        }).join('\n');
+        console.log('\n' + formattedResponse);
+        
+        // Show context usage below response
+        const stats = tokenCounter.getStats();
+        const contextUsage = Math.round((stats.totalTokens / 200000) * 100);
+        const remaining = 100 - Math.min(100, contextUsage);
+        console.log(chalk.gray(`\n[Context: ${remaining}% remaining | ${stats.totalTokens.toLocaleString()} tokens used]`))
+        console.log(); // Add blank line before prompt
+      } catch (error) {
+        console.log(chalk.red('\nError: ') + (error instanceof Error ? error.message : 'Unknown error'));
+        console.log(); // Add newline for clarity
+      } finally {
+        // Always show prompt after processing
+        rl.prompt();
+      }
+    })();
   });
 
   rl.on('close', () => {
