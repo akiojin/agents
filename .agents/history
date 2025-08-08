@@ -398,5 +398,25 @@
     "role": "assistant",
     "content": "こんにちは！もし何かご相談や質問があればいつでもどうぞ。お気軽にお知らせくださいね。",
     "timestamp": "2025-08-08T02:27:09.913Z"
+  },
+  {
+    "role": "user",
+    "content": "こんにちは",
+    "timestamp": "2025-08-08T02:31:02.646Z"
+  },
+  {
+    "role": "assistant",
+    "content": "こんにちは！  \n何か聞きたいことや試したいことはありますか？お気軽にどうぞ！",
+    "timestamp": "2025-08-08T02:31:05.917Z"
+  },
+  {
+    "role": "user",
+    "content": "古事記について詳しく教えて",
+    "timestamp": "2025-08-08T02:33:13.862Z"
+  },
+  {
+    "role": "assistant",
+    "content": "Mock response to: \"古事記について詳しく教えて\". This is a test response for REPL debugging.",
+    "timestamp": "2025-08-08T02:33:13.862Z"
   }
 ]

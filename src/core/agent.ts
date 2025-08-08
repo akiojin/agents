@@ -323,64 +323,47 @@ export class AgentCore extends EventEmitter {
       // ResponseProcessing
       globalProgressReporter.updateSubtask(3);
 
-      // Function Calling対応のレスポンス処理
-      if (typeof llmResponse === 'object' && llmResponse.tool_calls && llmResponse.tool_calls.length > 0) {
-        // Tool callsがある場合の処理
-        logger.info(`Processing ${llmResponse.tool_calls.length} tool calls`);
+      // Function Callingのチェック
+      if (llmResponse.functionCall) {
+        logger.info('Function call detected:', llmResponse.functionCall);
         
-        // Assistant message（tool callsを含む）をhistoryに追加
-        const assistantMessage: ChatMessage = {
-          role: 'assistant',
-          content: llmResponse.content || '',
-          timestamp: new Date(),
-        };
-        this.history.push(assistantMessage);
-
-        // 各ツールを実行
+        // Tool呼び出しをExecute
+        const toolCalls = Array.isArray(llmResponse.functionCall) 
+          ? llmResponse.functionCall 
+          : [llmResponse.functionCall];
+        
         const toolResults: string[] = [];
-        for (const toolCall of llmResponse.tool_calls) {
+        
+        for (const toolCall of toolCalls) {
+          logger.info(`Executing tool: ${toolCall.function.name}`);
+          
           try {
-            const mcpToolName = this.mcpFunctionConverter?.getMCPToolName(toolCall.function.name);
-            if (!mcpToolName || !this.mcpToolsHelper) {
-              throw new Error(`Unknown tool: ${toolCall.function.name}`);
-            }
-
-            logger.debug(`Executing tool: ${mcpToolName}`, {
-              functionName: toolCall.function.name,
-              arguments: toolCall.function.arguments
-            });
-
-            const params = JSON.parse(toolCall.function.arguments);
-            const toolResult = await this.mcpToolsHelper.executeTool(mcpToolName, params);
+            // Tool呼び出し
+            const toolResult = await this.mcpToolsHelper?.executeTool(
+              toolCall.function.name,
+              toolCall.function.arguments ? JSON.parse(toolCall.function.arguments) : {}
+            );
             
             toolResults.push(`Tool ${toolCall.function.name} result: ${JSON.stringify(toolResult)}`);
             
-            // Tool result messageをassistantメッセージとしてhistoryに追加
-            // Note: Anthropicは'tool'ロールをサポートしないため、assistantメッセージとして扱う
-            const toolMessage: ChatMessage = {
-              role: 'assistant',
-              content: `[Tool Result: ${toolCall.function.name}]\n${JSON.stringify(toolResult)}`,
-              timestamp: new Date(),
-            };
-            this.history.push(toolMessage);
+            // Tool resultを結果に含めるが、履歴には追加しない（後でまとめて追加）
 
           } catch (error) {
             const errorMessage = `Tool ${toolCall.function.name} failed: ${error instanceof Error ? error.message : String(error)}`;
             logger.error(errorMessage);
             toolResults.push(errorMessage);
-            
-            // Tool error messageをassistantメッセージとしてhistoryに追加
-            // Note: Anthropicは'tool'ロールをサポートしないため、assistantメッセージとして扱う
-            const toolMessage: ChatMessage = {
-              role: 'assistant',
-              content: `[Tool Error: ${toolCall.function.name}]\n${errorMessage}`,
-              timestamp: new Date(),
-            };
-            this.history.push(toolMessage);
           }
         }
 
         // LLMに最終レスポンスを生成させる
+        // Tool結果を含むユーザーメッセージとして追加
+        const toolResultMessage: ChatMessage = {
+          role: 'user',
+          content: `[Tool Results]\n${toolResults.join('\n')}`,
+          timestamp: new Date(),
+        };
+        this.history.push(toolResultMessage);
+
         const finalResult = await withRetry(
           async () => {
             return await this.provider.chat(this.history, {
@@ -458,7 +441,7 @@ export class AgentCore extends EventEmitter {
         // HistorySave
         globalProgressReporter.updateSubtask(4);
         
-        // HistoryをSave（Erroroccurredしても会話は継続）
+        // Historyを Save（Erroroccurredしても会話は継続）
         try {
           await this.memoryManager.saveHistory(this.history);
         } catch (saveError) {

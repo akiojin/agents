@@ -36,16 +36,21 @@ export class AnthropicProvider extends LLMProvider {
 
     // Message形式のValidationとConvert
     const anthropicMessages = otherMessages.map((msg, index) => {
+      // Find original index in messages array for better error reporting
+      const originalIndex = messages.indexOf(msg);
+      
       if (!msg.role || !msg.content) {
-        throw new Error(`Invalid message format (Index: ${index})`);
+        logger.error(`Invalid message at index ${originalIndex}:`, msg);
+        throw new Error(`Invalid message format (Index: ${originalIndex}, role: ${msg.role})`);
       }
       if (msg.role !== 'user' && msg.role !== 'assistant') {
-        throw new Error(`サポートされていないロール: ${msg.role}`);
+        logger.error(`Unsupported role at index ${originalIndex}:`, msg);
+        throw new Error(`Unsupported role: ${msg.role} (Index: ${originalIndex})`);
       }
       
       const content = msg.content.trim();
       if (content.length === 0) {
-        throw new Error(`Empty message content (Index: ${index})`);
+        throw new Error(`Empty message content (Index: ${originalIndex})`);
       }
       
       return {
