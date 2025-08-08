@@ -64,26 +64,58 @@ export class MCPLoader {
    * @returns MCPServerConfig または null（サポートされていない場合）
    */
   private static convertServerEntry(serverName: string, entry: MCPJsonServerEntry): MCPServerConfig | null {
-    // 現在はstdio typeのみサポート
-    if (entry.type && entry.type !== 'stdio') {
-      logger.warn(`Server ${serverName}: type '${entry.type}' is not supported yet. Only 'stdio' is supported.`);
-      return null;
+    // stdioタイプの処理
+    if (!entry.type || entry.type === 'stdio') {
+      if (!entry.command) {
+        throw new Error(`Server ${serverName}: command is required for stdio type`);
+      }
+
+      // 環境変数の展開
+      const expandedEnv = entry.env ? this.expandEnvironmentVariables(entry.env) : undefined;
+      const expandedArgs = entry.args ? entry.args.map(arg => this.expandSpecialVariables(this.expandEnvironmentVariables({ arg }).arg)) : undefined;
+
+      return {
+        name: serverName,
+        command: entry.command,
+        args: expandedArgs,
+        env: expandedEnv,
+      };
     }
 
-    if (!entry.command) {
-      throw new Error(`Server ${serverName}: command is required for stdio type`);
+    // HTTPタイプの処理
+    if (entry.type === 'http') {
+      if (!entry.url) {
+        throw new Error(`Server ${serverName}: url is required for http type`);
+      }
+
+      return {
+        name: serverName,
+        command: 'node', // HTTPクライアント用のプレースホルダー
+        args: [],
+        env: undefined,
+        url: entry.url, // HTTP URLを保存
+        type: 'http',
+      };
     }
 
-    // 環境変数の展開
-    const expandedEnv = entry.env ? this.expandEnvironmentVariables(entry.env) : undefined;
-    const expandedArgs = entry.args ? entry.args.map(arg => this.expandSpecialVariables(this.expandEnvironmentVariables({ arg }).arg)) : undefined;
+    // SSEタイプの処理
+    if (entry.type === 'sse') {
+      if (!entry.url) {
+        throw new Error(`Server ${serverName}: url is required for sse type`);
+      }
 
-    return {
-      name: serverName,
-      command: entry.command,
-      args: expandedArgs,
-      env: expandedEnv,
-    };
+      return {
+        name: serverName,
+        command: 'node', // SSEクライアント用のプレースホルダー
+        args: [],
+        env: undefined,
+        url: entry.url, // SSE URLを保存
+        type: 'sse',
+      };
+    }
+
+    logger.warn(`Server ${serverName}: type '${entry.type}' is not supported yet.`);
+    return null;
   }
 
   /**

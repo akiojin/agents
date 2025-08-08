@@ -82,9 +82,25 @@ export class MCPManager extends EventEmitter {
   }
 
   private async startServer(serverConfig: MCPServerConfig): Promise<void> {
-    logger.info(`Starting MCP server: ${serverConfig.name}`);
+    logger.info(`Starting MCP server: ${serverConfig.name} (${serverConfig.type || 'stdio'})`);
 
-    // プロセスを起動
+    // HTTP/SSEタイプの場合は子プロセスを起動しない
+    if (serverConfig.type === 'http' || serverConfig.type === 'sse') {
+      logger.info(`${serverConfig.type.toUpperCase()} server ${serverConfig.name} will connect to: ${serverConfig.url}`);
+      
+      // MCPクライアントを作成
+      const client = new MCPClient(serverConfig.name, {
+        timeout: this.mcpConfig.timeout,
+        maxRetries: this.mcpConfig.maxRetries,
+      });
+
+      // HTTP/SSE接続（将来の実装）
+      // 現在はstdioタイプのみ実装されているため、警告を表示
+      logger.warn(`${serverConfig.type.toUpperCase()} type servers are not yet implemented. Server ${serverConfig.name} will be skipped.`);
+      return;
+    }
+
+    // STDIOタイプの処理（既存の実装）
     const childProcess = spawn(serverConfig.command, serverConfig.args || [], {
       env: { ...process.env, ...serverConfig.env },
       stdio: ['pipe', 'pipe', 'pipe'],

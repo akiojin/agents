@@ -8,6 +8,8 @@ export interface MCPServerConfig {
   command: string;
   args?: string[];
   env?: Record<string, string>;
+  url?: string; // HTTP/SSE サーバー用のURL
+  type?: 'stdio' | 'sse' | 'http'; // サーバータイプ
 }
 
 // Claude Code .mcp.json format
