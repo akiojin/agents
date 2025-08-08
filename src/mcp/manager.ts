@@ -60,14 +60,34 @@ export class MCPManager extends EventEmitter {
    * 新しい統一Configシステムを使用するコンストラクタ
    */
   static fromUnifiedConfig(config: import('../config/types.js').Config): MCPManager {
-    // 統一Configを従来ConfigにConvert
+    // 統一ConfigをSerena組み込み対応の従来Configに変換
+    const mcpServers = { ...config.mcp.servers };
+    
+    // Serenaサーバーを自動追加（存在しない場合）
+    if (!mcpServers.serena) {
+      mcpServers.serena = {
+        type: 'stdio',
+        command: 'uvx',
+        args: [
+          '--from',
+          'git+https://github.com/oraios/serena',
+          'serena-mcp-server',
+          '--context',
+          'ide-assistant',
+          '--project',
+          process.cwd()
+        ]
+      };
+      logger.debug('Serena MCP server automatically added as built-in component');
+    }
+    
     const legacyConfig: import('../types/config.js').Config = {
       provider: config.llm.provider,
       apiKey: config.llm.apiKey,
       model: config.llm.model,
       localEndpoint: config.localEndpoint,
       useMCP: config.mcp.enabled,
-      mcpServers: config.mcp.servers,
+      mcpServers, // 組み込みSerenaを含む
       maxParallel: config.app.maxParallel,
       timeout: config.app.timeout,
       logLevel: config.app.logLevel,
@@ -77,7 +97,7 @@ export class MCPManager extends EventEmitter {
 
     const manager = new MCPManager(legacyConfig);
 
-    // 統一ConfigからMCPConfigをConfig
+    // 統一ConfigからMCPConfigを設定
     manager.mcpConfig = {
       timeout: config.mcp.timeout,
       maxRetries: config.mcp.maxRetries,

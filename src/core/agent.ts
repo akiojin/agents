@@ -1134,9 +1134,6 @@ export class AgentCore extends EventEmitter {
 
 }
 
-// ContinuousExecutionEngineをAgentCoreのstaticプロパティとしてエクスポート
-(AgentCore as any).ContinuousExecutionEngine = ContinuousExecutionEngine;
-
 /**
  * ReAct（Reason-and-Act）継続実行コントローラー
  * 推論→行動→観察のループで完了まで自動継続実行
@@ -2136,8 +2133,8 @@ export class ContinuousExecutionEngine {
   private isPaused: boolean = false;
   private currentExecutionPlan: ExecutionPlan | null = null;
   
-  constructor(config: Config, sessionId?: string) {
-    this.agent = new AgentCore(config, false);
+  constructor(agent: AgentCore, sessionId?: string) {
+    this.agent = agent;
     this.reactController = new ReActController(this.agent, 30); // 最大30回の反復
     this.taskManager = new ContinuousTaskManager(sessionId);
     this.sessionManager = new SessionStateManager(sessionId);
@@ -2487,3 +2484,6 @@ interface TaskProgress {
   actualDuration: number;
   currentTask: string | null;
 }
+
+// ContinuousExecutionEngineをAgentCoreのstaticプロパティとしてエクスポート
+(AgentCore as any).ContinuousExecutionEngine = ContinuousExecutionEngine;
