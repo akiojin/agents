@@ -14,11 +14,11 @@ mcp:
 app:
   maxParallel: 5
   timeout: 300000
-  logLevel: error
+  logLevel: debug
 
 paths:
   cache: ./.agents/cache
   history: ./.agents/history
   logs: ./.agents/logs
 
-localEndpoint: http://127.0.0.1:1234
+localEndpoint: http://host.docker.internal:1234

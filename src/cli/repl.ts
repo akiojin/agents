@@ -4,8 +4,12 @@ import ora from 'ora';
 import type { AgentCore } from '../core/agent.js';
 import type { MCPManager } from '../mcp/manager.js';
 import { logger } from '../utils/logger.js';
+import { TokenCounter } from '../utils/token-counter.js';
 
 export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promise<void> {
+  // Initialize token counter
+  const tokenCounter = new TokenCounter();
+  
   // Clear screen and show title
   console.clear();
   console.log('');
@@ -17,10 +21,18 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   console.log(chalk.gray('3. Type /exit to quit'));
   console.log('');
   
+  // Function to create prompt with context usage
+  const getPrompt = (): string => {
+    const stats = tokenCounter.getStats();
+    const contextUsage = Math.round((stats.totalTokens / 200000) * 100);
+    const remaining = 100 - Math.min(100, contextUsage);
+    return chalk.gray(`> `) + chalk.dim.gray(`(${remaining}% context left) `);
+  };
+  
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: chalk.gray('> '),
+    prompt: getPrompt(),
     terminal: true,
   });
 
@@ -49,8 +61,11 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       }
 
       case '/exit': {
-        rl.close();
-        process.exit(0);
+        // Show token statistics before exit
+        console.log('');
+        console.log(tokenCounter.formatStats());
+        console.log('');
+        process.exit(0);  // rl.close() will trigger the close event, so exit directly
         break;
       }
 
@@ -161,6 +176,22 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         return true;
       }
 
+      case '/stats': {
+        const stats = tokenCounter.getStats();
+        const contextUsage = Math.min(100, Math.round((stats.totalTokens / 200000) * 100));
+        console.log(chalk.cyan('\nToken Usage Statistics:'));
+        console.log(chalk.gray('───────────────────────'));
+        console.log(`Turns:          ${stats.turns}`);
+        console.log(`Input Tokens:   ${stats.totalInputTokens.toLocaleString()}`);
+        console.log(`Output Tokens:  ${stats.totalOutputTokens.toLocaleString()}`);
+        console.log(`Total Tokens:   ${stats.totalTokens.toLocaleString()}`);
+        console.log(`Context Usage:  ${contextUsage}% (200k max)`);
+        console.log(`API Time:       ${(stats.apiDuration / 1000).toFixed(1)}s`);
+        console.log(`Session Time:   ${(stats.wallDuration / 1000).toFixed(1)}s`);
+        console.log('');
+        return true;
+      }
+
       default: {
         console.log(chalk.red(`Unknown command: ${command}`));
         console.log(chalk.gray('Type /help to show commands'));
@@ -176,6 +207,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
 
       // 空行はスキップ
       if (!trimmedInput) {
+        rl.setPrompt(getPrompt());
         rl.prompt();
         return;
       }
@@ -187,6 +219,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         if (!command) return;
         const args = parts.slice(1);
         await handleSlashCommand(command, args.join(' '));
+        rl.setPrompt(getPrompt());
         rl.prompt();
         return;
       }
@@ -199,19 +232,38 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       }).start();
       
       try {
+        // Count input tokens
+        tokenCounter.addInput(trimmedInput);
+        tokenCounter.incrementTurn();
+        
+        const apiStartTime = Date.now();
         const response = await agent.chatWithTaskDecomposition(trimmedInput);
+        const apiDuration = Date.now() - apiStartTime;
+        
+        // Count output tokens and API duration
+        tokenCounter.addOutput(response);
+        tokenCounter.addApiDuration(apiDuration);
+        
         spinner.stop();
         console.log('\n' + response + '\n');
+        
+        // Update prompt with new context usage
+        rl.setPrompt(getPrompt());
       } catch (error) {
         spinner.stop();
         console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
       }
 
+      rl.setPrompt(getPrompt());
       rl.prompt();
     })();
   });
 
   rl.on('close', () => {
+    // Show token statistics on close
+    console.log('');
+    console.log(tokenCounter.formatStats());
+    console.log('');
     process.exit(0);
   });
 
