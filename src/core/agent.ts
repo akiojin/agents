@@ -322,9 +322,9 @@ export class AgentCore extends EventEmitter {
             // LLMレスポンスをデバッグ出力
             logger.debug('LLM Response type:', typeof response);
             if (typeof response === 'object' && response !== null) {
-              console.log(chalk.gray('[Debug] Response object keys:', Object.keys(response)));
+              logger.debug('Response object keys:', Object.keys(response));
               if ('tool_calls' in response) {
-                console.log(chalk.gray('[Debug] Tool calls detected:', JSON.stringify(response.tool_calls)));
+                logger.debug('Tool calls detected:', response.tool_calls);
               }
             }
             

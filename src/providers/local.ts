@@ -283,24 +283,16 @@ export class LocalProvider extends LLMProvider {
       // リクエストサイズを確認
       const requestSize = JSON.stringify(body).length;
       if (requestSize > 10000) {
-        console.log(`[Debug] Large request: ${requestSize} bytes (${Math.round(requestSize/1024)}KB)`);
+        logger.debug(`Large request: ${requestSize} bytes (${Math.round(requestSize/1024)}KB)`);
       }
       
       // Function Callingリクエストの詳細をログに出力
       if (body.tools && body.tools.length > 0) {
-        console.log(`[Debug] Function Calling request:`);
-        console.log(`  Tools count: ${body.tools.length}`);
-        console.log(`  Tool choice: ${body.tool_choice}`);
-        console.log(`  First 3 tools: ${body.tools.slice(0, 3).map(t => t.function.name).join(', ')}`);
-        
-        // リクエストボディをファイルに保存してデバッグ
-        try {
-          const fs = require('fs');
-          fs.writeFileSync('/tmp/function_calling_request.json', JSON.stringify(body, null, 2));
-          console.log(`[Debug] Request saved to /tmp/function_calling_request.json`);
-        } catch (err) {
-          // Ignore file write errors
-        }
+        logger.debug(`Function Calling request:`, {
+          toolsCount: body.tools.length,
+          toolChoice: body.tool_choice,
+          firstTools: body.tools.slice(0, 3).map(t => t.function.name)
+        });
       }
       
       logger.debug(`LocalProvider chat started: ${this.providerType}`, {
@@ -316,29 +308,6 @@ export class LocalProvider extends LLMProvider {
 
       const response = await this.makeRequest(body);
 
-      // デバッグ: レスポンス構造を確認
-      console.log(`[Debug] Response analysis:`);
-      console.log(`  Has choices: ${!!response.choices}`);
-      console.log(`  Choices length: ${response.choices?.length}`);
-      
-      if (response.choices?.[0]) {
-        const choice = response.choices[0];
-        console.log(`  First choice:`);
-        console.log(`    Has message: ${!!choice.message}`);
-        console.log(`    Message keys: ${choice.message ? Object.keys(choice.message).join(', ') : 'none'}`);
-        console.log(`    Has tool_calls: ${!!choice.message?.tool_calls}`);
-        console.log(`    Tool calls length: ${choice.message?.tool_calls?.length || 0}`);
-        console.log(`    Finish reason: ${choice.finish_reason}`);
-        
-        // レスポンスをファイルに保存
-        try {
-          const fs = require('fs');
-          fs.writeFileSync('/tmp/function_calling_response.json', JSON.stringify(response, null, 2));
-          console.log(`[Debug] Response saved to /tmp/function_calling_response.json`);
-        } catch (err) {
-          // Ignore file write errors
-        }
-      }
       
       logger.debug('Local API raw response structure:', {
         hasChoices: !!response.choices,

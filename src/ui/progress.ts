@@ -61,10 +61,10 @@ export class ProgressReporter {
    * @param info InfoMessage
    */
   showInfo(info: string): void {
-    // Show info messages for MCP tool execution status in formatted style
-    // Clear the current line to avoid mixing with progress indicator
-    process.stdout.write('\r\x1b[K');
-    console.log(`\n● ${info}\n`);
+    // Suppress verbose tool execution messages
+    // Only log debug level messages
+    const logger = require('../utils/logger.js').logger;
+    logger.debug(info);
   }
   
   /**

@@ -202,8 +202,6 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
           }
         }
 
-        console.log('');
-        console.log(chalk.gray('Legend: 📡=stdio, 🌐=http, ⚡=sse'));
         
         if (failedServers.length > 0) {
           console.log('');
