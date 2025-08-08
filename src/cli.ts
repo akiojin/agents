@@ -256,21 +256,21 @@ if (process.argv.length === 2) {
     
     // MCP初期化をバックグラウンドで実行
     if (config.mcp?.enabled) {
-      console.log(chalk.gray('● Loading MCP tools in background...'));
+      logger.debug('Loading MCP tools in background...');
       
-      // 初期化進捗イベントをリスニング
+      // 初期化進捗イベントをリスニング（ログレベルに変更）
       mcpManager.on('initialization-started', (progress) => {
-        console.log(chalk.gray(`  🔄 Starting initialization of ${progress.total} servers...`));
+        logger.debug(`Starting initialization of ${progress.total} servers...`);
       });
 
       mcpManager.on('server-initialized', (data) => {
-        console.log(chalk.gray(`  ✅ ${data.serverName} initialized (${data.toolCount} tools)`));
+        logger.debug(`${data.serverName} initialized (${data.toolCount} tools)`);
       });
 
       mcpManager.on('server-status-updated', (data) => {
         if (data.status.status === 'failed') {
           const serverType = data.status.type === 'http' ? '🌐' : data.status.type === 'sse' ? '⚡' : '📡';
-                    // エラー表示を抑制 - ログにのみ記録
+          // エラー表示を抑制 - ログにのみ記録
           logger.debug(`MCP server ${data.serverName} failed`);
           if (data.status.error) {
             // エラーメッセージをクリーンアップ
@@ -286,24 +286,22 @@ if (process.argv.length === 2) {
 
       mcpManager.initialize()
         .then(() => {
-          console.log(chalk.gray('  📋 Setting up MCP tools helper...'));
+          logger.debug('Setting up MCP tools helper...');
           return agent.setupMCPTools(mcpManager);
         })
         .then(() => {
-          console.log(chalk.gray('  ✅ MCP tools helper setup completed'));
+          logger.debug('MCP tools helper setup completed');
           const progress = mcpManager.getInitializationProgress();
-          console.log(chalk.green(`[MCP] ${progress.completed}/${progress.total} servers ready, ${progress.failed} failed`));
+          logger.debug(`MCP: ${progress.completed}/${progress.total} servers ready, ${progress.failed} failed`);
         })
         .catch((error) => {
-          console.log(chalk.red('● MCP initialization failed:'));
-          console.log(chalk.red(`  Error: ${error.message}`));
-          console.log(chalk.red(`  Stack: ${error.stack}`));
+          logger.debug('MCP initialization failed:', error.message);
           
-          // 個別サーバーの状態を表示
+          // 個別サーバーの状態をログに記録
           const progress = mcpManager.getInitializationProgress();
           for (const server of progress.servers) {
             if (server.status === 'failed' && server.error) {
-              console.log(chalk.red(`  ${server.name}: ${server.error}`));
+              logger.debug(`${server.name}: ${server.error}`);
             }
           }
         });
