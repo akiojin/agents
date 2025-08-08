@@ -1,6 +1,6 @@
 llm:
   provider: local-lmstudio
-  timeout: 30000
+  timeout: 120000
   maxRetries: 3
   temperature: 0.7
   maxTokens: 2000
@@ -8,7 +8,7 @@ llm:
 mcp:
   enabled: true
   servers: []
-  timeout: 30000
+  timeout: 120000
   maxRetries: 3
 
 app:
