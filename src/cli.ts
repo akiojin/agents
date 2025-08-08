@@ -1,4 +1,10 @@
 #!/usr/bin/env bun
+
+// REPLモード判定（引数なしで起動された場合）
+if (process.argv.length === 2) {
+  process.env.AGENTS_SILENT = 'true';
+}
+
 import { Command } from 'commander';
 import chalk from 'chalk';
 
@@ -236,6 +242,9 @@ program
 
 // Argumentsなしの場合は対話モードをStarted
 if (process.argv.length === 2) {
+  // REPLモードでは環境変数でログを無効化
+  process.env.AGENTS_SILENT = 'true';
+  
   try {
     const configManager = ConfigManager.getInstance();
     const config = await configManager.load();

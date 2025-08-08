@@ -51,17 +51,12 @@ export class MCPFunctionConverter {
     try {
       logger.info('Converting MCP tools to function definitions...');
       
-      // MCPマネージャーから全ツールを取得
-      const tools = await this.mcpManager.listTools();
+      // MCPマネージャーから全ツールをサーバー情報付きで取得
+      const toolsWithInfo = await this.mcpManager.listToolsWithServerInfo();
       const functions: FunctionDefinition[] = [];
 
-      for (const tool of tools) {
+      for (const { serverName, toolName, tool } of toolsWithInfo) {
         try {
-          // ツール名からサーバー名を抽出
-          const [serverName, toolName] = tool.name.includes(':') 
-            ? tool.name.split(':', 2)
-            : ['unknown', tool.name];
-
           const toolInfo: MCPToolInfo = {
             serverName,
             name: toolName,
@@ -73,14 +68,15 @@ export class MCPFunctionConverter {
           if (functionDef) {
             functions.push(functionDef);
             
-            // マッピングを保存
+            // マッピングを保存（serverName:toolName形式で保存）
+            const fullToolName = `${serverName}:${toolName}`;
             this.functionDefinitions.set(functionDef.name, functionDef);
-            this.toolMapping.set(functionDef.name, tool.name);
+            this.toolMapping.set(functionDef.name, fullToolName);
             
-            logger.debug(`Converted tool: ${tool.name} -> ${functionDef.name}`);
+            logger.debug(`Converted tool: ${fullToolName} -> ${functionDef.name}`);
           }
         } catch (error) {
-          logger.warn(`Failed to convert tool ${tool.name}:`, error);
+          logger.warn(`Failed to convert tool ${serverName}:${toolName}:`, error);
         }
       }
 
@@ -181,6 +177,13 @@ export class MCPFunctionConverter {
    */
   getAllFunctionDefinitions(): FunctionDefinition[] {
     return Array.from(this.functionDefinitions.values());
+  }
+
+  /**
+   * Function名からMCPツール名を取得
+   */
+  getMCPToolName(functionName: string): string | undefined {
+    return this.toolMapping.get(functionName);
   }
 
   /**

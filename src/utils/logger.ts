@@ -174,8 +174,19 @@ export class SimpleLogger {
   }
 }
 
-// シングルトンインスタンス
-export const logger = new SimpleLogger();
+// シングルトンインスタンス（遅延初期化）
+let _logger: SimpleLogger | null = null;
+
+export const logger = new Proxy({} as SimpleLogger, {
+  get(target, prop) {
+    if (!_logger) {
+      _logger = new SimpleLogger({
+        silent: process.env.AGENTS_SILENT === 'true'
+      });
+    }
+    return (_logger as any)[prop];
+  }
+});
 
 // デバッグモード用のヘルパー関数（後方互換性）
 export const debug = (message: string, ...args: unknown[]): void => {

@@ -114,6 +114,17 @@ export class MCPManager extends EventEmitter {
     return Array.from(this.tools.values());
   }
 
+  async listToolsWithServerInfo(): Promise<Array<{ serverName: string; toolName: string; tool: Tool }>> {
+    const result: Array<{ serverName: string; toolName: string; tool: Tool }> = [];
+    for (const [key, tool] of this.tools.entries()) {
+      const [serverName, toolName] = key.includes(':') 
+        ? key.split(':', 2)
+        : ['default', tool.name];
+      result.push({ serverName, toolName: toolName || tool.name, tool });
+    }
+    return result;
+  }
+
   async invokeTool(toolName: string, params?: Record<string, unknown>): Promise<unknown> {
     const [serverName, name] = toolName.includes(':')
       ? toolName.split(':', 2)

@@ -46,7 +46,24 @@ export class MCPClient extends EventEmitter {
       // stderr からのErrorをProcessing
       if (process.stderr) {
         process.stderr.on('data', (data) => {
-          logger.error(`MCPServerError [${this.name}]:`, data.toString());
+          const message = data.toString();
+          // INFOログや起動メッセージは無視（表示しない）
+          if (
+            message.includes('INFO ') || 
+            message.includes('INFO	') ||
+            message.includes('server running on stdio') ||
+            message.includes('Processing request of type') ||
+            message.includes('RuntimeWarning')
+          ) {
+            return; // 何も出力しない
+          }
+          // WARNINGは警告として表示
+          if (message.includes('WARN ') || message.includes('WARNING')) {
+            logger.warn(`MCPServerWarning [${this.name}]:`, message);
+            return;
+          }
+          // それ以外はエラーとして表示
+          logger.error(`MCPServerError [${this.name}]:`, message);
         });
       }
 
