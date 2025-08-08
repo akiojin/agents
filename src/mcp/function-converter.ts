@@ -73,7 +73,14 @@ export class MCPFunctionConverter {
             this.functionDefinitions.set(functionDef.name, functionDef);
             this.toolMapping.set(functionDef.name, fullToolName);
             
-            logger.debug(`Converted tool: ${fullToolName} -> ${functionDef.name}`);
+            // Function定義の詳細をログ出力（デバッグ用）
+            if (functionDef.name.startsWith('serena_')) {
+              logger.debug(`Converted tool: ${fullToolName} -> ${functionDef.name}`, {
+                parameters: functionDef.parameters
+              });
+            } else {
+              logger.debug(`Converted tool: ${fullToolName} -> ${functionDef.name}`);
+            }
           }
         } catch (error) {
           logger.warn(`Failed to convert tool ${serverName}:${toolName}:`, error);
