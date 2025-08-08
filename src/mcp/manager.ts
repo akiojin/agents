@@ -27,7 +27,7 @@ export class MCPManager extends EventEmitter {
 
     // MCPConfigを抽出（統一Configまたは従来Configから）
     this.mcpConfig = {
-      timeout: 30000, // デフォルト30seconds
+      timeout: 120000, // デフォルト2minutes for MCP operations
       maxRetries: 2, // デフォルト2回
       enabled: config.useMCP ?? true,
     };

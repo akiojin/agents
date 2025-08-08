@@ -23,7 +23,7 @@ export class MCPClient extends EventEmitter {
   constructor(name: string, options: { timeout?: number; maxRetries?: number } = {}) {
     super();
     this.name = name;
-    this.timeout = options.timeout || 30000; // デフォルト30seconds
+    this.timeout = options.timeout || 120000; // デフォルト2minutes for MCP operations
     this.maxRetries = options.maxRetries || 2; // デフォルト2回Retry
   }
 

@@ -51,7 +51,7 @@ export async function withRetry<T>(
     maxRetries = 3,
     delay = 1000,
     exponentialBackoff = false,
-    timeout = 30000,
+    timeout = 120000, // 2minutes for complex operations
     shouldRetry = defaultShouldRetry,
   } = options;
 
@@ -128,7 +128,7 @@ export class RetryHandler {
       maxRetries: 3,
       delay: 1000,
       exponentialBackoff: false,
-      timeout: 30000,
+      timeout: 120000, // 2minutes default
       shouldRetry: defaultShouldRetry,
       ...defaultOptions,
     };

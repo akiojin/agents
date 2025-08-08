@@ -424,8 +424,15 @@ export class AgentCore extends EventEmitter {
         const response = typeof llmResponse === 'string' ? llmResponse : llmResponse.content;
         
         if (!response || response.trim().length === 0) {
+          logger.error('LLM returned empty response:', {
+            llmResponse,
+            responseType: typeof llmResponse,
+            hasContent: !!(llmResponse && typeof llmResponse === 'object' && 'content' in llmResponse),
+            model: this.currentModel,
+            provider: this.config.llm.provider
+          });
           globalProgressReporter.completeTask(false);
-          throw new Error('Response from LLM is empty');
+          throw new Error(`Response from LLM is empty (model: ${this.currentModel}, provider: ${this.config.llm.provider})`);
         }
 
         const trimmedResponse = response.trim();
