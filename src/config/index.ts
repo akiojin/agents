@@ -60,15 +60,8 @@ export class ConfigManager {
   private configPath: string;
 
   private constructor() {
-    // .agents.jsonを優先、なければ.agents.yamlも対応
-    const jsonPath = join(process.cwd(), '.agents.json');
-    const yamlPath = join(process.cwd(), '.agents.yaml');
-    
-    if (existsSync(jsonPath)) {
-      this.configPath = jsonPath;
-    } else {
-      this.configPath = yamlPath;
-    }
+    // .agents/settings.jsonのみ対応
+    this.configPath = join(process.cwd(), '.agents', 'settings.json');
   }
 
   /**
