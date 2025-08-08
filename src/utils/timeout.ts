@@ -7,7 +7,7 @@
  */
 export function withTimeout<T>(
   promise: Promise<T>,
-  timeoutMs: number = 120000,
+  timeoutMs: number = 30000,
   timeoutMessage?: string,
 ): Promise<T> {
   const defaultMessage = `Requestが${timeoutMs / 1000}secondsでtimed out`;
@@ -25,7 +25,7 @@ export function withTimeout<T>(
 /**
  * AbortControllerを使用したTimeout
  */
-export function createTimeoutController(timeoutMs: number = 120000): {
+export function createTimeoutController(timeoutMs: number = 30000): {
   controller: AbortController;
   timeoutId: NodeJS.Timeout;
 } {
@@ -51,6 +51,6 @@ export interface TimeoutConfig {
  * デフォルトのTimeoutConfig
  */
 export const DEFAULT_TIMEOUT_CONFIG: Required<TimeoutConfig> = {
-  timeoutMs: 120000, // 2minutes
+  timeoutMs: 30000, // 2minutes
   timeoutMessage: 'Requestが2minutesでtimed out',
 };

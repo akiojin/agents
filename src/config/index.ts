@@ -32,7 +32,7 @@ const ConfigSchema = z.object({
         }),
       )
       .default([]),
-    timeout: z.number().positive().default(120000), // 2minutes for MCP operations
+    timeout: z.number().positive().default(30000), // 2minutes for MCP operations
     enabled: z.boolean().default(true),
     maxRetries: z.number().min(0).default(2),
   }),

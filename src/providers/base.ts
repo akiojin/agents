@@ -67,7 +67,7 @@ export abstract class LLMProvider {
     this.apiKey = apiKey;
     this.endpoint = endpoint;
     this.providerOptions = {
-      timeout: options?.timeout || 120000, // デフォルト2minutes for complex queries
+      timeout: options?.timeout || 30000, // デフォルト2minutes for complex queries
       maxRetries: options?.maxRetries || 3, // デフォルト3回
       temperature: options?.temperature,
       maxTokens: options?.maxTokens,

@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import type { ChildProcess } from 'child_process';
 import * as jsonrpc from 'jsonrpc-lite';
+import * as EventSource from 'eventsource';
 import { logger } from '../utils/logger.js';
 import { withRetry } from '../utils/retry.js';
 import type { Tool } from './manager.js';
@@ -23,7 +24,7 @@ export class MCPClient extends EventEmitter {
   constructor(name: string, options: { timeout?: number; maxRetries?: number } = {}) {
     super();
     this.name = name;
-    this.timeout = options.timeout || 120000; // デフォルト2minutes for MCP operations
+    this.timeout = options.timeout || 30000; // デフォルト30seconds for MCP operations
     this.maxRetries = options.maxRetries || 2; // デフォルト2回Retry
   }
 
@@ -559,5 +560,575 @@ export class MCPClient extends EventEmitter {
     }
 
     return false;
+  }
+}
+
+/**
+ * HTTP MCP クライアント
+ */
+export class HTTPMCPClient extends EventEmitter {
+  private name: string;
+  private url: string;
+  private connected: boolean = false;
+  private timeout: number;
+  private maxRetries: number;
+
+  constructor(name: string, url: string, options: { timeout?: number; maxRetries?: number } = {}) {
+    super();
+    this.name = name;
+    this.url = url;
+    this.timeout = options.timeout || 30000;
+    this.maxRetries = options.maxRetries || 2;
+  }
+
+  async connect(): Promise<void> {
+    try {
+      // HTTP初期化リクエスト
+      await this.initialize();
+      this.connected = true;
+      logger.info(`HTTP MCP server connected: ${this.name} at ${this.url}`);
+    } catch (error) {
+      logger.error(`HTTP MCP connection error [${this.name}]:`, error);
+      this.connected = false;
+      throw new Error(`HTTP MCP Server [${this.name}] failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async initialize(): Promise<void> {
+    try {
+      const response = await fetch(`${this.url}/initialize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(this.timeout),
+        body: JSON.stringify({
+          protocolVersion: '2024-11-05',
+          capabilities: {
+            tools: {},
+            resources: {},
+            prompts: {},
+            logging: {}
+          },
+          clientInfo: {
+            name: '@akiojin/agents',
+            version: '0.1.0',
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      logger.info(`HTTP MCP server initialized [${this.name}]:`, result);
+    } catch (error) {
+      logger.error(`HTTP MCP initialize error [${this.name}]:`, error);
+      throw new Error(`HTTP MCP Server [${this.name}] initialize failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async listTools(): Promise<Tool[]> {
+    try {
+      if (!this.connected) {
+        logger.warn(`HTTP MCP server [${this.name}] not connected`);
+        return [];
+      }
+
+      const response = await fetch(`${this.url}/tools/list`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(this.timeout),
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const tools = result.tools || [];
+      
+      logger.debug(`HTTP tool list retrieved [${this.name}]: ${tools.length} tools`);
+      return tools;
+    } catch (error) {
+      logger.error(`HTTP tool list error [${this.name}]:`, error);
+      return [];
+    }
+  }
+
+  async invokeTool(name: string, params?: Record<string, unknown>): Promise<unknown> {
+    const { globalProgressReporter } = await import('../ui/progress.js');
+    
+    if (!name || name.trim().length === 0) {
+      globalProgressReporter.showError('Tool name not specified');
+      throw new Error('Tool name not specified');
+    }
+
+    if (!this.connected) {
+      globalProgressReporter.showError(`HTTP MCP server [${this.name}] not connected`);
+      throw new Error(`HTTP MCP server [${this.name}] not connected`);
+    }
+
+    globalProgressReporter.startTask(
+      `HTTP MCP tool execute: ${name}`,
+      ['Connection check', 'Tool execute', 'Response validation']
+    );
+
+    logger.debug(`HTTP tool execute started [${this.name}/${name}]:`, { params });
+
+    try {
+      globalProgressReporter.updateSubtask(0);
+      globalProgressReporter.updateSubtask(1);
+      globalProgressReporter.showInfo(`Executing ${name} tool on ${this.name} server via HTTP...`);
+
+      const result = await withRetry(
+        async () => {
+          const response = await fetch(`${this.url}/tools/call`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            signal: AbortSignal.timeout(this.timeout),
+            body: JSON.stringify({
+              name: name.trim(),
+              arguments: params || {},
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+
+          if (result === undefined || result === null) {
+            logger.warn(`HTTP tool execute result is empty [${this.name}/${name}]`);
+            return { error: false, message: 'Tool executed successfully but result is empty', result: null };
+          }
+
+          return result;
+        },
+        {
+          maxRetries: this.maxRetries,
+          delay: 1000,
+          exponentialBackoff: true,
+          timeout: this.timeout,
+          shouldRetry: (error: Error) => {
+            const message = error.message.toLowerCase();
+            return (
+              message.includes('timeout') ||
+              message.includes('network') ||
+              message.includes('connection') ||
+              message.includes('503') ||
+              message.includes('502') ||
+              message.includes('500')
+            );
+          },
+        }
+      );
+
+      globalProgressReporter.updateSubtask(2);
+
+      if (!result.success) {
+        logger.error(`HTTP tool execute error after retries [${this.name}/${name}]:`, result.error);
+        globalProgressReporter.completeTask(false);
+        
+        const errorMessage = `HTTP tool execute error: ${result.error instanceof Error ? result.error.message : String(result.error)}`;
+        globalProgressReporter.showError(errorMessage);
+        
+        return {
+          error: true,
+          message: errorMessage,
+          toolName: name,
+          serverName: this.name,
+          canRetry: true,
+          originalError: result.error instanceof Error ? result.error.message : String(result.error),
+          timestamp: new Date().toISOString(),
+          attemptCount: result.attemptCount,
+          totalTime: result.totalTime,
+        };
+      }
+
+      globalProgressReporter.completeTask(true);
+      globalProgressReporter.showInfo(`HTTP tool completed: ${name} (attempts: ${result.attemptCount}, duration: ${result.totalTime}ms)`);
+      
+      logger.debug(`HTTP tool execute completed [${this.name}/${name}]`, {
+        attemptCount: result.attemptCount,
+        totalTime: result.totalTime,
+      });
+      
+      return result.result!;
+    } catch (error) {
+      globalProgressReporter.completeTask(false);
+      globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    try {
+      if (this.connected) {
+        // HTTP断続処理（必要に応じて）
+        this.connected = false;
+        logger.info(`HTTP MCP disconnect completed [${this.name}]`);
+      }
+    } catch (error) {
+      logger.error(`HTTP MCP disconnect error [${this.name}]:`, error);
+      this.connected = false;
+    }
+  }
+
+  isConnected(): boolean {
+    return this.connected;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
+  getTimeout(): number {
+    return this.timeout;
+  }
+
+  getMaxRetries(): number {
+    return this.maxRetries;
+  }
+}
+
+/**
+ * SSE MCP クライアント
+ */
+export class SSEMCPClient extends EventEmitter {
+  private name: string;
+  private url: string;
+  private connected: boolean = false;
+  private timeout: number;
+  private maxRetries: number;
+  private eventSource?: EventSource;
+  private requestId: number = 0;
+  private pendingRequests: Map<
+    string | number,
+    {
+      resolve: (value: unknown) => void;
+      reject: (error: Error) => void;
+    }
+  > = new Map();
+
+  constructor(name: string, url: string, options: { timeout?: number; maxRetries?: number } = {}) {
+    super();
+    this.name = name;
+    this.url = url;
+    this.timeout = options.timeout || 30000;
+    this.maxRetries = options.maxRetries || 2;
+  }
+
+  async connect(): Promise<void> {
+    try {
+      // SSE接続を開始
+      this.eventSource = new (EventSource as any)(this.url);
+      
+      this.eventSource.onopen = () => {
+        logger.info(`SSE MCP server connected: ${this.name} at ${this.url}`);
+        this.connected = true;
+      };
+
+      this.eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.handleMessage(data);
+        } catch (error) {
+          logger.error(`SSE message parse error [${this.name}]:`, error);
+        }
+      };
+
+      this.eventSource.onerror = (error) => {
+        logger.error(`SSE connection error [${this.name}]:`, error);
+        this.connected = false;
+        this.emit('error', error);
+      };
+
+      // 初期化
+      await this.initialize();
+      
+    } catch (error) {
+      logger.error(`SSE MCP connection error [${this.name}]:`, error);
+      this.connected = false;
+      throw new Error(`SSE MCP Server [${this.name}] failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async initialize(): Promise<void> {
+    try {
+      const response = await this.sendRequest('initialize', {
+        protocolVersion: '2024-11-05',
+        capabilities: {
+          tools: {},
+          resources: {},
+          prompts: {},
+          logging: {}
+        },
+        clientInfo: {
+          name: '@akiojin/agents',
+          version: '0.1.0',
+        },
+      });
+
+      logger.info(`SSE MCP server initialized [${this.name}]:`, response);
+    } catch (error) {
+      logger.error(`SSE MCP initialize error [${this.name}]:`, error);
+      throw new Error(`SSE MCP Server [${this.name}] initialize failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private handleMessage(message: any): void {
+    try {
+      if (message.id && this.pendingRequests.has(message.id)) {
+        const pending = this.pendingRequests.get(message.id);
+        if (pending) {
+          if (message.error) {
+            pending.reject(new Error(`SSE MCP Error (${message.error.code}): ${message.error.message}`));
+          } else {
+            pending.resolve(message.result);
+          }
+          this.pendingRequests.delete(message.id);
+        }
+      } else if (message.method) {
+        // 通知の処理
+        this.emit('notification', message);
+      }
+    } catch (error) {
+      logger.error(`SSE message handling error [${this.name}]:`, error);
+    }
+  }
+
+  private async sendRequest(method: string, params?: unknown): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!this.connected || !this.eventSource) {
+          reject(new Error(`SSE MCP server [${this.name}] not connected`));
+          return;
+        }
+
+        const id = ++this.requestId;
+        const request = {
+          jsonrpc: '2.0',
+          id,
+          method,
+          params,
+        };
+
+        // リクエストを記録
+        this.pendingRequests.set(id, { resolve, reject });
+
+        // タイムアウト設定
+        const timeout = setTimeout(() => {
+          this.pendingRequests.delete(id);
+          reject(new Error(`SSE request timeout [${this.name}/${method}]: ${this.timeout}ms exceeded`));
+        }, this.timeout);
+
+        // HTTPでリクエストを送信（SSE + HTTP hybrid）
+        fetch(`${this.url}/request`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: AbortSignal.timeout(this.timeout),
+          body: JSON.stringify(request),
+        }).then(response => {
+          if (!response.ok) {
+            clearTimeout(timeout);
+            this.pendingRequests.delete(id);
+            reject(new Error(`HTTP ${response.status}: ${response.statusText}`));
+          }
+        }).catch(error => {
+          clearTimeout(timeout);
+          this.pendingRequests.delete(id);
+          reject(error);
+        });
+
+        // レスポンスが返ってきたらタイムアウトをクリア
+        const originalResolve = resolve;
+        const originalReject = reject;
+        
+        this.pendingRequests.set(id, {
+          resolve: (value) => {
+            clearTimeout(timeout);
+            originalResolve(value);
+          },
+          reject: (error) => {
+            clearTimeout(timeout);
+            originalReject(error);
+          },
+        });
+
+      } catch (error) {
+        reject(new Error(`SSE request preparation failed [${this.name}/${method}]: ${error instanceof Error ? error.message : String(error)}`));
+      }
+    });
+  }
+
+  async listTools(): Promise<Tool[]> {
+    try {
+      if (!this.connected) {
+        logger.warn(`SSE MCP server [${this.name}] not connected`);
+        return [];
+      }
+
+      const response = (await this.sendRequest('tools/list')) as { tools: Tool[] };
+      
+      if (!response || typeof response !== 'object') {
+        logger.warn(`Invalid response format [${this.name}]:`, response);
+        return [];
+      }
+
+      const tools = response.tools || [];
+      logger.debug(`SSE tool list retrieved [${this.name}]: ${tools.length} tools`);
+      
+      return tools;
+    } catch (error) {
+      logger.error(`SSE tool list error [${this.name}]:`, error);
+      return [];
+    }
+  }
+
+  async invokeTool(name: string, params?: Record<string, unknown>): Promise<unknown> {
+    const { globalProgressReporter } = await import('../ui/progress.js');
+    
+    if (!name || name.trim().length === 0) {
+      globalProgressReporter.showError('Tool name not specified');
+      throw new Error('Tool name not specified');
+    }
+
+    if (!this.connected) {
+      globalProgressReporter.showError(`SSE MCP server [${this.name}] not connected`);
+      throw new Error(`SSE MCP server [${this.name}] not connected`);
+    }
+
+    globalProgressReporter.startTask(
+      `SSE MCP tool execute: ${name}`,
+      ['Connection check', 'Tool execute', 'Response validation']
+    );
+
+    logger.debug(`SSE tool execute started [${this.name}/${name}]:`, { params });
+
+    try {
+      globalProgressReporter.updateSubtask(0);
+      globalProgressReporter.updateSubtask(1);
+      globalProgressReporter.showInfo(`Executing ${name} tool on ${this.name} server via SSE...`);
+
+      const result = await withRetry(
+        async () => {
+          const result = await this.sendRequest('tools/call', {
+            name: name.trim(),
+            arguments: params || {},
+          });
+
+          if (result === undefined || result === null) {
+            logger.warn(`SSE tool execute result is empty [${this.name}/${name}]`);
+            return { error: false, message: 'Tool executed successfully but result is empty', result: null };
+          }
+
+          return result;
+        },
+        {
+          maxRetries: this.maxRetries,
+          delay: 1000,
+          exponentialBackoff: true,
+          timeout: this.timeout,
+          shouldRetry: (error: Error) => {
+            const message = error.message.toLowerCase();
+            return (
+              message.includes('timeout') ||
+              message.includes('network') ||
+              message.includes('connection') ||
+              message.includes('server not responding')
+            );
+          },
+        }
+      );
+
+      globalProgressReporter.updateSubtask(2);
+
+      if (!result.success) {
+        logger.error(`SSE tool execute error after retries [${this.name}/${name}]:`, result.error);
+        globalProgressReporter.completeTask(false);
+        
+        const errorMessage = `SSE tool execute error: ${result.error instanceof Error ? result.error.message : String(result.error)}`;
+        globalProgressReporter.showError(errorMessage);
+        
+        return {
+          error: true,
+          message: errorMessage,
+          toolName: name,
+          serverName: this.name,
+          canRetry: true,
+          originalError: result.error instanceof Error ? result.error.message : String(result.error),
+          timestamp: new Date().toISOString(),
+          attemptCount: result.attemptCount,
+          totalTime: result.totalTime,
+        };
+      }
+
+      globalProgressReporter.completeTask(true);
+      globalProgressReporter.showInfo(`SSE tool completed: ${name} (attempts: ${result.attemptCount}, duration: ${result.totalTime}ms)`);
+      
+      logger.debug(`SSE tool execute completed [${this.name}/${name}]`, {
+        attemptCount: result.attemptCount,
+        totalTime: result.totalTime,
+      });
+      
+      return result.result!;
+    } catch (error) {
+      globalProgressReporter.completeTask(false);
+      globalProgressReporter.showError(error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    try {
+      if (this.eventSource) {
+        this.eventSource.close();
+        this.eventSource = undefined;
+      }
+      
+      // 保留中のリクエストをクリーンアップ
+      const pendingCount = this.pendingRequests.size;
+      if (pendingCount > 0) {
+        logger.info(`Cancelling pending requests [${this.name}]: ${pendingCount} items`);
+        
+        for (const [id, { reject }] of this.pendingRequests) {
+          reject(new Error(`SSE MCP server [${this.name}] disconnected, request cancelled`));
+        }
+        this.pendingRequests.clear();
+      }
+
+      this.connected = false;
+      logger.info(`SSE MCP disconnect completed [${this.name}]`);
+    } catch (error) {
+      logger.error(`SSE MCP disconnect error [${this.name}]:`, error);
+      this.connected = false;
+      this.pendingRequests.clear();
+    }
+  }
+
+  isConnected(): boolean {
+    return this.connected;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
+  getTimeout(): number {
+    return this.timeout;
+  }
+
+  getMaxRetries(): number {
+    return this.maxRetries;
   }
 }

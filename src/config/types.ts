@@ -122,14 +122,8 @@ export const DEFAULT_CONFIG: Config = {
     maxTokens: 2000,
   },
   mcp: {
-    servers: [
-      {
-        name: 'filesystem',
-        command: 'npx',
-        args: ['-y', '@modelcontextprotocol/server-filesystem'],
-      },
-    ],
-    timeout: 120000, // 2minutes for complex queries with MCP tools
+    servers: [],
+    timeout: 30000, // 30seconds for MCP operations
     enabled: true,
     maxRetries: 2,
   },

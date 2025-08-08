@@ -828,6 +828,31 @@ export class AgentCore extends EventEmitter {
   }
 
   /**
+   * MCP初期化進捗を取得
+   */
+  getMCPInitializationProgress(): {
+    isInitializing: boolean;
+    total: number;
+    completed: number;
+    failed: number;
+    servers: Array<{
+      name: string;
+      type: 'stdio' | 'http' | 'sse';
+      status: 'pending' | 'connecting' | 'initializing' | 'listing-tools' | 'completed' | 'failed';
+      error?: string;
+      startedAt?: Date;
+      completedAt?: Date;
+      toolCount?: number;
+      duration?: number;
+    }>;
+  } | null {
+    if (!this.mcpToolsHelper) {
+      return null;
+    }
+    return this.mcpToolsHelper.getInitializationProgress();
+  }
+
+  /**
    * StepExecuteResultのDetailsSummaryを作成
    */
   private createDetailedSummary(

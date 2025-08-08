@@ -379,6 +379,28 @@ export class MCPToolsHelper {
   getServerStatus(): Map<string, boolean> {
     return this.mcpManager.getServerStatus();
   }
+
+  /**
+   * MCP初期化進捗を取得
+   */
+  getInitializationProgress(): {
+    isInitializing: boolean;
+    total: number;
+    completed: number;
+    failed: number;
+    servers: Array<{
+      name: string;
+      type: 'stdio' | 'http' | 'sse';
+      status: 'pending' | 'connecting' | 'initializing' | 'listing-tools' | 'completed' | 'failed';
+      error?: string;
+      startedAt?: Date;
+      completedAt?: Date;
+      toolCount?: number;
+      duration?: number;
+    }>;
+  } {
+    return this.mcpManager.getInitializationProgress();
+  }
 }
 
 /**

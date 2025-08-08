@@ -51,7 +51,7 @@ export async function withRetry<T>(
     maxRetries = 3,
     delay = 1000,
     exponentialBackoff = false,
-    timeout = 120000, // 2minutes for complex operations
+    timeout = 30000, // 2minutes for complex operations
     shouldRetry = defaultShouldRetry,
   } = options;
 
@@ -66,7 +66,7 @@ export async function withRetry<T>(
       // Timeout付きで関数Execute
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error(`Processingがtimed out（${timeout}ms）`));
+          reject(new Error(`Processing timed out (${timeout}ms)`));
         }, timeout);
       });
 
@@ -89,14 +89,14 @@ export async function withRetry<T>(
       // 最後の試行でない場合、Retry可能かチェック
       if (attemptCount < maxRetries) {
         if (!shouldRetry(lastError)) {
-          logger.debug('Retry不可能なErrorのため中断します:', lastError.message);
+          logger.debug('Non-retryable error, aborting retry:', lastError.message);
           break;
         }
 
         // 遅延時間を計算（指数バックオフの場合）
         const currentDelay = exponentialBackoff ? delay * Math.pow(2, attemptCount - 1) : delay;
 
-        logger.debug(`${currentDelay}ms 待機後にRetryします...`);
+        logger.debug(`Waiting ${currentDelay}ms before retry...`);
         await sleep(currentDelay);
       }
     }
@@ -104,7 +104,7 @@ export async function withRetry<T>(
 
   return {
     success: false,
-    error: lastError || new Error('不明なError'),
+    error: lastError || new Error('Unknown error'),
     attemptCount,
     totalTime: Date.now() - startTime,
   };
@@ -128,7 +128,7 @@ export class RetryHandler {
       maxRetries: 3,
       delay: 1000,
       exponentialBackoff: false,
-      timeout: 120000, // 2minutes default
+      timeout: 30000, // 2minutes default
       shouldRetry: defaultShouldRetry,
       ...defaultOptions,
     };
