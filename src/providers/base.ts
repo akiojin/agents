@@ -47,6 +47,7 @@ export interface CompletionOptions extends ChatOptions {
 export abstract class LLMProvider {
   protected apiKey?: string;
   protected endpoint?: string;
+  protected systemPrompt?: string;
   protected providerOptions: {
     timeout: number;
     maxRetries: number;

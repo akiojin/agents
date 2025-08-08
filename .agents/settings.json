@@ -4,7 +4,14 @@
     "timeout": 120000,
     "maxRetries": 3,
     "temperature": 0.7,
-    "maxTokens": 2000
+    "maxTokens": 2000,
+    "responseFormat": {
+      "enabled": true,
+      "maxLineLength": 80,
+      "useSimpleLists": true,
+      "avoidTables": true,
+      "minimizeEmojis": true
+    }
   },
   "mcp": {
     "enabled": true,

@@ -80,6 +80,13 @@ export interface Config {
     maxRetries: number; // 必須：最大Retry回数
     temperature?: number; // Options：0.0-2.0の範囲
     maxTokens?: number; // Options：最大トークン数
+    responseFormat?: {
+      enabled: boolean;
+      maxLineLength?: number;
+      useSimpleLists?: boolean;
+      avoidTables?: boolean;
+      minimizeEmojis?: boolean;
+    };
   };
 
   // MCPConfig

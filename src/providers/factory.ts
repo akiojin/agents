@@ -82,7 +82,11 @@ export function createProviderFromUnifiedConfig(
       }
       const endpoint = config.localEndpoint;
       
-      return new LocalProvider(endpoint, config.llm.provider, providerOptions);
+      const localProviderOptions = {
+        ...providerOptions,
+        responseFormat: config.llm.responseFormat
+      };
+      return new LocalProvider(endpoint, config.llm.provider, localProviderOptions);
     }
 
     default:

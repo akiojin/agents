@@ -27,18 +27,33 @@ interface LocalAPIResponse {
 
 export class LocalProvider extends LLMProvider {
   private providerType: 'local-gptoss' | 'local-lmstudio';
+  private responseFormatConfig?: {
+    enabled: boolean;
+    maxLineLength?: number;
+    useSimpleLists?: boolean;
+    avoidTables?: boolean;
+    minimizeEmojis?: boolean;
+  };
 
   constructor(endpoint: string, providerType: 'local-gptoss' | 'local-lmstudio' = 'local-gptoss', options?: {
     timeout?: number;
     maxRetries?: number;
     temperature?: number;
     maxTokens?: number;
+    responseFormat?: {
+      enabled: boolean;
+      maxLineLength?: number;
+      useSimpleLists?: boolean;
+      avoidTables?: boolean;
+      minimizeEmojis?: boolean;
+    };
   }) {
     if (!endpoint) {
       throw new Error('endpoint が指定されていません');
     }
     super(undefined, endpoint, options);
     this.providerType = providerType;
+    this.responseFormatConfig = options?.responseFormat;
     logger.debug(`LocalProvider initialized with endpoint: ${this.endpoint}`);
   }
 
@@ -190,8 +205,43 @@ export class LocalProvider extends LLMProvider {
         };
       });
 
+      // システムプロンプトでフォーマット指示を追加
+      const formattedMessages = [...localMessages];
+      if (this.responseFormatConfig?.enabled) {
+        const formatRules: string[] = [];
+        
+        if (this.responseFormatConfig.avoidTables !== false) {
+          formatRules.push('- 表形式は使用禁止。代わりにインデント付きリストを使用');
+        }
+        if (this.responseFormatConfig.maxLineLength) {
+          formatRules.push(`- 1行は${this.responseFormatConfig.maxLineLength}文字以内`);
+        }
+        if (this.responseFormatConfig.useSimpleLists !== false) {
+          formatRules.push('- 複雑なネストは避け、シンプルなリスト形式を使用');
+        }
+        if (this.responseFormatConfig.minimizeEmojis !== false) {
+          formatRules.push('- 絵文字は最小限に抑える');
+        }
+        
+        formatRules.push(
+          '- 引用ブロック(>)は最小限に',
+          '- コードブロックは```で囲む',
+          '- セクションは # ## ### で階層化',
+          '- 箇条書きは - または 1. 2. 3. を使用'
+        );
+
+        const systemPrompt = {
+          role: 'system' as const,
+          content: `応答フォーマット規則:\n${formatRules.join('\n')}`
+        };
+        
+        // システムプロンプトを先頭に挿入
+        formattedMessages.unshift(systemPrompt);
+        logger.debug('Response format rules applied');
+      }
+
       const body: LocalAPIRequest = {
-        messages: localMessages,
+        messages: formattedMessages,
         temperature: Math.min(Math.max(options?.temperature || this.providerOptions.temperature || 0.7, 0), 2),
         max_tokens: Math.min(Math.max(options?.maxTokens || this.providerOptions.maxTokens || 2000, 1), 8192),
         stream: options?.stream || false,
