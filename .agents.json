@@ -1,0 +1,25 @@
+{
+  "llm": {
+    "provider": "local-lmstudio",
+    "timeout": 120000,
+    "maxRetries": 3,
+    "temperature": 0.7,
+    "maxTokens": 2000
+  },
+  "mcp": {
+    "enabled": true,
+    "timeout": 120000,
+    "maxRetries": 3
+  },
+  "app": {
+    "maxParallel": 5,
+    "timeout": 300000,
+    "logLevel": "debug"
+  },
+  "paths": {
+    "cache": "./.agents/cache",
+    "history": "./.agents/history",
+    "logs": "./.agents/logs"
+  },
+  "localEndpoint": "http://host.docker.internal:1234"
+}

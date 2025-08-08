@@ -60,7 +60,15 @@ export class ConfigManager {
   private configPath: string;
 
   private constructor() {
-    this.configPath = join(process.cwd(), '.agents.yaml');
+    // .agents.jsonを優先、なければ.agents.yamlも対応
+    const jsonPath = join(process.cwd(), '.agents.json');
+    const yamlPath = join(process.cwd(), '.agents.yaml');
+    
+    if (existsSync(jsonPath)) {
+      this.configPath = jsonPath;
+    } else {
+      this.configPath = yamlPath;
+    }
   }
 
   /**
@@ -132,12 +140,18 @@ export class ConfigManager {
 
     const validated = ConfigSchema.parse(mergedConfig);
 
-    const yamlContent = yaml.stringify(validated, {
-      indent: 2,
-      lineWidth: 80,
-    });
+    // ファイル拡張子に応じて保存形式を変更
+    let content: string;
+    if (this.configPath.endsWith('.json')) {
+      content = JSON.stringify(validated, null, 2);
+    } else {
+      content = yaml.stringify(validated, {
+        indent: 2,
+        lineWidth: 80,
+      });
+    }
 
-    await writeFile(this.configPath, yamlContent, 'utf-8');
+    await writeFile(this.configPath, content, 'utf-8');
     this.config = validated;
 
     logger.info('ConfigをSavedone:', this.configPath);
@@ -174,7 +188,13 @@ export class ConfigManager {
   private async loadFromFile(): Promise<Partial<Config>> {
     try {
       const content = await readFile(this.configPath, 'utf-8');
-      return yaml.parse(content) as Partial<Config>;
+      
+      // ファイル拡張子に応じてパース方法を変更
+      if (this.configPath.endsWith('.json')) {
+        return JSON.parse(content) as Partial<Config>;
+      } else {
+        return yaml.parse(content) as Partial<Config>;
+      }
     } catch (error) {
       logger.warn('ConfigファイルのLoadにFaileddone:', error);
       return {};
