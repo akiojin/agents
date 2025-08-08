@@ -269,6 +269,9 @@ if (process.argv.length === 2) {
         agent.setupMCPTools(mcpManager)
           .then(() => {
             console.log(chalk.green(`[MCP] ${data.serverName} tools registered (${data.toolCount} tools)`));
+            // デバッグ: 現在の関数数を表示
+            const functionCount = agent.getAvailableFunctionCount();
+            console.log(chalk.gray(`[MCP] Total functions available: ${functionCount}`));
           })
           .catch((error) => {
             console.log(chalk.red(`[MCP] Failed to register ${data.serverName} tools: ${error.message}`));
@@ -295,15 +298,16 @@ if (process.argv.length === 2) {
 
       mcpManager.initialize()
         .then(() => {
-          logger.debug('Setting up MCP tools helper...');
+          logger.debug('All MCP servers initialized, setting up tools...');
           return agent.setupMCPTools(mcpManager);
         })
         .then(() => {
           logger.debug('MCP tools helper setup completed');
           const progress = mcpManager.getInitializationProgress();
+          const functionCount = agent.getAvailableFunctionCount();
           logger.debug(`MCP: ${progress.completed}/${progress.total} servers ready, ${progress.failed} failed`);
           // 成功時にコンソールに通知
-          console.log(chalk.green(`[MCP] Ready: ${progress.completed}/${progress.total} servers, ${progress.failed} failed`));
+          console.log(chalk.green(`[MCP] Ready: ${progress.completed}/${progress.total} servers, ${functionCount} functions available`));
         })
         .catch((error) => {
           // エラーをコンソールに表示して問題を明確にする
