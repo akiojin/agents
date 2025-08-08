@@ -251,12 +251,23 @@ if (process.argv.length === 2) {
     const agent = new AgentCore(config);
     const mcpManager = MCPManager.fromUnifiedConfig(config);
 
+    // REPL即座起動 - MCPは遅延初期化
+    const replPromise = startREPL(agent, mcpManager);
+    
+    // MCP初期化をバックグラウンドで実行
     if (config.mcp?.enabled) {
-      await mcpManager.initialize();
-      await agent.setupMCPTools(mcpManager);
+      console.log(chalk.gray('● Loading MCP tools in background...'));
+      mcpManager.initialize()
+        .then(() => agent.setupMCPTools(mcpManager))
+        .then(() => {
+          console.log(chalk.green('● MCP tools ready'));
+        })
+        .catch((error) => {
+          console.log(chalk.yellow('● MCP initialization failed:', error.message));
+        });
     }
 
-    await startREPL(agent, mcpManager);
+    await replPromise;
   } catch (error) {
     console.error(chalk.red('Error:'), error);
     process.exit(1);
