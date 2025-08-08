@@ -21,12 +21,20 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   console.log(chalk.gray('3. Type /exit to quit'));
   console.log('');
   
-  // Function to create prompt with context usage
-  const getPrompt = (): string => {
+  // Simple prompt
+  const getPrompt = (): string => chalk.gray('> ');
+  
+  // Function to show context status line
+  const showContextStatus = (): void => {
     const stats = tokenCounter.getStats();
     const contextUsage = Math.round((stats.totalTokens / 200000) * 100);
     const remaining = 100 - Math.min(100, contextUsage);
-    return chalk.gray(`> `) + chalk.dim.gray(`(${remaining}% context left) `);
+    const tokensFormatted = stats.totalTokens.toLocaleString();
+    
+    console.log('');
+    console.log(chalk.dim.gray(`───────────────────────────────────────────────────────────────────────────────`));
+    console.log(chalk.dim.gray(`Context: ${remaining}% remaining (${tokensFormatted} tokens used)`));
+    console.log('');
   };
   
   const rl = readline.createInterface({
@@ -207,7 +215,6 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
 
       // 空行はスキップ
       if (!trimmedInput) {
-        rl.setPrompt(getPrompt());
         rl.prompt();
         return;
       }
@@ -219,7 +226,6 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         if (!command) return;
         const args = parts.slice(1);
         await handleSlashCommand(command, args.join(' '));
-        rl.setPrompt(getPrompt());
         rl.prompt();
         return;
       }
@@ -245,16 +251,15 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         tokenCounter.addApiDuration(apiDuration);
         
         spinner.stop();
-        console.log('\n' + response + '\n');
+        console.log('\n' + response);
         
-        // Update prompt with new context usage
-        rl.setPrompt(getPrompt());
+        // Show context status at bottom
+        showContextStatus();
       } catch (error) {
         spinner.stop();
         console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
       }
 
-      rl.setPrompt(getPrompt());
       rl.prompt();
     })();
   });

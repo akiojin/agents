@@ -218,13 +218,13 @@ export class AgentCore extends EventEmitter {
       globalProgressReporter.updateSubtask(0);
       if (!input || input.trim().length === 0) {
         globalProgressReporter.completeTask(false);
-        throw new Error('Input is empty');
+        throw new Error('入力が空です');
       }
 
       const trimmedInput = input.trim();
       if (trimmedInput.length > 32000) {
         globalProgressReporter.completeTask(false);
-        throw new Error('Input is too long (maximum 32,000 characters)');
+        throw new Error('入力が長すぎます（最大32,000文字）');
       }
 
       // Function Calling準備
@@ -248,7 +248,7 @@ export class AgentCore extends EventEmitter {
       // ProviderConnectionCheck
       if (!this.provider) {
         globalProgressReporter.completeTask(false);
-        throw new Error('LLM Provider not initialized');
+        throw new Error('LLMプロバイダーが初期化されていません');
       }
 
       // LLM呼び出し
@@ -422,7 +422,7 @@ export class AgentCore extends EventEmitter {
         
         if (!response || response.trim().length === 0) {
           globalProgressReporter.completeTask(false);
-          throw new Error('Response from LLM is empty');
+          throw new Error('LLMからの応答が空です');
         }
 
         const trimmedResponse = response.trim();
@@ -525,7 +525,7 @@ export class AgentCore extends EventEmitter {
     try {
       // 入力Validation
       if (!input || input.trim().length === 0) {
-        throw new Error('Input is empty');
+        throw new Error('入力が空です');
       }
 
       const trimmedInput = input.trim();
