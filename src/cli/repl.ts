@@ -48,7 +48,8 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         console.log(chalk.cyan('Available commands:'));
         console.log('  /help        - Show help');
         console.log('  /exit        - Exit');
-        console.log('  /clear       - Clear screen');
+        console.log('  /clear       - Clear conversation history and screen');
+        console.log('  /refresh     - Clear screen only');
         console.log('  /clearhistory - Clear conversation history');
         console.log('  /history     - Show history');
         console.log('  /save <file> - Save conversation');
@@ -73,6 +74,13 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       }
 
       case '/clear': {
+        agent.clearHistory();
+        console.clear();
+        console.log(chalk.green('History cleared and screen refreshed'));
+        return true;
+      }
+
+      case '/refresh': {
         console.clear();
         return true;
       }
