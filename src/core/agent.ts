@@ -80,9 +80,11 @@ export class AgentCore extends EventEmitter {
       // Load historyの読み込みはセッション継続フラグによって制御
       if (continueSession) {
         this.history = await this.memoryManager.loadHistory();
+        console.log(`📂 Previous session loaded (${this.history.length} messages)`);
         logger.info('Previous session loaded');
       } else {
         this.history = [];
+        console.log('🆕 New session started');
         logger.info('New session started');
       }
       

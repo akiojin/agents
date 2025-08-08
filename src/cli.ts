@@ -30,12 +30,11 @@ program
 // グローバルOptions
 program
   .option('-m, --model <model>', 'LLMModelを指定', 'gpt-4')
-  .option('-c, --config <path>', 'Configファイルのパス', '.agents.yaml')
   .option('-v, --verbose', 'Detailsログ出力')
   .option('--no-color', 'カラー出力を無効化')
   .option('--max-parallel <number>', 'ParallelTaskExecute数', '5')
   .option('--timeout <seconds>', 'TaskTimeout（seconds）', '300')
-  .option('--continue', '前回のセッションを継続');
+  .option('-c, --continue', '前回のセッションを継続');
 
 // initCommand
 program
@@ -148,7 +147,7 @@ program
     globalProgressReporter.startTask('Preparing task execution', ['Loading config', 'Initializing agent', 'Initializing MCP', 'Executing task']);
     
     try {
-      // ConfigLoad
+      // ConfigLoad  
       globalProgressReporter.updateSubtask(0);
       const configManager = ConfigManager.getInstance();
       const config = await configManager.load();
@@ -250,19 +249,51 @@ program
     await startREPLMode(options.continue);
   });
 
-// Argumentsなしまたは--continueオプションのみの場合は対話モードを開始
+// Arguments解析とREPL起動の判定
+console.log('Process argv:', process.argv);
+
+// 引数なしの場合は新しいセッション
 if (process.argv.length === 2) {
-  await startREPLMode(false); // 新しいセッション
-} else if (process.argv.includes('--continue') && process.argv.length === 3) {
-  await startREPLMode(true); // セッション継続
-} else {
+  console.log('No args, starting new session');
+  await startREPLMode(false);
+  process.exit(0);
+}
+
+// -c または --continue が指定された場合の直接処理
+if (process.argv.includes('-c') || process.argv.includes('--continue')) {
+  if (process.argv.length === 3 && (process.argv[2] === '-c' || process.argv[2] === '--continue')) {
+    console.log('Continue option detected, starting REPL with session continuation');
+    await startREPLMode(true);
+    process.exit(0);
+  }
+}
+
+// その他のコマンドの場合は通常の処理
+try {
   program.parse(process.argv);
+  const opts = program.opts();
+  const args = program.args;
+  
+  console.log('Parsed opts:', opts);
+  console.log('Parsed args:', args);
+
+  // コマンドが指定されていない場合は対話モードを開始
+  if (args.length === 0) {
+    console.log('No commands, starting REPL with continue:', opts.continue);
+    await startREPLMode(opts.continue || false);
+  }
+} catch (error) {
+  console.error('Error parsing command line arguments:', error);
+  process.exit(1);
 }
 
 // REPLモード開始関数
 async function startREPLMode(continueSession: boolean = false) {
   // REPLモードでは環境変数でログを無効化
   process.env.AGENTS_SILENT = 'true';
+  
+  // デバッグ用ログ
+  console.log(`Starting REPL with continueSession: ${continueSession}`);
   
   try {
     const configManager = ConfigManager.getInstance();

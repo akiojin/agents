@@ -15,6 +15,48 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   console.log('');
   console.log('   ' + chalk.cyan.bold('AGENTS'));
   console.log('');
+  
+  // Show session status and history
+  const history = agent.getHistory();
+  if (history.length > 0) {
+    console.log(chalk.yellow(`📂 Session continued (${history.length} messages in history)`));
+    console.log('');
+    
+    // Display recent conversation history
+    console.log(chalk.cyan('Recent conversation:'));
+    console.log(chalk.gray('─'.repeat(50)));
+    
+    // Show last few messages (up to 5)
+    const recentHistory = history.slice(-5);
+    recentHistory.forEach((entry, index) => {
+      const isLast = index === recentHistory.length - 1;
+      const roleColor = entry.role === 'user' ? chalk.blue : chalk.green;
+      const roleLabel = entry.role === 'user' ? 'You' : 'AI';
+      
+      console.log(roleColor(`${roleLabel}:`));
+      
+      // Truncate long messages
+      let content = entry.content;
+      if (content.length > 200) {
+        content = content.substring(0, 200) + '...';
+      }
+      
+      // Split by lines and indent
+      content.split('\n').forEach(line => {
+        console.log(`  ${line}`);
+      });
+      
+      if (!isLast) {
+        console.log('');
+      }
+    });
+    
+    console.log(chalk.gray('─'.repeat(50)));
+  } else {
+    console.log(chalk.gray('🆕 New session started'));
+  }
+  console.log('');
+  
   console.log(chalk.gray('Tips for getting started:'));
   console.log(chalk.gray('1. Ask questions or give instructions'));
   console.log(chalk.gray('2. Type /help for available commands'));
