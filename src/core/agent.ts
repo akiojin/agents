@@ -441,6 +441,7 @@ export class AgentCore extends EventEmitter {
           timestamp: new Date(),
         };
         this.history.push(finalAssistantMessage);
+        this.limitHistorySize();
 
         // HistorySave
         globalProgressReporter.updateSubtask(4);
@@ -479,6 +480,7 @@ export class AgentCore extends EventEmitter {
           timestamp: new Date(),
         };
         this.history.push(assistantMessage);
+        this.limitHistorySize();
 
         // HistorySave
         globalProgressReporter.updateSubtask(4);
@@ -674,6 +676,26 @@ export class AgentCore extends EventEmitter {
 
   getHistory(): ChatMessage[] {
     return [...this.history];
+  }
+
+  /**
+   * 会話履歴をクリア
+   */
+  clearHistory(): void {
+    this.history = [];
+    logger.info('Conversation history cleared');
+  }
+
+  /**
+   * 履歴サイズを制限（最大20メッセージ）
+   */
+  private limitHistorySize(): void {
+    const MAX_HISTORY_MESSAGES = 20;
+    if (this.history.length > MAX_HISTORY_MESSAGES) {
+      const removed = this.history.length - MAX_HISTORY_MESSAGES;
+      this.history = this.history.slice(-MAX_HISTORY_MESSAGES);
+      logger.debug(`Trimmed ${removed} old messages from history to prevent large requests`);
+    }
   }
 
   clearHistory(): void {

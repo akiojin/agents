@@ -49,6 +49,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         console.log('  /help        - Show help');
         console.log('  /exit        - Exit');
         console.log('  /clear       - Clear screen');
+        console.log('  /clearhistory - Clear conversation history');
         console.log('  /history     - Show history');
         console.log('  /save <file> - Save conversation');
         console.log('  /load <file> - Load conversation');
@@ -73,6 +74,12 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
 
       case '/clear': {
         console.clear();
+        return true;
+      }
+
+      case '/clearhistory': {
+        agent.clearHistory();
+        console.log(chalk.green('Conversation history cleared'));
         return true;
       }
 
