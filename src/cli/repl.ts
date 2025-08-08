@@ -244,7 +244,14 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         tokenCounter.addApiDuration(apiDuration);
         
         spinner.stop();
-        console.log('\n' + chalk.cyan('● ') + response);
+        // Format response with bullet and indentation
+        const formattedResponse = response.split('\n').map((line, index) => {
+          if (index === 0) {
+            return chalk.cyan('● ') + line;
+          }
+          return '  ' + line; // 2 spaces for indentation
+        }).join('\n');
+        console.log('\n' + formattedResponse);
         
         // Show context usage below response
         const stats = tokenCounter.getStats();
