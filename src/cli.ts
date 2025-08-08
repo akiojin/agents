@@ -34,7 +34,8 @@ program
   .option('-v, --verbose', 'Detailsログ出力')
   .option('--no-color', 'カラー出力を無効化')
   .option('--max-parallel <number>', 'ParallelTaskExecute数', '5')
-  .option('--timeout <seconds>', 'TaskTimeout（seconds）', '300');
+  .option('--timeout <seconds>', 'TaskTimeout（seconds）', '300')
+  .option('--continue', '前回のセッションを継続');
 
 // initCommand
 program
@@ -249,9 +250,11 @@ program
     await startREPLMode(options.continue);
   });
 
-// Argumentsなしの場合は新しいセッションで対話モードを開始
+// Argumentsなしまたは--continueオプションのみの場合は対話モードを開始
 if (process.argv.length === 2) {
   await startREPLMode(false); // 新しいセッション
+} else if (process.argv.includes('--continue') && process.argv.length === 3) {
+  await startREPLMode(true); // セッション継続
 } else {
   program.parse(process.argv);
 }

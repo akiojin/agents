@@ -232,46 +232,44 @@ export class LocalProvider extends LLMProvider {
 
         const systemPrompt = {
           role: 'system' as const,
-          content: `CRITICAL FORMATTING RULES - MUST FOLLOW:
+          content: `ABSOLUTE CRITICAL RULE: NEVER USE TABLES OR PIPE CHARACTERS (|)
 
-1. NEVER use markdown tables (tables with | pipe characters)
-2. NEVER create any table format whatsoever
-3. DO NOT use the pipe character | for any formatting
+You are STRICTLY FORBIDDEN from using:
+- Markdown tables with | pipe characters
+- HTML tables
+- Tab-separated columns
+- ANY format that uses | pipe symbols
 
-REQUIRED FORMAT for structured information:
-
-Instead of tables, use hierarchical lists:
+INSTEAD, use hierarchical lists:
 
 # Title
 
-## Category Name
-- **Item Name**: Description
-- **Item Name**: Description
+## Section
+- **Field**: Value
+- **Field**: Value
 
-OR
+VIOLATION EXAMPLES (FORBIDDEN):
+| Field | Value |
+|-------|-------|
+| Data  | Info  |
 
-## Category Name
-### Item Name
-Description text...
+CORRECT FORMAT:
+## Data Overview
+- **Field**: Value
+- **Another Field**: Another Value
 
-### Item Name  
-Description text...
+This rule is NON-NEGOTIABLE. Any response with pipe characters will be invalid.
 
-STRICTLY FORBIDDEN:
-× Markdown tables (| column | format |)
-× HTML tables
-× Tab-separated tables
-× Any other table format
-
-MANDATORY: If you want to organize information in a table-like structure, you MUST convert it to the list format shown above.
-
-Additional formatting rules:
 ${formatRules.join('\n')}`
         };
         
         // システムプロンプトを先頭に挿入
         formattedMessages.unshift(systemPrompt);
-        logger.debug('Response format rules applied');
+        logger.debug('Response format rules applied', {
+          systemPromptLength: systemPrompt.content.length,
+          totalMessages: formattedMessages.length,
+          firstMessageRole: formattedMessages[0].role
+        });
       }
 
       const body: LocalAPIRequest = {
