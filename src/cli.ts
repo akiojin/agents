@@ -312,14 +312,14 @@ async function startREPLMode(continueSession: boolean = false) {
         .then(() => {
           const progress = mcpManager.getInitializationProgress();
           const functionCount = agent.getAvailableFunctionCount();
-          // 成功時にコンソールに通知
-          console.log(chalk.green(`[MCP] Ready: ${progress.completed}/${progress.total} servers, ${functionCount} functions available`));
+          // 成功時はログのみ
+          logger.debug(`MCP Ready: ${progress.completed}/${progress.total} servers, ${functionCount} functions available`);
         })
         .catch((error) => {
           logger.debug('MCP initialization failed:', error.message);
         });
     } else {
-      console.log(chalk.gray('● MCP disabled in configuration'));
+      logger.debug('MCP disabled in configuration');
     }
 
     await replPromise;

@@ -331,11 +331,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
     (async () => {
       // Show simple processing indicator using ASCII characters
       const dots = ['.  ', '.. ', '...', '   '];
-      let dotIndex = 0;
-      const indicatorInterval = setInterval(() => {
-        process.stdout.write(`\r${chalk.gray('Thinking' + dots[dotIndex])}`);
-        dotIndex = (dotIndex + 1) % dots.length;
-      }, 200);
+      // No thinking indicator for cleaner output
       
       try {
         // Count input tokens
@@ -351,8 +347,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         tokenCounter.addApiDuration(apiDuration);
         
         // Clear the indicator line
-        clearInterval(indicatorInterval);
-        process.stdout.write('\r' + ' '.repeat(20) + '\r');
+        // No indicator to clear
         
         // Format response with ASCII bullet and indentation
         const formattedResponse = response.split('\n').map((line, index) => {
@@ -371,8 +366,7 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
         console.log(); // Add blank line before prompt
       } catch (error) {
         // Clear the indicator
-        clearInterval(indicatorInterval);
-        process.stdout.write('\r' + ' '.repeat(20) + '\r');
+        // No indicator to clear
         console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
         console.log(); // Add newline for clarity
       } finally {
