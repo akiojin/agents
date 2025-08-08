@@ -793,8 +793,15 @@ export class AgentCore extends EventEmitter {
    * MCPManagerをConfigしてToolヘルパーをInitialize
    */
   async setupMCPTools(mcpManager: MCPManager): Promise<void> {
-    // MCPFunctionConverterを作成
-    this.mcpFunctionConverter = new MCPFunctionConverter(mcpManager);
+    // 内部関数のセキュリティ設定を準備
+    const securityConfig = this.config.functions?.filesystem?.security || {
+      allowedPaths: [process.cwd()],
+      allowCurrentDirectoryChange: true,
+      restrictToStartupDirectory: true
+    };
+
+    // MCPFunctionConverterを作成（内部関数設定付き）
+    this.mcpFunctionConverter = new MCPFunctionConverter(mcpManager, securityConfig);
     
     // MCPToolsHelperを初期化（FunctionConverterを渡す）
     this.mcpToolsHelper = new MCPToolsHelper(mcpManager, this.mcpFunctionConverter);
@@ -804,6 +811,13 @@ export class AgentCore extends EventEmitter {
     
     logger.debug(`Function definitions loaded: ${this.availableFunctions.length} functions available`);
     logger.debug('Available functions:', this.availableFunctions.map(f => f.name));
+    
+    // 内部関数が有効な場合はログ出力
+    const internalFunctions = this.availableFunctions.filter(f => f.name.startsWith('internal_'));
+    if (internalFunctions.length > 0) {
+      logger.debug(`Internal functions loaded: ${internalFunctions.length} functions`, 
+        internalFunctions.map(f => f.name));
+    }
   }
 
   /**

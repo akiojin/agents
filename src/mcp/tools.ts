@@ -81,11 +81,31 @@ export class MCPToolsHelper {
   }
 
   /**
-   * ToolをExecuteしてResultをGet
+   * ToolをExecuteしてResultをGet（内部関数優先）
    */
   async executeTool(toolName: string, params: Record<string, unknown>): Promise<unknown> {
     try {
-      logger.debug(`MCPToolをExecute中: ${toolName}`);
+      logger.debug(`Executing tool: ${toolName}`);
+      
+      // 内部関数かチェック
+      if (this.functionConverter && this.functionConverter.isInternalFunction(toolName)) {
+        const internalFunctionName = this.functionConverter.getInternalFunctionName(toolName);
+        if (internalFunctionName) {
+          logger.debug(`Executing internal function: ${internalFunctionName}`);
+          const registry = this.functionConverter.getInternalRegistry();
+          const result = await registry.executeFunction(internalFunctionName, params);
+          
+          if (result.success) {
+            logger.debug(`Internal function executed successfully: ${internalFunctionName}`);
+            return result.result;
+          } else {
+            throw new Error(result.error || `Internal function execution failed: ${internalFunctionName}`);
+          }
+        }
+      }
+      
+      // MCPツールの実行
+      logger.debug(`Executing MCP tool: ${toolName}`);
       
       // Function Calling名からMCPツール名に変換
       let mcpToolName = toolName;

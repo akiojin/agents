@@ -1,5 +1,7 @@
 import { logger } from '../utils/logger.js';
 import type { MCPManager } from './manager.js';
+import { InternalFunctionRegistry } from '../functions/registry.js';
+import { SecurityConfig } from '../functions/security.js';
 
 /**
  * OpenAI Function Calling形式の関数定義
@@ -39,21 +41,51 @@ export class MCPFunctionConverter {
   private mcpManager: MCPManager;
   private functionDefinitions: Map<string, FunctionDefinition> = new Map();
   private toolMapping: Map<string, string> = new Map(); // function name -> server:tool
+  private internalRegistry: InternalFunctionRegistry;
+  private internalFunctionPrefix = 'internal_';
 
-  constructor(mcpManager: MCPManager) {
+  constructor(mcpManager: MCPManager, securityConfig?: SecurityConfig) {
     this.mcpManager = mcpManager;
+    
+    // 内部関数レジストリを初期化（デフォルトセキュリティ設定を使用）
+    const defaultSecurityConfig: SecurityConfig = securityConfig || {
+      allowedPaths: [process.cwd()],
+      allowCurrentDirectoryChange: true,
+      restrictToStartupDirectory: true
+    };
+    
+    this.internalRegistry = new InternalFunctionRegistry(defaultSecurityConfig);
+    logger.debug('MCPFunctionConverter initialized with internal functions');
   }
 
   /**
-   * 全MCPツールをFunction定義に変換
+   * 全MCPツールと内部関数をFunction定義に変換
    */
   async convertAllTools(): Promise<FunctionDefinition[]> {
     try {
-      logger.debug('Converting MCP tools to function definitions...');
+      logger.debug('Converting MCP tools and internal functions to function definitions...');
+      
+      const functions: FunctionDefinition[] = [];
+      
+      // 内部関数を最初に追加（優先度が高い）
+      const internalFunctions = this.internalRegistry.getFunctionCallDefinitions();
+      for (const func of internalFunctions) {
+        const prefixedName = `${this.internalFunctionPrefix}${func.name}`;
+        const functionDef: FunctionDefinition = {
+          name: prefixedName,
+          description: func.description,
+          parameters: func.parameters
+        };
+        
+        functions.push(functionDef);
+        this.functionDefinitions.set(prefixedName, functionDef);
+        this.toolMapping.set(prefixedName, `internal:${func.name}`);
+        
+        logger.debug(`Registered internal function: ${func.name} -> ${prefixedName}`);
+      }
       
       // MCPマネージャーから全ツールをサーバー情報付きで取得
       const toolsWithInfo = await this.mcpManager.listToolsWithServerInfo();
-      const functions: FunctionDefinition[] = [];
 
       for (const { serverName, toolName, tool } of toolsWithInfo) {
         try {
@@ -87,10 +119,10 @@ export class MCPFunctionConverter {
         }
       }
 
-      logger.debug(`Successfully converted ${functions.length} MCP tools to functions`);
+      logger.debug(`Successfully converted ${internalFunctions.length} internal functions and ${functions.length - internalFunctions.length} MCP tools to functions`);
       return functions;
     } catch (error) {
-      logger.error('Failed to convert MCP tools:', error);
+      logger.error('Failed to convert tools:', error);
       return [];
     }
   }
@@ -166,7 +198,7 @@ export class MCPFunctionConverter {
   }
 
   /**
-   * Function名からMCPツール名を取得
+   * Function名からMCP/内部関数のツール名を取得
    */
   getMCPToolName(functionName: string): string | undefined {
     return this.toolMapping.get(functionName);
@@ -187,10 +219,35 @@ export class MCPFunctionConverter {
   }
 
   /**
-   * Function名からMCPツール名を取得
+   * 関数が内部関数かどうかチェック
    */
-  getMCPToolName(functionName: string): string | undefined {
-    return this.toolMapping.get(functionName);
+  isInternalFunction(functionName: string): boolean {
+    return functionName.startsWith(this.internalFunctionPrefix);
+  }
+
+  /**
+   * 内部関数名を取得（プレフィックスを除去）
+   */
+  getInternalFunctionName(functionName: string): string | undefined {
+    if (!this.isInternalFunction(functionName)) {
+      return undefined;
+    }
+    return functionName.slice(this.internalFunctionPrefix.length);
+  }
+
+  /**
+   * 内部関数レジストリを取得
+   */
+  getInternalRegistry(): InternalFunctionRegistry {
+    return this.internalRegistry;
+  }
+
+  /**
+   * セキュリティ設定を更新
+   */
+  updateSecurityConfig(config: Partial<SecurityConfig>): void {
+    this.internalRegistry.updateSecurityConfig(config);
+    logger.debug('Internal function security config updated');
   }
 
   /**

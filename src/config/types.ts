@@ -113,6 +113,18 @@ export interface Config {
     config: string; // 必須：Configファイルパス
   };
 
+  // 内部関数Config
+  functions?: {
+    filesystem: {
+      enabled: boolean;
+      security: {
+        allowedPaths: string[];
+        allowCurrentDirectoryChange: boolean;
+        restrictToStartupDirectory: boolean;
+      };
+    };
+  };
+
   // LocalConfig（後方互換性のため）
   localEndpoint?: string; // Options：LocalAPIエンドポイント
 }
@@ -145,6 +157,16 @@ export const DEFAULT_CONFIG: Config = {
     cache: '.agents-cache',
     history: '.agents-history',
     config: '.agents.yaml',
+  },
+  functions: {
+    filesystem: {
+      enabled: true,
+      security: {
+        allowedPaths: [process.cwd()],
+        allowCurrentDirectoryChange: true,
+        restrictToStartupDirectory: true
+      }
+    }
   },
   localEndpoint: 'http://host.docker.internal:1234',
 };
