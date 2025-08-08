@@ -61,9 +61,8 @@ export class ProgressReporter {
    * @param info InfoMessage
    */
   showInfo(info: string): void {
-    // Avoid emoji in console output to prevent encoding issues
-    // console.log(`[INFO] ${info}`);
-    // Silent mode for REPL - info messages can interfere with output
+    // Show info messages for MCP tool execution status
+    console.log(`[INFO] ${info}`);
   }
   
   /**
