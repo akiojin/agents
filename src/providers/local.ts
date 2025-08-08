@@ -232,28 +232,41 @@ export class LocalProvider extends LLMProvider {
 
         const systemPrompt = {
           role: 'system' as const,
-          content: `重要: 以下のフォーマット規則を厳密に遵守すること。
+          content: `CRITICAL FORMATTING RULES - MUST FOLLOW:
 
-${formatRules.join('\n')}
+1. NEVER use markdown tables (tables with | pipe characters)
+2. NEVER create any table format whatsoever
+3. DO NOT use the pipe character | for any formatting
 
-絶対に守るべきルール:
-- マークダウンの表（|で区切る形式）は絶対に使用しない
-- 代わりに必ずインデント付きのリストを使用する
-- セクションタイトルは # を使い、本文はシンプルなテキストで記述
-- 箇条書きは - のみを使用し、複雑な構造は避ける
+REQUIRED FORMAT for structured information:
 
-例:
-良い形式:
-# セクション
-- 項目1
-  - サブ項目1
-  - サブ項目2
-- 項目2
+Instead of tables, use hierarchical lists:
 
-悪い形式（使用禁止）:
-| 列1 | 列2 |
-|-----|-----|
-| データ | データ |`
+# Title
+
+## Category Name
+- **Item Name**: Description
+- **Item Name**: Description
+
+OR
+
+## Category Name
+### Item Name
+Description text...
+
+### Item Name  
+Description text...
+
+STRICTLY FORBIDDEN:
+× Markdown tables (| column | format |)
+× HTML tables
+× Tab-separated tables
+× Any other table format
+
+MANDATORY: If you want to organize information in a table-like structure, you MUST convert it to the list format shown above.
+
+Additional formatting rules:
+${formatRules.join('\n')}`
         };
         
         // システムプロンプトを先頭に挿入
@@ -352,7 +365,53 @@ ${formatRules.join('\n')}
       const tool_calls = message.tool_calls;
       const finish_reason = choice.finish_reason;
 
-      // Function Calling レスポンスの場合
+      // GPT-OSSのカスタムFunction Calling形式をチェック
+      // 形式: <|channel|>commentary to=function_name <|constrain|>json<|message|>{...}
+      if (content && content.includes('<|channel|>') && content.includes('<|message|>')) {
+        logger.debug('Detected GPT-OSS custom function calling format');
+        
+        // カスタム形式をパース
+        const channelMatch = content.match(/to=(\w+)/);
+        const messageMatch = content.match(/<\|message\|>(.+?)(?:<\|channel\|>|$)/s);
+        
+        if (channelMatch && messageMatch) {
+          const functionName = channelMatch[1];
+          let functionArgs = {};
+          
+          try {
+            // JSON引数をパース
+            const argsStr = messageMatch[1].trim();
+            if (argsStr) {
+              functionArgs = JSON.parse(argsStr);
+            }
+          } catch (e) {
+            logger.warn('Failed to parse function arguments:', e);
+            functionArgs = {};
+          }
+          
+          logger.debug(`Parsed GPT-OSS function call: ${functionName}`, functionArgs);
+          
+          // 標準的なtool_calls形式に変換
+          const parsedToolCalls: ToolCall[] = [{
+            id: `call_${Date.now()}`,
+            type: 'function',
+            function: {
+              name: functionName,
+              arguments: JSON.stringify(functionArgs)
+            }
+          }];
+          
+          const chatResponse: ChatResponse = {
+            content: '', // Function calling時はcontentは空
+            tool_calls: parsedToolCalls,
+            finish_reason: 'tool_calls'
+          };
+          
+          return chatResponse;
+        }
+      }
+
+      // Function Calling レスポンスの場合（標準形式）
       if (tool_calls && tool_calls.length > 0) {
         logger.debug(`Tool calls detected: ${tool_calls.length} calls`);
         
