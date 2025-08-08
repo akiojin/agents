@@ -215,9 +215,25 @@ export class LocalProvider extends LLMProvider {
         model: body.model,
         maxTokens: body.max_tokens,
         endpoint: this.endpoint,
+        hasTools: !!body.tools,
+        toolsCount: body.tools?.length,
+        toolChoice: body.tool_choice,
       });
 
       const response = await this.makeRequest(body);
+
+      // デバッグ: レスポンス構造を確認
+      logger.debug('Local API raw response structure:', {
+        hasChoices: !!response.choices,
+        choicesLength: response.choices?.length,
+        firstChoice: response.choices?.[0] ? {
+          hasMessage: !!response.choices[0].message,
+          messageKeys: response.choices[0].message ? Object.keys(response.choices[0].message) : [],
+          hasToolCalls: !!response.choices[0].message?.tool_calls,
+          toolCallsLength: response.choices[0].message?.tool_calls?.length,
+          finishReason: response.choices[0].finish_reason
+        } : null
+      });
 
       const choice = response.choices[0];
       if (!choice?.message) {

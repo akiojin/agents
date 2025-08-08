@@ -295,7 +295,18 @@ export class AgentCore extends EventEmitter {
               hasTools: !!chatOptions.tools
             });
             
-            return await this.provider.chat(this.history, chatOptions);
+            const response = await this.provider.chat(this.history, chatOptions);
+            
+            // LLMレスポンスをデバッグ出力
+            console.log(chalk.gray('[Debug] LLM Response type:', typeof response));
+            if (typeof response === 'object' && response !== null) {
+              console.log(chalk.gray('[Debug] Response object keys:', Object.keys(response)));
+              if ('tool_calls' in response) {
+                console.log(chalk.gray('[Debug] Tool calls detected:', JSON.stringify(response.tool_calls)));
+              }
+            }
+            
+            return response;
           },
           {
             maxRetries: this.config.llm.maxRetries,
