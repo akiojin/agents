@@ -293,8 +293,12 @@ if (process.argv.length === 2) {
           logger.debug('MCP tools helper setup completed');
           const progress = mcpManager.getInitializationProgress();
           logger.debug(`MCP: ${progress.completed}/${progress.total} servers ready, ${progress.failed} failed`);
+          // 成功時にコンソールに通知
+          console.log(chalk.green(`[MCP] Ready: ${progress.completed}/${progress.total} servers, ${progress.failed} failed`));
         })
         .catch((error) => {
+          // エラーをコンソールに表示して問題を明確にする
+          console.log(chalk.red('[MCP] Setup failed: ' + error.message));
           logger.debug('MCP initialization failed:', error.message);
           
           // 個別サーバーの状態をログに記録
