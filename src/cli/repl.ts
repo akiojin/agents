@@ -100,13 +100,20 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       }
 
       case '/save': {
-        if (!args) {
-          console.log(chalk.red('Please specify a filename'));
-          return true;
+        // ファイル名が指定されていない場合は自動生成
+        let filename = args;
+        if (!filename) {
+          const now = new Date();
+          const timestamp = now.toISOString()
+            .replace(/[:.]/g, '-')  // : と . を - に置換
+            .replace('T', '_')      // T を _ に置換
+            .slice(0, -5);          // ミリ秒とZを削除
+          filename = `session_${timestamp}.json`;
         }
+        
         try {
-          await agent.saveSession(args);
-          console.log(chalk.green(`Session saved: ${args}`));
+          await agent.saveSession(filename);
+          console.log(chalk.green(`Session saved: ${filename}`));
         } catch (error) {
           console.log(chalk.red('Failed to save:', error));
         }
