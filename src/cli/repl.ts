@@ -34,6 +34,12 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
   // Fix for multi-byte character handling (Japanese text)
   // Enable proper UTF-8 support
   process.stdin.setEncoding('utf8');
+  
+  // Ensure clean state on errors
+  process.stdin.on('error', (err) => {
+    console.error('Input stream error:', err);
+    rl.close();
+  });
 
   // スラッシュCommandハンドラー
   const handleSlashCommand = async (command: string, args: string): Promise<boolean> => {
@@ -248,17 +254,28 @@ export async function startREPL(agent: AgentCore, mcpManager: MCPManager): Promi
       } catch (error) {
         spinner.stop();
         console.log(chalk.red('Error: ') + (error instanceof Error ? error.message : 'Unknown error'));
+        console.log(); // Add newline for clarity
       }
 
+      // Ensure prompt is shown after both success and error
       rl.prompt();
     })();
   });
 
   rl.on('close', () => {
-    // Show token statistics on close
-    console.log('');
-    console.log(tokenCounter.formatStats());
-    console.log('');
+    // Clean up before exit
+    try {
+      // Reset terminal state
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+      // Show token statistics on close
+      console.log('');
+      console.log(tokenCounter.formatStats());
+      console.log('');
+    } catch (err) {
+      // Ignore cleanup errors
+    }
     process.exit(0);
   });
 
