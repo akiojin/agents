@@ -58,20 +58,12 @@ export function createContentGeneratorConfig(
   config: Config,
   authType: AuthType | undefined,
 ): ContentGeneratorConfig {
-  // ローカルLLMの設定を優先的にチェック
-  const localLLMBaseUrl = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL;
-  const isLocalLLM = localLLMBaseUrl && (
-    localLLMBaseUrl.includes('localhost') || 
-    localLLMBaseUrl.includes('127.0.0.1') || 
-    localLLMBaseUrl.includes('0.0.0.0') ||
-    localLLMBaseUrl.includes('host.docker.internal')
-  );
-  
-  // ローカルLLMが設定されている場合は、他のAPI KEYを無視
-  const geminiApiKey = isLocalLLM ? undefined : (process.env.GEMINI_API_KEY || undefined);
-  const googleApiKey = isLocalLLM ? undefined : (process.env.GOOGLE_API_KEY || undefined);
-  const googleCloudProject = isLocalLLM ? undefined : (process.env.GOOGLE_CLOUD_PROJECT || undefined);
-  const googleCloudLocation = isLocalLLM ? undefined : (process.env.GOOGLE_CLOUD_LOCATION || undefined);
+  // authTypeが明示的に指定されている場合は、それを優先する
+  // 環境変数は、authTypeに応じて選択的に使用する
+  const geminiApiKey = process.env.GEMINI_API_KEY || undefined;
+  const googleApiKey = process.env.GOOGLE_API_KEY || undefined;
+  const googleCloudProject = process.env.GOOGLE_CLOUD_PROJECT || undefined;
+  const googleCloudLocation = process.env.GOOGLE_CLOUD_LOCATION || undefined;
 
   // Use runtime model from config if available, otherwise fallback to parameter or default
   // For OPENAI_COMPATIBLE, also check LOCAL_LLM_MODEL environment variable
@@ -95,7 +87,11 @@ export function createContentGeneratorConfig(
     return contentGeneratorConfig;
   }
 
-  if (authType === AuthType.USE_GEMINI && geminiApiKey) {
+  // authTypeが明示的にUSE_GEMINIの場合のみGEMINI_API_KEYを使用
+  if (authType === AuthType.USE_GEMINI) {
+    if (!geminiApiKey) {
+      throw new Error('GEMINI_API_KEY is required for Gemini API authentication');
+    }
     contentGeneratorConfig.apiKey = geminiApiKey;
     contentGeneratorConfig.vertexai = false;
     getEffectiveModel(
@@ -110,10 +106,11 @@ export function createContentGeneratorConfig(
     return contentGeneratorConfig;
   }
 
-  if (
-    authType === AuthType.USE_VERTEX_AI &&
-    (googleApiKey || (googleCloudProject && googleCloudLocation))
-  ) {
+  // authTypeが明示的にUSE_VERTEX_AIの場合のみVertex AI設定を使用
+  if (authType === AuthType.USE_VERTEX_AI) {
+    if (!googleApiKey && !(googleCloudProject && googleCloudLocation)) {
+      throw new Error('GOOGLE_API_KEY or GOOGLE_CLOUD_PROJECT/LOCATION is required for Vertex AI authentication');
+    }
     contentGeneratorConfig.apiKey = googleApiKey;
     contentGeneratorConfig.vertexai = true;
 
