@@ -132,6 +132,17 @@ export class GeminiClient {
     this.vlmService = new CompositeVLMService(this.contentGenerator);
     this.fileParserService = new FileParserService(this.vlmService);
     
+    // Memory APIの初期化（利用可能な場合）
+    try {
+      const memoryModule = await import('@agents/memory');
+      const memoryAPI = memoryModule.getMemoryAPI();
+      await memoryAPI.initialize();
+      console.log('Memory API initialized successfully');
+    } catch (error) {
+      // Memory APIが利用できない場合は静かに無視
+      console.debug('Memory API not available or failed to initialize:', error);
+    }
+    
     this.chat = await this.startChat();
   }
 

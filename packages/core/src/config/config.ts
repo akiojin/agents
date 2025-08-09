@@ -24,10 +24,15 @@ import { WriteFileTool } from '../tools/write-file.js';
 import { WebFetchTool } from '../tools/web-fetch.js';
 import { ReadManyFilesTool } from '../tools/read-many-files.js';
 import {
-  MemoryTool,
   setGeminiMdFilename,
   GEMINI_CONFIG_DIR as GEMINI_DIR,
 } from '../tools/memoryTool.js';
+import {
+  SaveMemoryTool,
+  SearchMemoryTool,
+  MemoryFeedbackTool,
+  MemoryStatsTool,
+} from '../tools/memory-tool.js';
 import { WebSearchTool } from '../tools/web-search.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
@@ -617,7 +622,11 @@ export class Config {
     registerCoreTool(WebFetchTool, this);
     registerCoreTool(ReadManyFilesTool, this);
     registerCoreTool(ShellTool, this);
-    registerCoreTool(MemoryTool);
+    // 新しいMemory Toolsを登録
+    registerCoreTool(SaveMemoryTool);
+    registerCoreTool(SearchMemoryTool);
+    registerCoreTool(MemoryFeedbackTool);
+    registerCoreTool(MemoryStatsTool);
     registerCoreTool(WebSearchTool, this);
 
     await registry.discoverTools();
