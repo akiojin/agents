@@ -139,7 +139,7 @@ describe('mcpCommand', () => {
         type: 'message',
         messageType: 'info',
         content:
-          'No MCP servers configured. Please open the following URL in your browser to view documentation:\nhttps://goo.gle/gemini-cli-docs-mcp',
+          'MCPサーバーが設定されていません。ドキュメントを確認してください:\nhttps://github.com/akiojin/agents/blob/main/docs/MCP.md',
       });
       expect(open).not.toHaveBeenCalled();
     });
@@ -151,9 +151,9 @@ describe('mcpCommand', () => {
         type: 'message',
         messageType: 'info',
         content:
-          'No MCP servers configured. Opening documentation in your browser: https://goo.gle/gemini-cli-docs-mcp',
+          'MCPサーバーが設定されていません。ブラウザでドキュメントを開きます: https://github.com/akiojin/agents/blob/main/docs/MCP.md',
       });
-      expect(open).toHaveBeenCalledWith('https://goo.gle/gemini-cli-docs-mcp');
+      expect(open).toHaveBeenCalledWith('https://github.com/akiojin/agents/blob/main/docs/MCP.md');
     });
   });
 

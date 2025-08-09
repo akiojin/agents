@@ -87,5 +87,9 @@
     "vitest": "^3.2.4",
     "yargs": "^18.0.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "2": "^3.0.0",
+    "@chroma-core/default-embed": "^0.1.8",
+    "yaml": "^2.8.1"
+  }
 }

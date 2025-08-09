@@ -51,12 +51,12 @@ const getMcpStatus = async (
   const serverNames = Object.keys(mcpServers);
 
   if (serverNames.length === 0) {
-    const docsUrl = 'https://goo.gle/gemini-cli-docs-mcp';
+    const docsUrl = 'https://github.com/akiojin/agents/blob/main/docs/MCP.md';
     if (process.env.SANDBOX && process.env.SANDBOX !== 'sandbox-exec') {
       return {
         type: 'message',
         messageType: 'info',
-        content: `No MCP servers configured. Please open the following URL in your browser to view documentation:\n${docsUrl}`,
+        content: `MCPサーバーが設定されていません。ドキュメントを確認してください:\n${docsUrl}`,
       };
     } else {
       // Open the URL in the browser
@@ -64,7 +64,7 @@ const getMcpStatus = async (
       return {
         type: 'message',
         messageType: 'info',
-        content: `No MCP servers configured. Opening documentation in your browser: ${docsUrl}`,
+        content: `MCPサーバーが設定されていません。ブラウザでドキュメントを開きます: ${docsUrl}`,
       };
     }
   }

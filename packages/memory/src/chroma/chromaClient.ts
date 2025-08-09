@@ -4,6 +4,7 @@
  */
 
 import { ChromaClient, Collection } from 'chromadb';
+import * as process from 'process';
 
 // Embedding型定義（ChromaDBから利用できない場合の手動定義）
 type Embedding = number[];
@@ -35,7 +36,14 @@ export class ChromaMemoryClient {
   private collectionName: string;
 
   constructor(collectionName: string = 'agent_memories') {
-    this.client = new ChromaClient();
+    // ChromaDBサーバーへの接続設定
+    // デフォルトはローカルのChromaDBサーバー
+    const chromaHost = process.env.CHROMA_HOST || 'localhost';
+    const chromaPort = process.env.CHROMA_PORT || '8000';
+    
+    this.client = new ChromaClient({
+      path: `http://${chromaHost}:${chromaPort}`
+    });
     this.collectionName = collectionName;
   }
 
@@ -53,8 +61,10 @@ export class ChromaMemoryClient {
       });
       console.log(`ChromaDB collection '${this.collectionName}' initialized`);
     } catch (error) {
-      console.error('Failed to initialize ChromaDB collection:', error);
-      throw error;
+      console.warn('Failed to initialize ChromaDB collection:', error);
+      console.warn('ChromaDB server may not be running. Memory features will be limited.');
+      // ChromaDBが利用できない場合は、collectionをnullのままにして続行
+      // 他の記憶システム（Serena MCP）は引き続き動作する
     }
   }
 
@@ -63,7 +73,8 @@ export class ChromaMemoryClient {
    */
   async store(memory: Memory): Promise<void> {
     if (!this.collection) {
-      throw new Error('ChromaDB collection not initialized');
+      console.debug('ChromaDB collection not available, skipping vector storage');
+      return;
     }
 
     const document = JSON.stringify(memory.content);
@@ -90,7 +101,8 @@ export class ChromaMemoryClient {
     filter?: Record<string, any>
   ): Promise<Memory[]> {
     if (!this.collection) {
-      throw new Error('ChromaDB collection not initialized');
+      console.debug('ChromaDB collection not available, returning empty results');
+      return [];
     }
 
     const results = await this.collection.query({
@@ -136,7 +148,8 @@ export class ChromaMemoryClient {
    */
   async update(memory: Memory): Promise<void> {
     if (!this.collection) {
-      throw new Error('ChromaDB collection not initialized');
+      console.debug('ChromaDB collection not available, skipping update');
+      return;
     }
 
     const document = JSON.stringify(memory.content);
@@ -159,7 +172,8 @@ export class ChromaMemoryClient {
    */
   async get(id: string): Promise<Memory | null> {
     if (!this.collection) {
-      throw new Error('ChromaDB collection not initialized');
+      console.debug('ChromaDB collection not available, returning null');
+      return null;
     }
 
     const result = await this.collection.get({
@@ -197,7 +211,8 @@ export class ChromaMemoryClient {
    */
   async getAll(): Promise<Memory[]> {
     if (!this.collection) {
-      throw new Error('ChromaDB collection not initialized');
+      console.debug('ChromaDB collection not available, returning empty array');
+      return [];
     }
 
     const result = await this.collection.get();
