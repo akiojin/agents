@@ -64,7 +64,13 @@ export function createContentGeneratorConfig(
   const googleCloudLocation = process.env.GOOGLE_CLOUD_LOCATION || undefined;
 
   // Use runtime model from config if available, otherwise fallback to parameter or default
-  const effectiveModel = config.getModel() || DEFAULT_GEMINI_MODEL;
+  // For OPENAI_COMPATIBLE, also check LOCAL_LLM_MODEL environment variable
+  let effectiveModel = config.getModel() || DEFAULT_GEMINI_MODEL;
+  
+  if (authType === AuthType.OPENAI_COMPATIBLE) {
+    // For OpenAI Compatible API, check environment variables first
+    effectiveModel = process.env.OPENAI_MODEL || process.env.LOCAL_LLM_MODEL || effectiveModel;
+  }
 
   const contentGeneratorConfig: ContentGeneratorConfig = {
     model: effectiveModel,
@@ -118,9 +124,7 @@ export function createContentGeneratorConfig(
       contentGeneratorConfig.apiKey = process.env.OPENAI_API_KEY;
     }
     
-    // モデル設定: 環境変数 > デフォルト
-    // ローカルLLMの場合は、LOCAL_LLM_MODELも参照
-    contentGeneratorConfig.model = process.env.OPENAI_MODEL || process.env.LOCAL_LLM_MODEL || 'local-model';
+    // モデル設定は既に上部で設定済み
     
     console.log('[ContentGeneratorConfig] OpenAI Compatible settings:', {
       baseUrl,

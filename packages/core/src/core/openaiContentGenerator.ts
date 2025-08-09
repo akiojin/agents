@@ -181,10 +181,32 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 }
             }
 
-            // 如果需要JSON响应，添加相应的指令
-            if (request.config?.responseMimeType === 'application/json') {
+            // 添加系统指令支持
+            if (request.config?.systemInstruction) {
+                let systemContent = '';
+                
+                // 处理系统指令（可能是字符串或Part对象）
+                if (typeof request.config.systemInstruction === 'string') {
+                    systemContent = request.config.systemInstruction;
+                } else if (typeof request.config.systemInstruction === 'object' && 'text' in request.config.systemInstruction && request.config.systemInstruction.text) {
+                    systemContent = request.config.systemInstruction.text;
+                }
+                
+                if (systemContent) {
+                    // 如果需要JSON响应，将JSON格式要求追加到系统指令
+                    if (request.config?.responseMimeType === 'application/json') {
+                        systemContent += '\n\nYou must respond with valid JSON only. Do not wrap your response in markdown code blocks.';
+                        openaiRequest.response_format = { type: 'json_object' };
+                    }
+                    
+                    openaiRequest.messages.unshift({
+                        role: 'system',
+                        content: systemContent
+                    });
+                }
+            } else if (request.config?.responseMimeType === 'application/json') {
+                // JSON响应但没有系统指令的情况
                 openaiRequest.response_format = { type: 'json_object' };
-                // 在系统消息中添加JSON格式要求
                 openaiRequest.messages.unshift({
                     role: 'system',
                     content: 'You must respond with valid JSON only. Do not wrap your response in markdown code blocks.'
@@ -251,8 +273,31 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 }
             }
 
-        // 如果需要JSON响应，添加相应的指令
-        if (request.config?.responseMimeType === 'application/json') {
+        // 添加系统指令支持
+        if (request.config?.systemInstruction) {
+            let systemContent = '';
+            
+            // 处理系统指令（可能是字符串或Part对象）
+            if (typeof request.config.systemInstruction === 'string') {
+                systemContent = request.config.systemInstruction;
+            } else if (typeof request.config.systemInstruction === 'object' && 'text' in request.config.systemInstruction && request.config.systemInstruction.text) {
+                systemContent = request.config.systemInstruction.text;
+            }
+            
+            if (systemContent) {
+                // 如果需要JSON响应，将JSON格式要求追加到系统指令
+                if (request.config?.responseMimeType === 'application/json') {
+                    systemContent += '\n\nYou must respond with valid JSON only. Do not wrap your response in markdown code blocks.';
+                    openaiRequest.response_format = { type: 'json_object' };
+                }
+                
+                openaiRequest.messages.unshift({
+                    role: 'system',
+                    content: systemContent
+                });
+            }
+        } else if (request.config?.responseMimeType === 'application/json') {
+            // JSON响应但没有系统指令的情况
             openaiRequest.response_format = { type: 'json_object' };
             openaiRequest.messages.unshift({
                 role: 'system',
