@@ -35,7 +35,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
         let baseURL = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL || 'https://api.openai.com/v1';
         
         // LM Studioの場合、/v1が含まれていない場合は追加
-        if ((baseURL.includes('localhost:1234') || baseURL.includes('127.0.0.1:1234')) && !baseURL.includes('/v1')) {
+        if ((baseURL.includes('localhost:1234') || baseURL.includes('127.0.0.1:1234') || baseURL.includes('host.docker.internal:1234')) && !baseURL.includes('/v1')) {
             baseURL = baseURL.replace(/\/$/, '') + '/v1';
             console.log(`[OpenAI Compatible API] Added /v1 to base URL for LM Studio: ${baseURL}`);
         }
