@@ -51,6 +51,11 @@ export function AuthDialog({
       );
     }
 
+    // LOCAL_LLM_BASE_URLが設定されている場合の表示
+    if (process.env.LOCAL_LLM_BASE_URL) {
+      return `Local LLM configured (LOCAL_LLM_BASE_URL: ${process.env.LOCAL_LLM_BASE_URL}). Select "Use an OpenAI Compatible API" to continue.`;
+    }
+
     if (
       process.env.GEMINI_API_KEY &&
       (!defaultAuthType || defaultAuthType === AuthType.USE_GEMINI)
@@ -93,6 +98,11 @@ export function AuthDialog({
     );
     if (defaultAuthType) {
       return item.value === defaultAuthType;
+    }
+
+    // LOCAL_LLM_BASE_URLが設定されている場合はOPENAI_COMPATIBLEを選択
+    if (process.env.LOCAL_LLM_BASE_URL) {
+      return item.value === AuthType.OPENAI_COMPATIBLE;
     }
 
     if (process.env.GEMINI_API_KEY) {
