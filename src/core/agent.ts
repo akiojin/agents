@@ -827,10 +827,54 @@ export class AgentCore extends EventEmitter {
   getCurrentModel(): string {
     return this.currentModel;
   }
-
-  setModel(model: string): void {
-    this.currentModel = model;
-    logger.info(`Model changed: ${model}`);
+  
+  async listAvailableModels(): Promise<string[]> {
+    try {
+      const models = await this.provider.listModels();
+      return models;
+    } catch (error) {
+      logger.error('Failed to list available models:', error);
+      return [];
+    }
+  }
+  
+  async setModel(model: string): Promise<boolean> {
+    try {
+      // 利用可能なモデル一覧を取得して検証
+      const availableModels = await this.listAvailableModels();
+      if (availableModels.length > 0 && !availableModels.includes(model)) {
+        logger.warn(`Model "${model}" not found in available models. Setting anyway.`);
+      }
+      
+      // 新しいモデルでプロバイダーを再作成
+      const newConfig = {
+        ...this.config,
+        llm: {
+          ...this.config.llm,
+          model: model
+        }
+      };
+      
+      const newProvider = createProviderFromUnifiedConfig(newConfig);
+      
+      // 接続テストを実行
+      const isValid = await newProvider.validateConnection();
+      if (!isValid) {
+        logger.error(`Failed to validate connection with model: ${model}`);
+        return false;
+      }
+      
+      // 成功したらプロバイダーと設定を更新
+      this.provider = newProvider;
+      this.currentModel = model;
+      this.config.llm.model = model;
+      
+      logger.info(`Model successfully changed to: ${model}`);
+      return true;
+    } catch (error) {
+      logger.error(`Failed to set model to "${model}":`, error);
+      return false;
+    }
   }
 
   toggleParallelMode(): boolean {

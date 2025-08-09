@@ -1,5 +1,6 @@
 import readline from 'readline';
 import chalk from 'chalk';
+import inquirer from 'inquirer';
 // import ora from 'ora'; // Removed to fix REPL response display issue
 import type { AgentCore } from '../core/agent.js';
 import type { MCPManager } from '../mcp/manager.js';
@@ -307,10 +308,75 @@ export function startREPL(agent: AgentCore, mcpManager: MCPManager): Promise<voi
 
         case '/model': {
           if (!args) {
-            console.log(chalk.yellow(`Current model: ${agent.getCurrentModel()}`));
+            // 引数なしの場合はインタラクティブにモデルを選択
+            try {
+              console.log(chalk.cyan('利用可能なモデルを取得中...'));
+              const availableModels = await agent.listAvailableModels();
+              const currentModel = agent.getCurrentModel();
+              
+              if (availableModels.length === 0) {
+                console.log(chalk.red('利用可能なモデルを取得できませんでした。'));
+                console.log(chalk.yellow(`現在のモデル: ${currentModel}`));
+                return true;
+              }
+              
+              console.log(chalk.cyan(`現在のモデル: ${currentModel}`));
+              console.log(chalk.cyan('利用可能なモデル:'));
+              
+              // モデル選択のための選択肢を作成
+              const choices = availableModels.map((model, index) => ({
+                name: model === currentModel ? `${model} (現在選択中)` : model,
+                value: model,
+                short: model
+              }));
+              
+              choices.push({ name: 'キャンセル', value: 'cancel', short: 'キャンセル' });
+              
+              const answer = await inquirer.prompt([{
+                type: 'list',
+                name: 'selectedModel',
+                message: 'モデルを選択してください:',
+                choices: choices,
+                pageSize: 10
+              }]);
+              
+              if (answer.selectedModel === 'cancel') {
+                console.log(chalk.gray('モデル変更をキャンセルしました。'));
+                return true;
+              }
+              
+              if (answer.selectedModel === currentModel) {
+                console.log(chalk.yellow('同じモデルが選択されました。変更はありません。'));
+                return true;
+              }
+              
+              // モデルを変更
+              console.log(chalk.cyan(`モデルを ${answer.selectedModel} に変更中...`));
+              const success = await agent.setModel(answer.selectedModel);
+              
+              if (success) {
+                console.log(chalk.green(`✅ モデルが ${answer.selectedModel} に変更されました`));
+              } else {
+                console.log(chalk.red(`❌ モデルの変更に失敗しました`));
+              }
+              
+            } catch (error) {
+              console.log(chalk.red('モデル選択中にエラーが発生しました:'), error);
+            }
           } else {
-            agent.setModel(args);
-            console.log(chalk.green(`Model changed: ${args}`));
+            // 引数ありの場合は直接モデルを変更
+            try {
+              console.log(chalk.cyan(`モデルを ${args} に変更中...`));
+              const success = await agent.setModel(args);
+              
+              if (success) {
+                console.log(chalk.green(`✅ モデルが ${args} に変更されました`));
+              } else {
+                console.log(chalk.red(`❌ モデルの変更に失敗しました`));
+              }
+            } catch (error) {
+              console.log(chalk.red('モデル変更中にエラーが発生しました:'), error);
+            }
           }
           return true;
         }
