@@ -9,7 +9,7 @@ import {
 } from '@google/genai';
 import { ContentGenerator, ContentGeneratorConfig } from './contentGenerator.js';
 
-export function createGeminiContentGenerator(
+export function createAgentsContentGenerator(
   config: ContentGeneratorConfig,
 ): ContentGenerator {
     const version = process.env.CLI_VERSION || process.version;

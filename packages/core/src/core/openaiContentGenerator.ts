@@ -24,7 +24,7 @@ import {
     CallableTool
 } from '@google/genai';
 import { ContentGenerator, ContentGeneratorConfig } from './contentGenerator.js';
-import { GeminiToOpenAIConverter, OpenAIToGeminiConverter } from '../utils/adapter.js';
+import { AgentsToOpenAIConverter, OpenAIToAgentsConverter } from '../utils/adapter.js';
 import OpenAI from 'openai';
 
 export class OpenAIContentGenerator implements ContentGenerator {
@@ -112,14 +112,14 @@ export class OpenAIContentGenerator implements ContentGenerator {
      */
     private convertToOpenAIMessages(contents: ContentListUnion): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
         const normalizedContents = this.normalizeContentListUnion(contents);
-        return GeminiToOpenAIConverter.convertContentsToMessages(normalizedContents);
+        return AgentsToOpenAIConverter.convertContentsToMessages(normalizedContents);
     }
 
     /**
      * 清理JSON响应，移除markdown代码块包装
      */
     private cleanJsonResponse(text: string): string {
-        return OpenAIToGeminiConverter.cleanMarkdownJson(text);
+        return OpenAIToAgentsConverter.cleanMarkdownJson(text);
     }
 
 
@@ -128,14 +128,14 @@ export class OpenAIContentGenerator implements ContentGenerator {
      * 将Gemini工具声明转换为OpenAI函数格式
      */
     private async convertGeminiToolsToOpenAI(tools?: ToolListUnion): Promise<OpenAI.Chat.Completions.ChatCompletionTool[]> {
-        return await GeminiToOpenAIConverter.convertToolsToOpenAI(tools);
+        return await AgentsToOpenAIConverter.convertToolsToOpenAI(tools);
     }
 
     /**
      * 将OpenAI函数调用转换为Gemini格式
      */
-    private convertOpenAIFunctionCallsToGemini(toolCalls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]): FunctionCall[] {
-        return OpenAIToGeminiConverter.convertOpenAIFunctionCallsToGemini(toolCalls);
+    private convertOpenAIFunctionCallsToAgents(toolCalls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]): FunctionCall[] {
+        return OpenAIToAgentsConverter.convertOpenAIFunctionCallsToAgents(toolCalls);
     }
     /**
      * 使用OpenAI API生成内容（非流式）
@@ -150,7 +150,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
             const openaiRequest: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
                 model: this.config.model || 'gpt-3.5-turbo',
                 messages,
-                ...GeminiToOpenAIConverter.convertConfigToOpenAIParams(request.config),
+                ...AgentsToOpenAIConverter.convertConfigToOpenAIParams(request.config),
             };
 
             // 添加工具支持
@@ -189,7 +189,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
 
             // 确保response是ChatCompletion类型而不是Stream
             if ('choices' in response && !('controller' in response)) {
-                return OpenAIToGeminiConverter.convertResponseToGemini(response, request.config?.responseMimeType === 'application/json');
+                return OpenAIToAgentsConverter.convertResponseToAgents(response, request.config?.responseMimeType === 'application/json');
             } else {
                 throw new Error('Unexpected response type: expected ChatCompletion but got Stream');
             }
@@ -218,7 +218,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
         const openaiRequest: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
             model: this.config.model || 'gpt-3.5-turbo',
             messages,
-            ...GeminiToOpenAIConverter.convertConfigToOpenAIParams(request.config),
+            ...AgentsToOpenAIConverter.convertConfigToOpenAIParams(request.config),
             stream: true,
             stream_options: { include_usage: true }, // 启用流式响应中的用量统计
         };
@@ -283,14 +283,14 @@ export class OpenAIContentGenerator implements ContentGenerator {
 
             // 对于包含usage信息的chunk，即使没有其他内容也要处理
             // 传递当前chunk的usage信息（如果有的话）
-            const geminiResponse = OpenAIToGeminiConverter.convertStreamingChunkToGemini(
+            const agentsResponse = OpenAIToAgentsConverter.convertStreamingChunkToAgents(
                 chunk,
                 isJsonResponse,
                 accumulatedToolCalls,
                 chunk.usage ?? undefined // 如果chunk.usage为null，则传递undefined
             );
-            if (geminiResponse) {
-                yield geminiResponse;
+            if (agentsResponse) {
+                yield agentsResponse;
             }
         }
     }

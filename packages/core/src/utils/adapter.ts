@@ -21,7 +21,7 @@ import OpenAI from 'openai';
 /**
  * Gemini 格式到 OpenAI 格式的转换器
  */
-export class GeminiToOpenAIConverter {
+export class AgentsToOpenAIConverter {
     /**
      * 将 Gemini contents 转换为 OpenAI messages
      */
@@ -281,7 +281,7 @@ export class GeminiToOpenAIConverter {
 /**
  * OpenAI 格式到 Gemini 格式的转换器
  */
-export class OpenAIToGeminiConverter {
+export class OpenAIToAgentsConverter {
     /**
      * 清理 markdown 格式的 JSON 代码块，提取纯 JSON 内容
      */
@@ -302,7 +302,7 @@ export class OpenAIToGeminiConverter {
     /**
      * 将OpenAI函数调用转换为Gemini格式
      */
-    static convertOpenAIFunctionCallsToGemini(toolCalls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]): FunctionCall[] {
+    static convertOpenAIFunctionCallsToAgents(toolCalls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]): FunctionCall[] {
         if (!toolCalls || toolCalls.length === 0) {
             return [];
         }
@@ -317,7 +317,7 @@ export class OpenAIToGeminiConverter {
     /**
      * 将 OpenAI 响应转换为 Gemini 格式
      */
-    static convertResponseToGemini(response: OpenAI.Chat.Completions.ChatCompletion, isJsonResponse: boolean = false): GenerateContentResponse {
+    static convertResponseToAgents(response: OpenAI.Chat.Completions.ChatCompletion, isJsonResponse: boolean = false): GenerateContentResponse {
         const choice = response.choices[0];
         const message = choice.message;
 
@@ -365,7 +365,7 @@ export class OpenAIToGeminiConverter {
         const finishReason = finishReasonMapping[choice.finish_reason || 'stop'] || FinishReason.STOP;
 
         // 构建响应
-        const geminiResponse: GenerateContentResponse = {
+        const agentsResponse: GenerateContentResponse = {
             candidates: [
                 {
                     content: {
@@ -386,20 +386,20 @@ export class OpenAIToGeminiConverter {
 
         // 添加使用信息
         if (response.usage) {
-            geminiResponse.usageMetadata = {
+            agentsResponse.usageMetadata = {
                 promptTokenCount: response.usage.prompt_tokens,
                 candidatesTokenCount: response.usage.completion_tokens,
                 totalTokenCount: response.usage.total_tokens,
             };
         }
 
-        return geminiResponse;
+        return agentsResponse;
     }
 
     /**
      * 转换流式响应块为 Gemini 格式
      */
-    static convertStreamingChunkToGemini(
+    static convertStreamingChunkToAgents(
         chunk: OpenAI.Chat.Completions.ChatCompletionChunk,
         isJsonResponse: boolean = false,
         accumulatedToolCalls: Record<string, { id: string; name: string; arguments: string }> = {},
@@ -520,7 +520,7 @@ export class OpenAIToGeminiConverter {
             tool_calls: FinishReason.STOP,
         };
 
-        const geminiResponse: GenerateContentResponse = {
+        const agentsResponse: GenerateContentResponse = {
             candidates: [
                 {
                     content: { parts, role: 'model' },
@@ -540,14 +540,14 @@ export class OpenAIToGeminiConverter {
 
         // 添加usage信息（如果可用）
         if (finalUsage) {
-            geminiResponse.usageMetadata = {
+            agentsResponse.usageMetadata = {
                 promptTokenCount: finalUsage.prompt_tokens,
                 candidatesTokenCount: finalUsage.completion_tokens,
                 totalTokenCount: finalUsage.total_tokens,
             };
-            // console.log('[Usage Debug] Added usage metadata to response:', geminiResponse.usageMetadata);
+            // console.log('[Usage Debug] Added usage metadata to response:', agentsResponse.usageMetadata);
         }
 
-        return geminiResponse;
+        return agentsResponse;
     }
 }

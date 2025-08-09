@@ -161,7 +161,7 @@ export async function createContentGenerator(
     config.authType === AuthType.USE_GEMINI ||
     config.authType === AuthType.USE_VERTEX_AI
   ) {
-    return createGeminiContentGenerator(config);
+    return createAgentsContentGenerator(config);
   }
 
   if (config.authType === AuthType.OPENAI_COMPATIBLE) {
