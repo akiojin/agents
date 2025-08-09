@@ -184,12 +184,18 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
   } = useAuthCommand(settings, setAuthError, config);
 
   useEffect(() => {
+    // LOCAL_LLM_BASE_URLが設定されている場合は、認証タイプが自動選択されるのを待つ
+    const shouldSkipValidation = !settings.merged.selectedAuthType && !!process.env.LOCAL_LLM_BASE_URL;
+    
     if (settings.merged.selectedAuthType) {
       const error = validateAuthMethod(settings.merged.selectedAuthType);
       if (error) {
         setAuthError(error);
         openAuthDialog();
       }
+    } else if (!shouldSkipValidation) {
+      // LOCAL_LLM_BASE_URLが設定されていない場合のみ、認証ダイアログを開く
+      openAuthDialog();
     }
   }, [settings.merged.selectedAuthType, openAuthDialog, setAuthError]);
 

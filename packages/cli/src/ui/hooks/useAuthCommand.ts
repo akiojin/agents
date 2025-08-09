@@ -20,8 +20,11 @@ export const useAuthCommand = (
   setAuthError: (error: string | null) => void,
   config: Config,
 ) => {
+  // LOCAL_LLM_BASE_URLが設定されている場合は自動的にOPENAI_COMPATIBLEを選択
+  const shouldAutoSelectLocalLLM = !!process.env.LOCAL_LLM_BASE_URL;
+  
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(
-    settings.merged.selectedAuthType === undefined,
+    settings.merged.selectedAuthType === undefined && !shouldAutoSelectLocalLLM,
   );
 
   const openAuthDialog = useCallback(() => {
@@ -32,7 +35,15 @@ export const useAuthCommand = (
 
   useEffect(() => {
     const authFlow = async () => {
-      const authType = settings.merged.selectedAuthType;
+      // LOCAL_LLM_BASE_URLが設定されていて、まだ認証タイプが選択されていない場合
+      let authType = settings.merged.selectedAuthType;
+      
+      if (shouldAutoSelectLocalLLM && !authType) {
+        // 自動的にOPENAI_COMPATIBLEを選択
+        authType = AuthType.OPENAI_COMPATIBLE;
+        settings.setValue(SettingScope.User, 'selectedAuthType', authType);
+      }
+      
       if (isAuthDialogOpen || !authType) {
         return;
       }
@@ -50,7 +61,7 @@ export const useAuthCommand = (
     };
 
     void authFlow();
-  }, [isAuthDialogOpen, settings, config, setAuthError, openAuthDialog]);
+  }, [isAuthDialogOpen, settings, config, setAuthError, openAuthDialog, shouldAutoSelectLocalLLM]);
 
   const handleAuthSelect = useCallback(
     async (authType: AuthType | undefined, scope: SettingScope) => {
