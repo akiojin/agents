@@ -1,15 +1,15 @@
 {
-  "name": "@indenscale/open-gemini-cli",
+  "name": "@akiojin/agents-cli",
   "version": "0.1.10",
-  "description": "Gemini CLI",
+  "description": "Agents CLI",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/IndenScale/open-gemini-cli.git"
+    "url": "git+https://github.com/akiojin/agents.git"
   },
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "gemini": "dist/index.js"
+    "agents": "dist/index.js"
   },
   "publishConfig": {
     "access": "public"

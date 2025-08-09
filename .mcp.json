@@ -11,7 +11,7 @@
     "google-search": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-gemini-google-search"],
+      "args": ["-y", "mcp-google-search"],
       "env": {}
     },
     "markitdown": {

@@ -10,7 +10,9 @@ async function testConnection() {
   
   try {
     const client = new ChromaClient({
-      path: `http://${chromaHost}:${chromaPort}`
+      host: chromaHost,
+      port: parseInt(chromaPort),
+      ssl: false
     });
     
     // テスト用コレクションを作成

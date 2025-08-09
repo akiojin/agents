@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Claude Code CLIをインストール
 RUN npm install -g @anthropic-ai/claude-code
 
-# Google AI Studio CLIをインストール (公式のgemini cliパッケージを調査後に正しい名前に修正)
+# Agents CLIをインストール (必要に応じて後で追加)
 # 注: 正確なパッケージ名は要確認
 # RUN npm install -g @google-ai/cli
 

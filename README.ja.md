@@ -1,13 +1,13 @@
 # Agents
 
-AgentsはClaude Code、AI CLI、先進的なシナプス記憶ネットワークを組み合わせて、インテリジェントな開発アシスタントを作成するAI搭載開発・記憶管理システムです。
+AgentsはClaude Code、Agents CLI、先進的なシナプス記憶ネットワークを組み合わせて、インテリジェントな開発アシスタントを作成するAI搭載開発・記憶管理システムです。
 
 ## 💡 主要機能
 
 Agentsが提供する機能：
 
 - **Claude Code統合**: コードの理解と生成のためのAnthropic Claude Codeへの直接アクセス
-- **AI CLI統合**: 多様なAI推論能力のためのGoogle AI統合  
+- **Agents CLI統合**: 多様なAI推論能力のためのAI統合  
 - **シナプス記憶システム**: 永続的な知識とコンテキストのための脳にインスパイアされた神経ネットワークを使った先進的記憶管理
 - **MCPツール統合**: インテリジェントなコード探索のためのSerenaを含むModel Context Protocolツール
 - **Docker開発環境**: 必要なツールがすべてプリインストールされた完全にコンテナ化された開発セットアップ
@@ -72,7 +72,7 @@ Agentsシステムは以下の主要コンポーネントで構成されてい�
 
 ### AI統合レイヤー
 - **Claude Code**: Anthropicの高性能コード理解・生成
-- **AI CLI**: Googleの多様なAI推論機能
+- **Agents CLI**: 多様なAI推論機能
 - **MCP Tools**: Model Context Protocolによるツール統合
 
 ### データ永続化
@@ -81,7 +81,7 @@ Agentsシステムは以下の主要コンポーネントで構成されてい�
 
 ## 🔮 開発計画
 
-- **Phase 1**: 基本的なClaude Code/AI統合 ✅
+- **Phase 1**: 基本的なClaude Code/Agents統合 ✅
 - **Phase 2**: シナプス記憶システム実装 ✅
 - **Phase 3**: 高度なMCP Tools統合
 - **Phase 4**: マルチモーダルファイル処理

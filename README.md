@@ -1,13 +1,13 @@
 # Agents
 
-Agents is an AI-powered development and memory management system that combines the power of Claude Code, Gemini CLI, and advanced synaptic memory networks to create an intelligent development assistant.
+Agents is an AI-powered development and memory management system that combines the power of Claude Code, Agents CLI, and advanced synaptic memory networks to create an intelligent development assistant.
 
 ## 💡 Key Features
 
 Agents provides:
 
 - **Claude Code Integration**: Direct access to Anthropic's Claude Code for intelligent code understanding and generation
-- **Gemini CLI Integration**: Google AI integration for diverse AI reasoning capabilities  
+- **Agents CLI Integration**: AI integration for diverse AI reasoning capabilities  
 - **Synaptic Memory System**: Advanced memory management with brain-inspired neural networks for persistent knowledge and context
 - **MCP Tools Integration**: Model Context Protocol tools including Serena for intelligent code exploration
 - **Docker Development Environment**: Fully containerized development setup with all necessary tools pre-installed
@@ -68,7 +68,7 @@ Agentsの記憶システムはChromaDBベクトルデータベースを必要と
 # Claude Code / Anthropic
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
-# Google AI / Gemini
+# Google AI
 GOOGLE_API_KEY=your_google_ai_api_key_here
 
 # GitHub統合（オプション）
@@ -90,7 +90,7 @@ Agentsシステムは以下の主要コンポーネントで構成されてい�
 
 ### AI統合レイヤー
 - **Claude Code**: Anthropicの高性能コード理解・生成
-- **Gemini CLI**: Googleの多様なAI推論機能
+- **Agents CLI**: 多様なAI推論機能
 - **MCP Tools**: Model Context Protocolによるツール統合
 
 ### データ永続化
@@ -99,7 +99,7 @@ Agentsシステムは以下の主要コンポーネントで構成されてい�
 
 ## 🔮 開発計画
 
-- **Phase 1**: 基本的なClaude Code/Gemini統合 ✅
+- **Phase 1**: 基本的なClaude Code/Agents統合 ✅
 - **Phase 2**: シナプス記憶システム実装 ✅
 - **Phase 3**: 高度なMCP Tools統合
 - **Phase 4**: マルチモーダルファイル処理

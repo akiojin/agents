@@ -13,8 +13,24 @@ const execAsync = promisify(exec);
 
 async function isChromaRunning() {
   try {
+    // Docker環境内かどうかを判定して適切なホストを選択
+    let chromaHost = process.env.CHROMA_HOST;
+    
+    if (!chromaHost) {
+      const hostname = process.env.HOSTNAME || '';
+      const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
+      
+      if (isInDocker) {
+        chromaHost = 'host.docker.internal';
+      } else {
+        chromaHost = 'localhost';
+      }
+    }
+    
     const client = new ChromaClient({
-      path: 'http://localhost:8000'
+      host: chromaHost,
+      port: 8000,
+      ssl: false
     });
     await client.heartbeat();
     return true;

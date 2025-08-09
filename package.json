@@ -13,7 +13,7 @@
     "url": "git+https://github.com/akiojin/agents.git"
   },
   "config": {
-    "sandboxImageUri": "us-docker.pkg.dev/gemini-code-dev/gemini-cli/sandbox:0.1.0"
+    "sandboxImageUri": "us-docker.pkg.dev/agents-code-dev/agents-cli/sandbox:0.1.0"
   },
   "publishConfig": {
     "access": "public"
@@ -35,9 +35,9 @@
     "test:scripts": "vitest run --config ./scripts/tests/vitest.config.ts",
     "test:e2e": "npm run test:integration:sandbox:none -- --verbose --keep-output",
     "test:integration:all": "npm run test:integration:sandbox:none && npm run test:integration:sandbox:docker && npm run test:integration:sandbox:podman",
-    "test:integration:sandbox:none": "GEMINI_SANDBOX=false node integration-tests/run-tests.js",
-    "test:integration:sandbox:docker": "GEMINI_SANDBOX=docker node integration-tests/run-tests.js",
-    "test:integration:sandbox:podman": "GEMINI_SANDBOX=podman node integration-tests/run-tests.js",
+    "test:integration:sandbox:none": "AGENTS_SANDBOX=false node integration-tests/run-tests.js",
+    "test:integration:sandbox:docker": "AGENTS_SANDBOX=docker node integration-tests/run-tests.js",
+    "test:integration:sandbox:podman": "AGENTS_SANDBOX=podman node integration-tests/run-tests.js",
     "lint": "eslint . --ext .ts,.tsx && eslint integration-tests",
     "lint:fix": "eslint . --fix && eslint integration-tests --fix",
     "lint:ci": "eslint . --ext .ts,.tsx --max-warnings 0 && eslint integration-tests --max-warnings 0",

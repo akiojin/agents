@@ -22,7 +22,7 @@ services:
       - CLAUDE_API_KEY=${CLAUDE_API_KEY}
       # Google AI用の環境変数
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AGENTS_API_KEY=${AGENTS_API_KEY}
       # GitHub統合用
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       # MCP設定

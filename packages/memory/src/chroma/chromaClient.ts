@@ -37,14 +37,33 @@ export class ChromaMemoryClient {
 
   constructor(collectionName: string = 'agent_memories') {
     // ChromaDBサーバーへの接続設定
-    // デフォルトはローカルのChromaDBサーバー
-    const chromaHost = process.env.CHROMA_HOST || 'localhost';
+    // Docker環境内かどうかを判定して適切なホストを選択
+    let chromaHost = process.env.CHROMA_HOST;
+    
+    if (!chromaHost) {
+      // ホスト名でDocker環境内かどうかを判定
+      const hostname = process.env.HOSTNAME || '';
+      const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
+      
+      if (isInDocker) {
+        // Docker環境内ではhost.docker.internalを使用
+        chromaHost = 'host.docker.internal';
+      } else {
+        // ローカル環境ではlocalhostを使用
+        chromaHost = 'localhost';
+      }
+    }
+    
     const chromaPort = process.env.CHROMA_PORT || '8000';
     
     this.client = new ChromaClient({
-      path: `http://${chromaHost}:${chromaPort}`
+      host: chromaHost,
+      port: parseInt(chromaPort),
+      ssl: false
     });
     this.collectionName = collectionName;
+    
+    console.log(`ChromaDB client configured: ${chromaHost}:${chromaPort}`);
   }
 
   /**
@@ -88,17 +107,24 @@ export class ChromaMemoryClient {
     }
 
     const document = JSON.stringify(memory.content);
-    const metadata = {
-      ...memory.metadata,
+    
+    // ChromaDBが受け付ける形式にメタデータを変換
+    const metadata: Record<string, string | number | boolean | null> = {
       created_at: memory.metadata.created_at.toISOString(),
       last_accessed: memory.metadata.last_accessed.toISOString(),
+      access_count: memory.metadata.access_count,
+      success_rate: memory.metadata.success_rate,
+      memory_strength: memory.metadata.memory_strength || 0,
+      type: memory.metadata.type || 'general',
+      human_rating: memory.metadata.human_rating || null,
+      tags: JSON.stringify(memory.metadata.tags || []),
       connections: JSON.stringify(memory.metadata.connections || [])
     };
 
     await this.collection.add({
       ids: [memory.id],
       documents: [document],
-      metadatas: [metadata as any]
+      metadatas: [metadata]
     });
   }
 
