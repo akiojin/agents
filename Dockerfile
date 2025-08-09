@@ -12,6 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install pipx and uv for MCP server execution
+RUN python3 -m pip install --upgrade pipx && \
+    pipx ensurepath && \
+    pipx install uv
+
 # Claude Code CLIをインストール
 RUN npm install -g @anthropic-ai/claude-code
 
