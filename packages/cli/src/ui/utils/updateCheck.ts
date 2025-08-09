@@ -4,38 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import updateNotifier from 'update-notifier';
-import semver from 'semver';
-import { getPackageJson } from '../../utils/package.js';
+// 不要なimportを削除（バージョンチェック機能は無効化）
 
 export async function checkForUpdates(): Promise<string | null> {
-  try {
-    const packageJson = await getPackageJson();
-    if (!packageJson || !packageJson.name || !packageJson.version) {
-      return null;
-    }
-    const notifier = updateNotifier({
-      pkg: {
-        name: packageJson.name,
-        version: packageJson.version,
-      },
-      // check every time
-      updateCheckInterval: 0,
-      // allow notifier to run in scripts
-      shouldNotifyInNpmScript: true,
-    });
-
-    if (
-      notifier.update &&
-      semver.gt(notifier.update.latest, notifier.update.current)
-    ) {
-      return `Agents update available! ${notifier.update.current} → ${notifier.update.latest}
-Run npm install -g ${packageJson.name} to update`;
-    }
-
-    return null;
-  } catch (e) {
-    console.warn('Failed to check for updates: ' + e);
-    return null;
-  }
+  // バージョンチェック機能を無効化
+  // このプロジェクトはローカル専用のため、npmレジストリのチェックは不要
+  return null;
 }
