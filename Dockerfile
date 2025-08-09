@@ -1,50 +1,73 @@
-FROM docker.io/library/node:20-slim
+# マルチステージビルド: ビルドステージ
+FROM docker.io/library/node:20-slim AS builder
 
-ARG SANDBOX_NAME="gemini-cli-sandbox"
-ARG CLI_VERSION_ARG
-ENV SANDBOX="$SANDBOX_NAME"
-ENV CLI_VERSION=$CLI_VERSION_ARG
+# 作業ディレクトリを設定
+WORKDIR /app
 
-# install minimal set of packages, then clean up
+# 依存関係ファイルをコピー
+COPY package*.json bun.lockb* ./
+COPY packages/*/package*.json ./packages/*/
+
+# Bunをインストール
+RUN npm install -g bun
+
+# 依存関係をインストール
+RUN bun install --frozen-lockfile
+
+# ソースコードをコピー
+COPY . .
+
+# プロジェクトをビルド
+RUN bun run build && bun run package
+
+# マルチステージビルド: 本番ステージ
+FROM docker.io/library/node:20-slim AS production
+
+# セキュリティ: 非特権ユーザーを作成
+RUN groupadd -r synaptic && useradd -r -g synaptic synaptic
+
+# 必要最小限のパッケージをインストール
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  python3 \
-  make \
-  g++ \
-  man-db \
-  curl \
-  dnsutils \
-  less \
-  jq \
-  bc \
-  gh \
-  git \
-  unzip \
-  rsync \
-  ripgrep \
-  procps \
-  psmisc \
-  lsof \
-  socat \
-  ca-certificates \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+    curl \
+    ca-certificates \
+    dumb-init \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# set up npm global package folder under /usr/local/share
-# give it to non-root user node, already set up in base image
-RUN mkdir -p /usr/local/share/npm-global \
-  && chown -R node:node /usr/local/share/npm-global
-ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-ENV PATH=$PATH:/usr/local/share/npm-global/bin
+# アプリケーションディレクトリを作成
+WORKDIR /app
 
-# switch to non-root user node
-USER node
+# ビルドステージから必要なファイルのみコピー
+COPY --from=builder --chown=synaptic:synaptic /app/dist ./dist
+COPY --from=builder --chown=synaptic:synaptic /app/packages/cli/dist/*.tgz ./cli/
+COPY --from=builder --chown=synaptic:synaptic /app/packages/core/dist/*.tgz ./core/
+COPY --from=builder --chown=synaptic:synaptic /app/package.json ./
 
-# install gemini-cli and clean up
-COPY packages/cli/dist/google-gemini-cli-*.tgz /usr/local/share/npm-global/gemini-cli.tgz
-COPY packages/core/dist/google-gemini-cli-core-*.tgz /usr/local/share/npm-global/gemini-core.tgz
-RUN npm install -g /usr/local/share/npm-global/gemini-cli.tgz /usr/local/share/npm-global/gemini-core.tgz \
-  && npm cache clean --force \
-  && rm -f /usr/local/share/npm-global/gemini-{cli,core}.tgz
+# Bunをインストール（本番用）
+RUN npm install -g bun
 
-# default entrypoint when none specified
-CMD ["gemini"]
+# 本番用パッケージをインストール
+RUN bun install ./cli/*.tgz ./core/*.tgz --production \
+    && bun cache clean
+
+# 非特権ユーザーに切り替え
+USER synaptic
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
+
+# セキュリティ: シグナル処理とプロセス管理
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# 環境変数とメタデータ
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+
+LABEL maintainer="Synaptic Memory System" \
+      description="Synaptic Memory System - AI-powered memory and knowledge management" \
+      version="1.0.0"
+
+# デフォルトコマンド
+CMD ["bun", "start"]

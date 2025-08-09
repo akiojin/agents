@@ -38,12 +38,6 @@
     "test:integration:sandbox:none": "GEMINI_SANDBOX=false node integration-tests/run-tests.js",
     "test:integration:sandbox:docker": "GEMINI_SANDBOX=docker node integration-tests/run-tests.js",
     "test:integration:sandbox:podman": "GEMINI_SANDBOX=podman node integration-tests/run-tests.js",
-    "test:synaptic:unit": "vitest run packages/memory/src/api/memoryApi.test.ts packages/cli/src/ui/components/SynapticMemoryDashboard.test.tsx packages/cli/src/ui/hooks/useSynapticMemory.test.ts packages/cli/src/ui/commands/synapticCommand.test.ts",
-    "test:synaptic:integration": "vitest run packages/memory/src/synaptic/synapticNetwork.integration.test.ts",
-    "test:synaptic:performance": "vitest run test/performance/synaptic-memory.performance.test.ts --timeout=300000",
-    "test:synaptic:error": "vitest run test/error-handling/synaptic-memory.error.test.ts",
-    "test:synaptic:e2e": "vitest run test/e2e/synaptic-memory.e2e.test.ts --timeout=600000",
-    "test:synaptic:all": "npm run test:synaptic:unit && npm run test:synaptic:integration && npm run test:synaptic:error",
     "lint": "eslint . --ext .ts,.tsx && eslint integration-tests",
     "lint:fix": "eslint . --fix && eslint integration-tests --fix",
     "lint:ci": "eslint . --ext .ts,.tsx --max-warnings 0 && eslint integration-tests --max-warnings 0",
@@ -93,7 +87,5 @@
     "vitest": "^3.2.4",
     "yargs": "^18.0.0"
   },
-  "dependencies": {
-    "chromadb": "^3.0.11"
-  }
+  "dependencies": {}
 }

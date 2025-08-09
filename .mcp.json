@@ -46,7 +46,7 @@
         "--client-type",
         "persistent",
         "--data-dir",
-        "$(pwd)/.chroma"
+        ".chroma"
       ]
     }
   }

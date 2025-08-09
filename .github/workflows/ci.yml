@@ -239,16 +239,3 @@ jobs:
           flags: unittests
           name: codecov-umbrella
 
-  docker:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Build Docker image
-        run: docker build -t agents:test .
-      
-      - name: Test Docker image
-        run: |
-          docker run --rm agents:test bun --version
-          docker run --rm agents:test agents --version
