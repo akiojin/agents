@@ -5,8 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: agents
     depends_on:
-      chroma:
-        condition: service_healthy
+      - chroma
     volumes:
       # プロジェクトディレクトリのマウント
       - .:/agents
@@ -18,15 +17,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       # Claude Code用の環境変数
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - ANTHROPIC_API_KEY
       # Google AI用の環境変数
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - AGENTS_API_KEY=${AGENTS_API_KEY}
+      - GOOGLE_API_KEY
       # GitHub統合用
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       # MCP設定
-      - MAX_MCP_OUTPUT_TOKENS=${MAX_MCP_OUTPUT_TOKENS}
+      - MAX_MCP_OUTPUT_TOKENS
     working_dir: /agents
     command: /bin/bash
     stdin_open: true
@@ -47,12 +44,6 @@ services:
       - CHROMA_PORT=8000
     networks:
       - agents-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
 
 volumes:
   claude_config:

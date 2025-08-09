@@ -7,6 +7,8 @@
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import process from 'node:process';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   Config,
   loadServerHierarchicalMemory,
@@ -19,6 +21,7 @@ import {
   TelemetryTarget,
   MCPServerConfig,
   IDE_SERVER_NAME,
+  AuthType,
 
 } from '@indenscale/open-gemini-cli-core';
 import { Settings } from './settings.js';
@@ -278,6 +281,40 @@ export async function loadCliConfig(
     extensionContextFilePaths,
   );
 
+  // .agents/settings.jsonファイルを読み込む
+  let authType: AuthType | undefined;
+  let localEndpoint: string | undefined;
+  let localModel: string | undefined;
+  const agentsSettingsPath = path.join(process.cwd(), '.agents', 'settings.json');
+  if (fs.existsSync(agentsSettingsPath)) {
+    try {
+      const agentsSettings = JSON.parse(fs.readFileSync(agentsSettingsPath, 'utf-8'));
+      // providerをAuthTypeにマッピング
+      if (agentsSettings.llm?.provider === 'local-lmstudio') {
+        authType = AuthType.OPENAI_COMPATIBLE;
+        localEndpoint = agentsSettings.localEndpoint || agentsSettings.llm?.localEndpoint;
+        localModel = agentsSettings.llm?.model;
+        
+        // 環境変数を設定（OpenAI互換APIで使用）
+        if (localEndpoint && !process.env.LOCAL_LLM_BASE_URL) {
+          process.env.LOCAL_LLM_BASE_URL = localEndpoint;
+        }
+        if (localModel && !process.env.LOCAL_LLM_MODEL) {
+          process.env.LOCAL_LLM_MODEL = localModel;
+        }
+      }
+    } catch (error) {
+      logger.debug(`Failed to load .agents/settings.json: ${error}`);
+    }
+  }
+
+  // モデル名を決定（OpenAI互換APIの場合は別のデフォルト値を使用）
+  const modelName = argv.model || (
+    authType === AuthType.OPENAI_COMPATIBLE
+      ? (process.env.LOCAL_LLM_MODEL || localModel || 'llama-3.2-3b-instruct')
+      : (process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL)
+  );
+
   let mcpServers = mergeMcpServers(settings, activeExtensions);
   const excludeTools = mergeExcludeTools(settings, activeExtensions);
 
@@ -393,7 +430,7 @@ export async function loadCliConfig(
     cwd: process.cwd(),
     fileDiscoveryService: fileService,
     bugCommand: settings.bugCommand,
-    model: argv.model!,
+    model: modelName,
     extensionContextFilePaths,
     maxSessionTurns: settings.maxSessionTurns ?? -1,
     listExtensions: argv.listExtensions || false,
@@ -409,6 +446,31 @@ export async function loadCliConfig(
 
 function mergeMcpServers(settings: Settings, extensions: Extension[]) {
   const mcpServers = { ...(settings.mcpServers || {}) };
+  
+  // .mcp.jsonファイルを読み込む
+  const mcpJsonPath = path.join(process.cwd(), '.mcp.json');
+  if (fs.existsSync(mcpJsonPath)) {
+    try {
+      const mcpJsonContent = fs.readFileSync(mcpJsonPath, 'utf-8');
+      const mcpJson = JSON.parse(mcpJsonContent);
+      if (mcpJson.mcpServers) {
+        logger.info(`Loading MCP servers from .mcp.json`);
+        // .mcp.jsonのサーバー設定をマージ（既存設定を優先）
+        Object.entries(mcpJson.mcpServers).forEach(([key, server]) => {
+          if (!mcpServers[key]) {
+            mcpServers[key] = server as MCPServerConfig;
+          } else {
+            logger.debug(
+              `MCP server "${key}" already defined in settings, skipping .mcp.json entry`,
+            );
+          }
+        });
+      }
+    } catch (error) {
+      logger.warn(`Failed to load .mcp.json: ${error}`);
+    }
+  }
+  
   for (const extension of extensions) {
     Object.entries(extension.config.mcpServers || {}).forEach(
       ([key, server]) => {
