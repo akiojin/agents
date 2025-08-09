@@ -49,14 +49,24 @@ export const useAuthCommand = (
       }
 
       try {
-        setIsAuthenticating(true);
-        await config.refreshAuth(authType);
-        console.log(`Authenticated via "${authType}".`);
+        // ローカルLLMの場合は認証をスキップ
+        if (authType === AuthType.OPENAI_COMPATIBLE) {
+          // OpenAI互換APIの場合は認証プロセスをスキップ
+          await config.refreshAuth(authType);
+          console.log(`Using local LLM via "${authType}".`);
+        } else {
+          setIsAuthenticating(true);
+          await config.refreshAuth(authType);
+          console.log(`Authenticated via "${authType}".`);
+        }
       } catch (e) {
         setAuthError(`Failed to login. Message: ${getErrorMessage(e)}`);
         openAuthDialog();
       } finally {
-        setIsAuthenticating(false);
+        // ローカルLLM以外の場合のみisAuthenticatingをfalseに
+        if (authType !== AuthType.OPENAI_COMPATIBLE) {
+          setIsAuthenticating(false);
+        }
       }
     };
 
