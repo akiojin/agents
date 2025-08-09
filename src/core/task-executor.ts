@@ -249,7 +249,7 @@ export class TaskExecutor extends EventEmitter {
 
     return {
       success: allSuccess,
-      message: allSuccess ? 'すべてのTaskがCompleteddone' : 'Taskの一部がFaileddone',
+      message: allSuccess ? 'All tasks completed successfully' : 'Some tasks failed',
       data: data.length === 1 ? data[0] : data,
     };
   }

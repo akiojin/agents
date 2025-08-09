@@ -886,6 +886,9 @@ export class AgentCore extends EventEmitter {
     // MCPToolsHelperを初期化（FunctionConverterを渡す）
     this.mcpToolsHelper = new MCPToolsHelper(mcpManager, this.mcpFunctionConverter);
     
+    // MCPTaskPlannerを初期化
+    this.mcpTaskPlanner = new MCPTaskPlanner(this.mcpToolsHelper);
+    
     // Function Callingで利用可能なツールを更新
     this.availableFunctions = await this.mcpFunctionConverter.convertAllTools();
     
@@ -904,10 +907,16 @@ export class AgentCore extends EventEmitter {
    * MCPToolを使用してTaskをExecute
    */
   async executeTaskWithMCP(config: TaskConfig): Promise<TaskResult> {
+    // 一時的にMCPタスク実行を無効化し、通常のタスク実行を使用
+    logger.info('Using normal task execution instead of MCP task planner');
+    return this.executeTask(config);
+    
+    /* TODO: MCPTaskPlannerを改善後に再有効化
     if (!this.mcpToolsHelper || !this.mcpTaskPlanner) {
       logger.warn('MCP tools not initialized. Switching to normal task execution');
       return this.executeTask(config);
     }
+    */
 
     const perf = new PerformanceLogger('executeTaskWithMCP');
 
