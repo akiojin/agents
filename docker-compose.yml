@@ -21,7 +21,9 @@ services:
       # Google AI用の環境変数
       - GOOGLE_API_KEY
       # GitHub統合用
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_TOKEN
+      - GITHUB_USERNAME
+      - GITHUB_PERSONAL_ACCESS_TOKEN
       # MCP設定
       - MAX_MCP_OUTPUT_TOKENS
     working_dir: /agents
