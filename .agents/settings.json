@@ -1,6 +1,7 @@
 {
   "llm": {
     "provider": "local-lmstudio",
+    "model": "openai/gpt-oss-20b",
     "timeout": 120000,
     "maxRetries": 3,
     "temperature": 0.7,

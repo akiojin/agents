@@ -22,24 +22,12 @@ RUN npm install -g @anthropic-ai/claude-code
 # 作業ディレクトリを設定
 WORKDIR /agents
 
-# パッケージファイルをコピー
-COPY package*.json ./
-
-# Node.js依存関係をインストール
-RUN npm install
-
-# アプリケーションコードをコピー
-COPY . .
-
-# entrypoint.shを実行可能にする
-RUN chmod +x /agents/scripts/entrypoint.sh
-
 LABEL maintainer="akiojin/agents" \
       description="Agents - AI development and memory management tools" \
       version="1.0.0"
 
-# エントリーポイントを設定
-ENTRYPOINT ["/agents/scripts/entrypoint.sh"]
+# エントリーポイントを設定（マウントされたファイルを使用）
+ENTRYPOINT ["/bin/bash", "/agents/scripts/entrypoint.sh"]
 
 # デフォルトコマンド（開発用）
 CMD ["/bin/bash"]
