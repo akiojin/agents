@@ -173,5 +173,13 @@ chromadb_env/
 bundle/
 
 # ChromaDB data
-$(pwd)/.chroma/
 .chroma/
+
+# Dockerローカル設定
+docker-compose.prod.yml
+
+# データベース初期化スクリプト（ローカル）
+scripts/init-db.sql
+
+# ログディレクトリ
+logs/
