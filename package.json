@@ -47,7 +47,7 @@
     "test:e2e": "bun test tests/integration/e2e.test.ts",
     "test:parallel": "bun test tests/integration/parallel-integration.test.ts",
     "test:all": "bun run test:unit && bun run test:integration",
-    "test:bash": "bun run start -- task 'bashの実装はどのようになっていますか？'",
+    "test:bash": "bun run start -- task \"bashの実装はどのようになっていますか？\"",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",

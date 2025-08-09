@@ -62,12 +62,6 @@ COPY src/ ./src/
 COPY examples/ ./examples/
 COPY tests/ ./tests/
 
-# 依存関係のインストール
-RUN bun install
-
-# プロジェクトのビルド
-RUN bun run build:all
-
 # グローバルにインストール（binが有効になる）
 RUN npm install -g .
 
