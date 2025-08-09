@@ -58,10 +58,20 @@ export function createContentGeneratorConfig(
   config: Config,
   authType: AuthType | undefined,
 ): ContentGeneratorConfig {
-  const geminiApiKey = process.env.GEMINI_API_KEY || undefined;
-  const googleApiKey = process.env.GOOGLE_API_KEY || undefined;
-  const googleCloudProject = process.env.GOOGLE_CLOUD_PROJECT || undefined;
-  const googleCloudLocation = process.env.GOOGLE_CLOUD_LOCATION || undefined;
+  // ローカルLLMの設定を優先的にチェック
+  const localLLMBaseUrl = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL;
+  const isLocalLLM = localLLMBaseUrl && (
+    localLLMBaseUrl.includes('localhost') || 
+    localLLMBaseUrl.includes('127.0.0.1') || 
+    localLLMBaseUrl.includes('0.0.0.0') ||
+    localLLMBaseUrl.includes('host.docker.internal')
+  );
+  
+  // ローカルLLMが設定されている場合は、他のAPI KEYを無視
+  const geminiApiKey = isLocalLLM ? undefined : (process.env.GEMINI_API_KEY || undefined);
+  const googleApiKey = isLocalLLM ? undefined : (process.env.GOOGLE_API_KEY || undefined);
+  const googleCloudProject = isLocalLLM ? undefined : (process.env.GOOGLE_CLOUD_PROJECT || undefined);
+  const googleCloudLocation = isLocalLLM ? undefined : (process.env.GOOGLE_CLOUD_LOCATION || undefined);
 
   // Use runtime model from config if available, otherwise fallback to parameter or default
   // For OPENAI_COMPATIBLE, also check LOCAL_LLM_MODEL environment variable
