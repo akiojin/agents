@@ -102,5 +102,101 @@ export const memoryCommand: SlashCommand = {
         }
       },
     },
+    // シナプス記憶システム統合
+    {
+      name: 'synaptic',
+      description: 'Access synaptic memory system.',
+      action: async (context) => {
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: 'Launching synaptic memory management interface...',
+          },
+          Date.now(),
+        );
+
+        // シナプス記憶システムは実装中
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: 'シナプス記憶管理機能は実装中です。',
+          },
+          Date.now(),
+        );
+      },
+    },
+    {
+      name: 'network',
+      description: 'Show memory network visualization.',
+      action: async (context) => {
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: 'Displaying memory network visualization...',
+          },
+          Date.now(),
+        );
+
+        return {
+          type: 'ui',
+          component: 'SynapticVisualization',
+          props: { mode: 'network' },
+        };
+      },
+    },
+    {
+      name: 'search',
+      description: 'Search memories using synaptic network.',
+      action: (context, args): SlashCommandActionReturn | void => {
+        if (!args || args.trim() === '') {
+          return {
+            type: 'message',
+            messageType: 'error',
+            content: 'Usage: /memory search <query>',
+          };
+        }
+
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: `Searching synaptic memory network for: "${args.trim()}"`,
+          },
+          Date.now(),
+        );
+
+        return {
+          type: 'tool',
+          toolName: 'synaptic_search',
+          toolArgs: { query: args.trim() },
+        };
+      },
+    },
+    {
+      name: 'activate',
+      description: 'Activate a specific memory in the network.',
+      action: (context, args): SlashCommandActionReturn | void => {
+        if (!args || args.trim() === '') {
+          return {
+            type: 'message',
+            messageType: 'error',
+            content: 'Usage: /memory activate <memory-id>',
+          };
+        }
+
+        context.ui.addItem(
+          {
+            type: MessageType.INFO,
+            text: `Activating memory: ${args.trim()}`,
+          },
+          Date.now(),
+        );
+
+        return {
+          type: 'tool',
+          toolName: 'synaptic_activate',
+          toolArgs: { memory_id: args.trim() },
+        };
+      },
+    },
   ],
 };
