@@ -1,5 +1,5 @@
 {
-  "name": "@indenscale/open-gemini-cli",
+  "name": "@akiojin/agents",
   "version": "0.1.10",
   "engines": {
     "node": ">=20.0.0"
@@ -10,7 +10,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/IndenScale/open-gemini-cli.git"
+    "url": "git+https://github.com/akiojin/agents.git"
   },
   "config": {
     "sandboxImageUri": "us-docker.pkg.dev/gemini-code-dev/gemini-cli/sandbox:0.1.0"
@@ -51,7 +51,7 @@
     "clean": "node scripts/clean.js"
   },
   "bin": {
-    "gemini": "bundle/gemini.js"
+    "agents": "src/cli.js"
   },
   "files": [
     "bundle/",
