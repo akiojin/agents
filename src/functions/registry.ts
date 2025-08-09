@@ -3,6 +3,7 @@ import { InternalBash, BashSecurityConfig } from './bash.js';
 import { SecurityConfig, FileSystemSecurity } from './security.js';
 import { logger } from '../utils/logger.js';
 import type { FunctionDefinition } from '../mcp/function-converter.js';
+import { TodoWriteTool, TodoItem } from '../../packages/tools/todo-write.js';
 
 /**
  * 内部関数の情報
@@ -420,6 +421,108 @@ export class InternalFunctionRegistry {
           return { enabled: false, reason: 'Bash execution is not available' };
         }
         return this.bash.getSecurityInfo();
+      }
+    });
+
+    // TodoWriteツール
+    const todoWriteTool = new TodoWriteTool();
+    this.registerFunction({
+      name: 'write_todos',
+      description: `タスクリストを作成・管理して作業の進捗を追跡する
+
+使用するタイミング:
+- 3つ以上のステップが必要な複雑なタスク
+- 慎重な計画が必要な重要なタスク
+- 複数のタスクが提供された場合
+- 新しい指示を受けた後
+- タスク開始時（in_progressとしてマーク）
+- タスク完了後（completedとしてマーク）
+
+タスク状態:
+- pending: まだ開始していないタスク
+- in_progress: 現在作業中（同時に1つまで）
+- completed: 正常に完了したタスク`,
+      parameters: {
+        type: 'object',
+        properties: {
+          todos: {
+            type: 'array',
+            description: '更新されたTODOリスト',
+            items: {
+              type: 'object',
+              properties: {
+                id: {
+                  type: 'string',
+                  description: 'TODOの一意識別子'
+                },
+                content: {
+                  type: 'string',
+                  description: 'タスクの説明'
+                },
+                status: {
+                  type: 'string',
+                  enum: ['pending', 'in_progress', 'completed'],
+                  description: 'タスクの現在の状態'
+                }
+              },
+              required: ['content', 'status']
+            }
+          }
+        },
+        required: ['todos']
+      },
+      handler: async (params) => {
+        const todos = params.todos as TodoItem[];
+        const result = await todoWriteTool.execute({ todos });
+        
+        if (result.success) {
+          return {
+            success: true,
+            message: result.message,
+            todos: result.todos,
+            summary: result.summary
+          };
+        } else {
+          throw new Error(result.message);
+        }
+      }
+    });
+
+    // サブエージェント呼び出し
+    this.registerFunction({
+      name: 'task',
+      description: `複雑な複数ステップのタスクを自律的に処理するサブエージェントを起動する
+
+利用可能なサブエージェントタイプ:
+- general-purpose: すべてのツールにアクセスできる汎用エージェント
+
+使用するタイミング:
+- 特殊な処理が必要な複雑なタスク
+- 特定の操作のコンテキストを分離したい場合
+- サブタスクを委譲する場合`,
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'サブエージェントに実行させるタスクの詳細な説明'
+          },
+          subagent_type: {
+            type: 'string',
+            description: '使用するサブエージェントのタイプ',
+            enum: ['general-purpose']
+          }
+        },
+        required: ['description', 'subagent_type']
+      },
+      handler: async (params) => {
+        // このハンドラーは後でSubAgentManagerと連携するように実装
+        // 現時点ではプレースホルダー
+        return {
+          success: true,
+          message: `Sub-agent task registered: ${params.description}`,
+          subagent_type: params.subagent_type
+        };
       }
     });
 

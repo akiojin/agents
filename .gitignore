@@ -168,4 +168,6 @@ private/
 # その他
 *.orig
 .history/
-.phpunit.result.cache
+.phpunit.result.cacheanalysis/
+chromadb_env/
+bundle/

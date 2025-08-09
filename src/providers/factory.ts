@@ -3,6 +3,7 @@ import type { LLMProvider } from './base.js';
 import { OpenAIProvider } from './openai.js';
 import { AnthropicProvider } from './anthropic.js';
 import { LocalProvider } from './local.js';
+import { GeminiAdapterProvider } from './gemini-adapter.js';
 import { isValidApiKey, isValidUrl, isDefined } from '../utils/type-guards.js';
 
 export function createProvider(config: Config): LLMProvider {
@@ -29,9 +30,15 @@ export function createProvider(config: Config): LLMProvider {
         maxTokens: config.llm.maxTokens,
       });
 
+    case 'gemini-adapter':
+      // GeminiAdapterProvider for OpenAI-compatible APIs (e.g., LM Studio)
+      const apiKey = config.llm.apiKey || 'dummy-key';
+      const baseUrl = config.localEndpoint || 'http://localhost:1234/v1';
+      return new GeminiAdapterProvider(apiKey, config.llm.model, baseUrl);
+
     case 'local-gptoss':
     case 'local-lmstudio':
-      // LocalエンドポイントはConfigから取得（必須）
+      // Local エンドポイントはConfigから取得（必須）
       if (!config.localEndpoint) {
         throw new Error('localEndpoint が設定ファイルに定義されていません');
       }
@@ -73,6 +80,13 @@ export function createProviderFromUnifiedConfig(
         throw new Error('Anthropic APIキーがConfignot initialized');
       }
       return new AnthropicProvider(config.llm.apiKey, config.llm.model, providerOptions);
+
+    case 'gemini-adapter': {
+      // GeminiAdapterProvider for OpenAI-compatible APIs (e.g., LM Studio)
+      const apiKey = config.llm.apiKey || 'dummy-key';
+      const baseUrl = config.localEndpoint || 'http://localhost:1234/v1';
+      return new GeminiAdapterProvider(apiKey, config.llm.model, baseUrl);
+    }
 
     case 'local-gptoss':
     case 'local-lmstudio': {

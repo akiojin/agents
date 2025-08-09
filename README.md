@@ -1,204 +1,75 @@
-# @akiojin/agents
+# Open Gemini CLI
 
-オープンソースで完全無料の自律型コーディングエージェント。ローカルLLMとクラウドLLMを自由に選択でき、MCPツールによる無限の拡張性を持ちます。
+Open Gemini CLI is a fork of the Google Gemini CLI that empowers you with the freedom to connect and use any OpenAI-compatible API as your Agent reasoning engine.
+We believe that a powerful Agent tool should not be locked into a single ecosystem. By opening up backend choices, we hope to inspire more innovation, protect user privacy, and foster a more open and collaborative AI Agent ecosystem.
 
-## 特徴
+## 💡 Why Choose Open Gemini CLI?
 
-- 🤖 **高度な自律性** - アプリケーション全体を構築できるレベルの自律的動作
-- 🚀 **Bunランタイム** - 高速起動と優れたパフォーマンス
-- 🔧 **MCP対応** - Serena MCPツールによる精密なコード操作
-- ⚡ **並列処理** - タスクの並列実行により3-5倍の高速化
-- 🌐 **マルチプロバイダー** - ローカル（GPT-OSS）からクラウド（OpenAI/Claude/Gemini）まで対応
-- 🔓 **完全オープンソース** - MITライセンスで自由に利用可能
+With Open Gemini CLI, you can:
 
-## インストール
+- **Freedom to choose MaaS providers**: No longer limited to a single cloud vendor, you can run your Agent on any platform that provides OpenAI-compatible APIs (such as Azure, Groq, Together AI, and numerous open-source model frameworks).
+- **Use locally hosted models for privacy protection**: By connecting to locally running LLMs (such as through Ollama, vLLM, LlamaEdge, etc.), you can ensure that code and data remain completely on your device, achieving the highest level of privacy and security.
+- **Mix multiple models to balance cost and efficiency**: You can configure different model providers for different tasks (such as general reasoning, code generation, visual understanding), achieving the optimal combination of cost and performance.
+- **Evaluate and compare models in Agentic tasks**: In the same complex workflows, easily switch and compare the performance of different models (such as GPT-4o, Llama3, Mixtral, Qwen2) to find the "brain" that best suits your tasks.
 
-```bash
-# Bunを使用したグローバルインストール（推奨）
-bun add -g @akiojin/agents
+## 🚀 Quick Start
 
-# または bunx で直接実行
-bunx @akiojin/agents
+1. **Install prerequisites**: Ensure you have Node.js version 20 or higher installed.
+2. **Run directly via npx (recommended)**: `npx https://github.com/IndenScale/open-gemini-cli`
+3. **Or install globally**: `npm install -g @indenscale/open-gemini-cli`
+4. **Configuration**: On first run, the CLI will guide you through interactive configuration. When asked about authentication method, select the newly added "Use an OpenAI Compatible API" option.
 
-# npmを使用する場合
-npm install -g @akiojin/agents
-```
+You can also configure quickly through environment variables:
 
-## 使い方
+### Global Configuration (Recommended)
 
-### 初期設定
+This is the simplest way, directing all requests to the same OpenAI-compatible endpoint.
 
 ```bash
-# 対話形式で設定を初期化
-agents init
-
-# LLMプロバイダーを選択:
-# - OpenAI
-# - Anthropic
-# - Local (GPT-OSS)
-# - Local (LM Studio)
+# Your API key (required)
+export OPENAI_API_KEY="your-moonshot-api-key"
+# Your API endpoint address (required, e.g., https://api.moonshot.cn/v1)
+export OPENAI_BASE_URL="YOUR_BASE_URL"
+# The model name you want to use (optional, defaults to gpt-4o)
+export OPENAI_MODEL="kimi-k2-0711-preview"
 ```
 
-### インタラクティブモード（REPL）
+### Fine-grained Configuration (Advanced)(Not Implemented Yet)
+
+You can specify different model providers for different types of tasks to achieve ultimate optimization of cost and performance.
 
 ```bash
-# 対話モードを開始
-agents chat
+# Main LLM reasoning using a powerful model
+export OPENAI_LLM_KEY="your-moonshot-api-key"
+export OPENAI_LLM_BASE="https://api.moonshot.cn/v1"
+export OPENAI_LLM_MODEL="kimi-k2-0711-preview"
 
-# スラッシュコマンドが利用可能
-agents> /help
-agents> /tools
-agents> /model gpt-4-turbo-preview
-agents> Todoアプリを作成してください
+# Vision understanding (VLM) using another model
+export OPENAI_VLM_KEY="sk-..."
+export OPENAI_VLM_BASE="https://api.openai.com/v1"
+export OPENAI_VLM_MODEL="gpt-4o"
+
+# Fast, cheap tasks (like conversation history compression) using Flash models
+export OPENAI_FLASH_KEY="sk-..."
+export OPENAI_FLASH_BASE="https://api.together.xyz/v1"
+export OPENAI_FLASH_MODEL="mistralai/Mixtral-8x7B-Instruct-v0.1"
 ```
 
-### タスク実行モード
+## 🛠️ Implementation Approach
 
-```bash
-# タスクを直接実行
-agents task "RESTful APIを実装"
+For transparency, we briefly explain the compatibility layer implementation approach of open-gemini-cli:
 
-# ファイルを指定して実行
-agents task "このファイルをリファクタリング" -f src/main.ts
+We introduce an adapter layer (API Adaptor) that acts as a "translator" between the core Agent logic and the underlying model APIs.
 
-# 並列実行を有効化
-agents task "テストを追加" --parallel
-```
+- **Request transformation**: When you issue instructions, the APIAdaptor converts Gemini's internal message and tool call format (Content[]) to OpenAI-compatible messages array format.
+- **Response transformation**: When OpenAI-compatible APIs return data in streaming (delta) format, the APIAdaptor reassembles these incremental data chunks into structurally complete GenerateContentResponse events expected by the upper-level gemini-cli logic.
 
-### ファイル監視モード
+This design ensures that gemini-cli's powerful Agent scheduling, tool execution, and multi-turn interaction logic can remain unchanged while seamlessly running on different reasoning backends.
 
-```bash
-# ファイル変更を監視して自動実行
-agents watch src/ --task "変更されたファイルをフォーマット"
-```
+## 🔮 Future Plans
 
-### 設定ファイル（settings.json）
+We are actively enhancing file processing tools (read_file, read_many_files). Since many OpenAI-compatible models do not have native, integrated multimodal capabilities like Gemini, we will introduce a file parsing and understanding layer. This will allow the CLI to automatically convert image, PDF, and other file content into high-quality text descriptions before submitting to the core LLM, thus achieving powerful multimodal file interaction capabilities on any model.
 
-```yaml
-provider: openai
-apiKey: sk-...
-model: gpt-4-turbo-preview
-useMCP: true
-maxParallel: 5
-timeout: 300
-logLevel: info
-cachePath: .agents-cache
-historyPath: .agents-history
-mcpServers:
-  - name: filesystem
-    command: npx
-    args: ['-y', '@modelcontextprotocol/server-filesystem']
-```
+## ❤️ Welcome Contributions
 
-## ドキュメント
-
-- [要件定義書](docs/REQUIREMENTS.md) - プロジェクトの詳細な要件
-- [アーキテクチャ設計書](docs/ARCHITECTURE.md) - システム設計と技術仕様
-- [ロードマップ](docs/ROADMAP.md) - 開発計画とリリーススケジュール
-
-## プロジェクト構成
-
-```
-@akiojin/agents/
-├── src/                  # ソースコード
-│   ├── core/            # エージェントコア
-│   ├── mcp/             # MCPツール実装
-│   ├── providers/       # LLMプロバイダー
-│   └── cli/             # CLIインターフェース
-├── tests/               # テストファイル
-├── docs/                # ドキュメント
-└── examples/            # 使用例
-```
-
-## 開発状況
-
-現在、v0.1.0の初期実装が完了しました。詳細は[ロードマップ](docs/ROADMAP.md)をご覧ください。
-
-### 完了済み
-
-- ✅ CLIインターフェース実装
-- ✅ エージェントコア実装
-- ✅ MCPマネージャー実装
-- ✅ LLMプロバイダー実装（OpenAI、Anthropic、ローカル）
-- ✅ REPLモード実装
-- ✅ 基本的なタスク実行機能
-
-### 次のマイルストーン（v0.2.0）
-
-- [ ] Serena MCPツール統合
-- [ ] 並列タスク実行の最適化
-- [ ] テストカバレッジ向上
-- [ ] パフォーマンス改善
-
-## コントリビューション
-
-プロジェクトへの貢献を歓迎します！
-
-### 開発環境のセットアップ
-
-```bash
-# リポジトリのクローン
-git clone https://github.com/akiojin/agents.git
-cd agents
-
-# 依存関係のインストール（Bun推奨）
-bun install
-
-# 開発モードで実行
-bun run dev
-
-# ビルド
-bun run build
-
-# テスト
-bun test
-```
-
-### 開発フロー
-
-Git Flow に従って開発を行います：
-
-1. `develop` ブランチから機能ブランチを作成
-2. 機能開発を実施
-3. `develop` ブランチへPRを作成
-4. レビュー後マージ
-5. リリース時に `main` ブランチへマージ
-
-### ブランチ構成
-
-- `main`: 本番環境用のブランチ
-- `develop`: 開発用のメインブランチ
-- `feature/*`: 機能開発ブランチ
-- `release/*`: リリース準備ブランチ
-- `hotfix/*`: 緊急修正ブランチ
-
-## 必要要件
-
-- Bun v1.0以上（推奨）または Node.js v18以上
-- Git
-
-## ライセンス
-
-MIT License - 詳細は[LICENSE](LICENSE)ファイルを参照してください。
-
-## お問い合わせ
-
-- GitHub Issues: バグ報告や機能要望
-- Discussions: 質問や議論
-- Pull Requests: コード貢献
-
-## 謝辞
-
-このプロジェクトは以下のオープンソースプロジェクトに触発されています：
-
-- Claude Code (Anthropic)
-- Continue.dev
-- Aider
-- OpenDevin
-
-## ステータス
-
-![GitHub stars](https://img.shields.io/github/stars/akiojin/agents)
-![GitHub issues](https://img.shields.io/github/issues/akiojin/agents)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/akiojin/agents)
-![License](https://img.shields.io/github/license/akiojin/agents)
+open-gemini-cli is a community-driven project. We welcome contributions of any form, whether it's submitting bug reports, proposing feature suggestions, or directly contributing code. If you share the vision of this project, please join us in building a more open, free, and powerful AI Agent tool together!
