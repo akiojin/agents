@@ -1,97 +1,93 @@
 {
-  "name": "@akiojin/agents",
-  "version": "0.1.0",
-  "description": "オープンソースで完全無料の自律型コーディングエージェント",
-  "keywords": [
-    "ai",
-    "agent",
-    "llm",
-    "mcp",
-    "cli",
-    "coding-assistant",
-    "bun"
-  ],
-  "homepage": "https://github.com/akiojin/agents#readme",
-  "bugs": {
-    "url": "https://github.com/akiojin/agents/issues"
+  "name": "@indenscale/open-gemini-cli",
+  "version": "0.1.10",
+  "engines": {
+    "node": ">=20.0.0"
   },
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/akiojin/agents.git"
+    "url": "git+https://github.com/IndenScale/open-gemini-cli.git"
   },
-  "license": "MIT",
-  "author": "akiojin",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "config": {
+    "sandboxImageUri": "us-docker.pkg.dev/gemini-code-dev/gemini-cli/sandbox:0.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "node scripts/start.js",
+    "debug": "cross-env DEBUG=1 node --inspect-brk scripts/start.js",
+    "auth:npm": "npx google-artifactregistry-auth",
+    "auth:docker": "gcloud auth configure-docker us-west1-docker.pkg.dev",
+    "auth": "npm run auth:npm && npm run auth:docker",
+    "generate": "node scripts/generate-git-commit-info.js",
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/cli",
+    "build:all": "npm run build && npm run build:sandbox",
+    "build:packages": "npm run build --workspaces",
+    "build:sandbox": "node scripts/build_sandbox.js --skip-npm-install-build",
+    "bundle": "npm run generate && node esbuild.config.js && node scripts/copy_bundle_assets.js",
+    "test": "npm run test --workspaces",
+    "test:ci": "npm run test:ci --workspaces --if-present && npm run test:scripts",
+    "test:scripts": "vitest run --config ./scripts/tests/vitest.config.ts",
+    "test:e2e": "npm run test:integration:sandbox:none -- --verbose --keep-output",
+    "test:integration:all": "npm run test:integration:sandbox:none && npm run test:integration:sandbox:docker && npm run test:integration:sandbox:podman",
+    "test:integration:sandbox:none": "GEMINI_SANDBOX=false node integration-tests/run-tests.js",
+    "test:integration:sandbox:docker": "GEMINI_SANDBOX=docker node integration-tests/run-tests.js",
+    "test:integration:sandbox:podman": "GEMINI_SANDBOX=podman node integration-tests/run-tests.js",
+    "lint": "eslint . --ext .ts,.tsx && eslint integration-tests",
+    "lint:fix": "eslint . --fix && eslint integration-tests --fix",
+    "lint:ci": "eslint . --ext .ts,.tsx --max-warnings 0 && eslint integration-tests --max-warnings 0",
+    "format": "prettier --write .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "preflight": "npm run clean && npm ci && npm run format && npm run lint:ci && npm run build && npm run typecheck && npm run test:ci",
+    "prepare": "npm run bundle",
+    "prepare:package": "node scripts/prepare-package.js",
+    "release:version": "node scripts/version.js",
+    "telemetry": "node scripts/telemetry.js",
+    "clean": "node scripts/clean.js"
+  },
   "bin": {
-    "agents": "./dist/cli.js",
-    "@akiojin/agents": "./dist/cli.js"
+    "gemini": "bundle/gemini.js"
   },
   "files": [
-    "dist",
+    "bundle/",
     "README.md",
     "LICENSE"
   ],
-  "scripts": {
-    "dev": "bun run src/cli.ts",
-    "build": "bun build src/cli.ts --outdir dist --target node --minify",
-    "build:types": "tsc --emitDeclarationOnly",
-    "build:all": "bun run build && bun run build:types",
-    "start": "bun run dist/cli.js",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage",
-    "test:unit": "bun test tests/core tests/providers tests/utils tests/mcp tests/cli.test.ts",
-    "test:integration": "bun test tests/integration",
-    "test:e2e": "bun test tests/integration/e2e.test.ts",
-    "test:parallel": "bun test tests/integration/parallel-integration.test.ts",
-    "test:all": "bun run test:unit && bun run test:integration",
-    "test:bash": "bun run start -- task \"bashの実装はどのようになっていますか？\"",
-    "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "bun run clean && bun run build:all"
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/micromatch": "^4.0.9",
+    "@types/mime-types": "^3.0.1",
+    "@types/minimatch": "^5.1.2",
+    "@types/shell-quote": "^1.7.5",
+    "@types/vscode": "^1.102.0",
+    "@vitest/coverage-v8": "^3.1.1",
+    "concurrently": "^9.2.0",
+    "cross-env": "^7.0.3",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.24.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-license-header": "^0.8.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "glob": "^10.4.5",
+    "globals": "^16.0.0",
+    "json": "^11.0.0",
+    "lodash": "^4.17.21",
+    "memfs": "^4.17.2",
+    "openai": "^5.9.0",
+    "prettier": "^3.5.3",
+    "react-devtools-core": "^4.28.5",
+    "typescript-eslint": "^8.30.1",
+    "vitest": "^3.2.4",
+    "yargs": "^18.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.0",
-    "chalk": "^5.3.0",
-    "chokidar": "^3.6.0",
-    "commander": "^12.0.0",
-    "eventsource": "^4.0.0",
-    "inquirer": "^9.2.15",
-    "jsonrpc-lite": "^2.2.0",
-    "openai": "^4.47.0",
-    "ora": "^8.0.1",
-    "p-limit": "^5.0.0",
-    "winston": "^3.11.0",
-    "ws": "^8.16.0",
-    "yaml": "^2.3.4",
-    "zod": "^3.22.4"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.1.0",
-    "@types/inquirer": "^9.0.7",
-    "@types/node": "^20.11.0",
-    "@types/ws": "^8.5.10",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.1.3",
-    "prettier": "^3.2.4",
-    "typescript": "^5.3.3",
-    "vitest": "^1.2.0"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "bun": ">=1.0.0"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
+    "chromadb": "^3.0.11"
   }
 }
