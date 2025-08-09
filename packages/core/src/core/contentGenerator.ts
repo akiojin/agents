@@ -65,13 +65,17 @@ export function createContentGeneratorConfig(
   const googleCloudProject = process.env.GOOGLE_CLOUD_PROJECT || undefined;
   const googleCloudLocation = process.env.GOOGLE_CLOUD_LOCATION || undefined;
 
-  // Use runtime model from config if available, otherwise fallback to parameter or default
-  // For OPENAI_COMPATIBLE, also check LOCAL_LLM_MODEL environment variable
-  let effectiveModel = config.getModel() || DEFAULT_GEMINI_MODEL;
+  // For OPENAI_COMPATIBLE, prioritize environment variables to avoid circular dependency
+  let effectiveModel: string;
   
   if (authType === AuthType.OPENAI_COMPATIBLE) {
     // For OpenAI Compatible API, check environment variables first
-    effectiveModel = process.env.OPENAI_MODEL || process.env.LOCAL_LLM_MODEL || effectiveModel;
+    effectiveModel = process.env.OPENAI_MODEL || process.env.LOCAL_LLM_MODEL || 'llama-3.2-3b-instruct';
+    console.debug(`[ContentGenerator] OPENAI_COMPATIBLE model resolved: ${effectiveModel} (OPENAI_MODEL: ${process.env.OPENAI_MODEL}, LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL})`);
+  } else {
+    // Use runtime model from config if available, otherwise fallback to default
+    effectiveModel = config.getModel() || DEFAULT_GEMINI_MODEL;
+    console.debug(`[ContentGenerator] Non-OPENAI model resolved: ${effectiveModel}`);
   }
 
   const contentGeneratorConfig: ContentGeneratorConfig = {
