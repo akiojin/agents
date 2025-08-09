@@ -100,6 +100,17 @@ export const AppWrapper = (props: AppProps) => (
 
 const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
   useBracketedPaste();
+  
+  // ローカルLLMかどうかを判定
+  const isLocalLLM = () => {
+    const baseUrl = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL;
+    return baseUrl && (
+      baseUrl.includes('localhost') || 
+      baseUrl.includes('127.0.0.1') || 
+      baseUrl.includes('0.0.0.0') ||
+      baseUrl.includes('host.docker.internal')
+    );
+  };
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const { stdout } = useStdout();
   const nightly = version.includes('nightly');
@@ -1019,7 +1030,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
             </Box>
           )}
           <Footer
-            model={currentModel}
+            model={isLocalLLM() ? 'Local LLM' : currentModel}
             targetDir={config.getTargetDir()}
             debugMode={config.getDebugMode()}
             branchName={branchName}
