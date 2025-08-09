@@ -1030,7 +1030,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
             showMemoryUsage={
               config.getDebugMode() || config.getShowMemoryUsage()
             }
-            promptTokenCount={sessionStats.lastPromptTokenCount}
+            promptTokenCount={sessionStats.cumulativePromptTokenCount}
             nightly={nightly}
           />
         </Box>

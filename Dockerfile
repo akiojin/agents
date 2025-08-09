@@ -9,11 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     build-essential \
     ca-certificates \
+    python3-venv \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pipx and uv for MCP server execution
-RUN python3 -m pip install --upgrade pipx && \
+RUN python3 -m pip install --upgrade pipx --break-system-packages && \
     pipx ensurepath && \
     pipx install uv
 

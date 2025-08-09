@@ -311,11 +311,17 @@ export async function loadCliConfig(
   }
 
   // モデル名を決定（OpenAI互換APIの場合は別のデフォルト値を使用）
+  console.debug(`[Config] authType: ${authType}, AuthType.OPENAI_COMPATIBLE: ${AuthType.OPENAI_COMPATIBLE}`);
+  console.debug(`[Config] LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL}, localModel: ${localModel}`);
+  console.debug(`[Config] GEMINI_MODEL: ${process.env.GEMINI_MODEL}, DEFAULT_GEMINI_MODEL: ${DEFAULT_GEMINI_MODEL}`);
+  
   const modelName = argv.model || (
     authType === AuthType.OPENAI_COMPATIBLE
       ? (process.env.LOCAL_LLM_MODEL || localModel || 'llama-3.2-3b-instruct')
       : (process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL)
   );
+  
+  console.debug(`[Config] Final modelName: ${modelName}`);
 
   let mcpServers = mergeMcpServers(settings, activeExtensions);
   const excludeTools = mergeExcludeTools(settings, activeExtensions);

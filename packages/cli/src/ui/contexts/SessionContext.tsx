@@ -27,6 +27,7 @@ export interface SessionStatsState {
   sessionStartTime: Date;
   metrics: SessionMetrics;
   lastPromptTokenCount: number;
+  cumulativePromptTokenCount: number;
   promptCount: number;
 }
 
@@ -67,6 +68,7 @@ export const SessionStatsProvider: React.FC<{ children: React.ReactNode }> = ({
     sessionStartTime: new Date(),
     metrics: uiTelemetryService.getMetrics(),
     lastPromptTokenCount: 0,
+    cumulativePromptTokenCount: 0,
     promptCount: 0,
   });
 
@@ -78,10 +80,17 @@ export const SessionStatsProvider: React.FC<{ children: React.ReactNode }> = ({
       metrics: SessionMetrics;
       lastPromptTokenCount: number;
     }) => {
+      // Calculate cumulative prompt tokens from all models
+      const cumulativePromptTokenCount = Object.values(metrics.models).reduce(
+        (total, modelMetrics) => total + modelMetrics.tokens.prompt,
+        0
+      );
+      
       setStats((prevState) => ({
         ...prevState,
         metrics,
         lastPromptTokenCount,
+        cumulativePromptTokenCount,
       }));
     };
 
