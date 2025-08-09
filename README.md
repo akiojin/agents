@@ -12,9 +12,27 @@ Agents provides:
 - **MCP Tools Integration**: Model Context Protocol tools including Serena for intelligent code exploration
 - **Docker Development Environment**: Fully containerized development setup with all necessary tools pre-installed
 
+## 📋 必要条件
+
+### ChromaDB必須
+Agentsの記憶システムはChromaDBベクトルデータベースを必要とします。以下のいずれかの方法でChromaDBを起動する必要があります：
+
+1. **Docker経由**:
+   ```bash
+   docker run -d -p 8000:8000 chromadb/chroma:latest
+   ```
+
+2. **Python経由**:
+   ```bash
+   pip install chromadb
+   chroma run --path ./chroma-data
+   ```
+
+3. **自動起動**: `npm start`実行時に自動的にChromaDBの起動を試みます
+
 ## 🚀 Quick Start
 
-### Docker環境での実行（推奨）
+### Docker環境での実行
 
 1. **環境変数を設定**:
    ```bash

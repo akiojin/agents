@@ -4,6 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: agents
+    depends_on:
+      chroma:
+        condition: service_healthy
     volumes:
       # プロジェクトディレクトリのマウント
       - .:/agents

@@ -21,6 +21,7 @@ import { spawn, execSync } from 'child_process';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
+import { ensureChromaDB } from './start-chromadb.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -31,6 +32,15 @@ execSync('node ./scripts/check-build-status.js', {
   stdio: 'inherit',
   cwd: root,
 });
+
+// ChromaDBが必須なので起動を確認
+console.log('Ensuring ChromaDB is running...');
+try {
+  await ensureChromaDB();
+} catch (error) {
+  console.error('Failed to start ChromaDB:', error);
+  process.exit(1);
+}
 
 const nodeArgs = [];
 let sandboxCommand = undefined;
