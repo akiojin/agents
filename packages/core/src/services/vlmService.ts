@@ -25,7 +25,7 @@ export class OpenAIVLMService implements VLMService {
     if (this.isInitialized) return;
 
     const apiKey = process.env.OPENAI_VLM_API_KEY || process.env.OPENAI_API_KEY;
-    const baseURL = process.env.OPENAI_VLM_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+    const baseURL = process.env.OPENAI_VLM_BASE_URL || process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL || 'https://api.openai.com/v1';
 
     if (!apiKey) {
       throw new Error('OpenAI VLM API key not configured');

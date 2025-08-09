@@ -31,9 +31,13 @@ export class OpenAIContentGenerator implements ContentGenerator {
     private openai: OpenAI;
 
     constructor(private readonly config: ContentGeneratorConfig) {
+        // ローカルLLMまたはOpenAI互換APIのベースURL設定
+        const baseURL = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL || 'https://api.openai.com/v1';
+        const isLocalLLM = baseURL.includes('localhost') || baseURL.includes('127.0.0.1') || baseURL.includes('0.0.0.0');
+        
         this.openai = new OpenAI({
-            apiKey: config.apiKey || process.env.OPENAI_API_KEY,
-            baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+            apiKey: config.apiKey || process.env.OPENAI_API_KEY || (isLocalLLM ? 'not-needed' : undefined),
+            baseURL: baseURL,
         });
     }
 

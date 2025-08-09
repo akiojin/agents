@@ -39,12 +39,20 @@ export const validateAuthMethod = (authMethod: string): string | null => {
   }
 
   if (authMethod === AuthType.OPENAI_COMPATIBLE) {
-    if (!process.env.OPENAI_API_KEY) {
-      return 'OPENAI_API_KEY environment variable not found. Add that to your environment and try again (no reload needed if using .env)!';
+    // ローカルLLMまたはOpenAI互換APIの設定
+    const baseUrl = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL;
+    
+    if (!baseUrl) {
+      return 'OPENAI_BASE_URL or LOCAL_LLM_BASE_URL environment variable not found. Add one to your environment and try again (no reload needed if using .env)!';
     }
-    if (!process.env.OPENAI_BASE_URL) {
-      return 'OPENAI_BASE_URL environment variable not found. Add that to your environment and try again (no reload needed if using .env)!';
+    
+    // ローカルLLMの場合はAPI KEYは不要
+    const isLocalLLM = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('0.0.0.0');
+    
+    if (!isLocalLLM && !process.env.OPENAI_API_KEY) {
+      return 'OPENAI_API_KEY environment variable not found for external API. Add that to your environment and try again (no reload needed if using .env)!';
     }
+    
     return null;
   }
 

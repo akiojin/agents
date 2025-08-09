@@ -342,6 +342,7 @@ export function clearAuthEnvironmentVariables(targetAuthType?: AuthType) {
     // Only clear OpenAI variables when not switching TO OpenAI
     delete process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_BASE_URL;
+    delete process.env.LOCAL_LLM_BASE_URL;
     delete process.env.OPENAI_MODEL;
   }
   

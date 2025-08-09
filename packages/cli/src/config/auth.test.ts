@@ -68,23 +68,39 @@ describe('validateAuthMethod', () => {
   });
 
   describe('OPENAI_COMPATIBLE', () => {
-    it('should return null if OPENAI_API_KEY and OPENAI_BASE_URL are set', () => {
+    it('should return null if OPENAI_API_KEY and OPENAI_BASE_URL are set for external API', () => {
       process.env.OPENAI_API_KEY = 'test-key';
-      process.env.OPENAI_BASE_URL = 'test-base';
+      process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1';
       expect(validateAuthMethod(AuthType.OPENAI_COMPATIBLE)).toBeNull();
     });
 
-    it('should return an error message if OPENAI_API_KEY is not set', () => {
-      process.env.OPENAI_BASE_URL = 'test-base';
+    it('should return null if only base URL is set for local LLM', () => {
+      delete process.env.OPENAI_API_KEY;
+      process.env.OPENAI_BASE_URL = 'http://localhost:11434/v1';
+      expect(validateAuthMethod(AuthType.OPENAI_COMPATIBLE)).toBeNull();
+    });
+
+    it('should return null if LOCAL_LLM_BASE_URL is set for local LLM', () => {
+      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENAI_BASE_URL;
+      process.env.LOCAL_LLM_BASE_URL = 'http://127.0.0.1:8080/v1';
+      expect(validateAuthMethod(AuthType.OPENAI_COMPATIBLE)).toBeNull();
+    });
+
+    it('should return an error message if API KEY is not set for external API', () => {
+      delete process.env.OPENAI_API_KEY;
+      process.env.OPENAI_BASE_URL = 'https://api.external.com/v1';
       expect(validateAuthMethod(AuthType.OPENAI_COMPATIBLE)).toBe(
-        'OPENAI_API_KEY environment variable not found. Add that to your environment and try again (no reload needed if using .env)!',
+        'OPENAI_API_KEY environment variable not found for external API. Add that to your environment and try again (no reload needed if using .env)!',
       );
     });
 
-    it('should return an error message if OPENAI_BASE_URL is not set', () => {
+    it('should return an error message if no base URL is set', () => {
       process.env.OPENAI_API_KEY = 'test-key';
+      delete process.env.OPENAI_BASE_URL;
+      delete process.env.LOCAL_LLM_BASE_URL;
       expect(validateAuthMethod(AuthType.OPENAI_COMPATIBLE)).toBe(
-        'OPENAI_BASE_URL environment variable not found. Add that to your environment and try again (no reload needed if using .env)!',
+        'OPENAI_BASE_URL or LOCAL_LLM_BASE_URL environment variable not found. Add one to your environment and try again (no reload needed if using .env)!',
       );
     });
   });
