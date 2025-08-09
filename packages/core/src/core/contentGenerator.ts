@@ -119,7 +119,8 @@ export function createContentGeneratorConfig(
     }
     
     // モデル設定: 環境変数 > デフォルト
-    contentGeneratorConfig.model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+    // ローカルLLMの場合は、LOCAL_LLM_MODELも参照
+    contentGeneratorConfig.model = process.env.OPENAI_MODEL || process.env.LOCAL_LLM_MODEL || 'local-model';
     
     console.log('[ContentGeneratorConfig] OpenAI Compatible settings:', {
       baseUrl,
