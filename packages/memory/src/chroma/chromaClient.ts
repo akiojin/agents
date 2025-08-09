@@ -63,7 +63,7 @@ export class ChromaMemoryClient {
     });
     this.collectionName = collectionName;
     
-    console.log(`ChromaDB client configured: ${chromaHost}:${chromaPort}`);
+
   }
 
   /**
