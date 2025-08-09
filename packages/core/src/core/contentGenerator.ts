@@ -17,7 +17,7 @@ import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
 import { Config } from '../config/config.js';
 import { getEffectiveModel } from './modelCheck.js';
 import { UserTierId } from '../code_assist/types.js';
-import { createGeminiContentGenerator } from './geminiContentGenerator.js';
+import { createAgentsContentGenerator } from './agentsContentGenerator.js';
 import { OpenAIContentGenerator } from './openaiContentGenerator.js';
 
 /**
@@ -105,9 +105,29 @@ export function createContentGeneratorConfig(
   }
 
   if (authType === AuthType.OPENAI_COMPATIBLE) {
-    contentGeneratorConfig.apiKey = process.env.OPENAI_API_KEY;
-    contentGeneratorConfig.model =
-      process.env.OPENAI_MODEL || contentGeneratorConfig.model;
+    const baseUrl = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL;
+    const isLocalLLM = baseUrl && (
+      baseUrl.includes('localhost') || 
+      baseUrl.includes('127.0.0.1') || 
+      baseUrl.includes('0.0.0.0') ||
+      baseUrl.includes('host.docker.internal')
+    );
+    
+    // ローカルLLMの場合はAPI KEY不要
+    if (!isLocalLLM) {
+      contentGeneratorConfig.apiKey = process.env.OPENAI_API_KEY;
+    }
+    
+    // モデル設定: 環境変数 > デフォルト
+    contentGeneratorConfig.model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+    
+    console.log('[ContentGeneratorConfig] OpenAI Compatible settings:', {
+      baseUrl,
+      isLocalLLM,
+      model: contentGeneratorConfig.model,
+      hasApiKey: !!contentGeneratorConfig.apiKey,
+    });
+    
     return contentGeneratorConfig;
   }
 
@@ -145,6 +165,12 @@ export async function createContentGenerator(
   }
 
   if (config.authType === AuthType.OPENAI_COMPATIBLE) {
+    console.log('[ContentGenerator] Creating OpenAI Compatible API generator');
+    console.log('[ContentGenerator] Config:', {
+      authType: config.authType,
+      model: config.model,
+      hasApiKey: !!config.apiKey,
+    });
     return new OpenAIContentGenerator(config);
   }
 

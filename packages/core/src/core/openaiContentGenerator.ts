@@ -38,8 +38,16 @@ export class OpenAIContentGenerator implements ContentGenerator {
                            baseURL.includes('0.0.0.0') ||
                            baseURL.includes('host.docker.internal');
         
+        const apiKey = config.apiKey || process.env.OPENAI_API_KEY || (isLocalLLM ? 'not-needed' : undefined);
+        
+        // デバッグ情報を出力
+        console.log('[OpenAI Compatible API] Initializing with:');
+        console.log(`  Base URL: ${baseURL}`);
+        console.log(`  Is Local LLM: ${isLocalLLM}`);
+        console.log(`  API Key: ${apiKey ? '***' + apiKey.slice(-4) : 'not set'}`);
+        
         this.openai = new OpenAI({
-            apiKey: config.apiKey || process.env.OPENAI_API_KEY || (isLocalLLM ? 'not-needed' : undefined),
+            apiKey: apiKey,
             baseURL: baseURL,
         });
     }
@@ -186,7 +194,12 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 throw new Error('Unexpected response type: expected ChatCompletion but got Stream');
             }
         } catch (error) {
-            console.error('OpenAI API error:', error);
+            console.error('[OpenAI Compatible API] Request failed:', error);
+            console.error('Request details:', {
+                model: this.config.model || 'gpt-3.5-turbo',
+                baseURL: process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL,
+                hasApiKey: !!(this.config.apiKey || process.env.OPENAI_API_KEY),
+            });
             throw error;
         }
     }
