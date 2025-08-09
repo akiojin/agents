@@ -87,6 +87,13 @@ describe('validateAuthMethod', () => {
       expect(validateAuthMethod(AuthType.OPENAI_COMPATIBLE)).toBeNull();
     });
 
+    it('should return null if LOCAL_LLM_BASE_URL is set with host.docker.internal', () => {
+      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENAI_BASE_URL;
+      process.env.LOCAL_LLM_BASE_URL = 'http://host.docker.internal:1234/v1';
+      expect(validateAuthMethod(AuthType.OPENAI_COMPATIBLE)).toBeNull();
+    });
+
     it('should return an error message if API KEY is not set for external API', () => {
       delete process.env.OPENAI_API_KEY;
       process.env.OPENAI_BASE_URL = 'https://api.external.com/v1';

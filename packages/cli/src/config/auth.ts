@@ -47,7 +47,10 @@ export const validateAuthMethod = (authMethod: string): string | null => {
     }
     
     // ローカルLLMの場合はAPI KEYは不要
-    const isLocalLLM = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('0.0.0.0');
+    const isLocalLLM = baseUrl.includes('localhost') || 
+                       baseUrl.includes('127.0.0.1') || 
+                       baseUrl.includes('0.0.0.0') ||
+                       baseUrl.includes('host.docker.internal');
     
     if (!isLocalLLM && !process.env.OPENAI_API_KEY) {
       return 'OPENAI_API_KEY environment variable not found for external API. Add that to your environment and try again (no reload needed if using .env)!';

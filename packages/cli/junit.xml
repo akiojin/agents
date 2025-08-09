@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="14" failures="0" errors="0" time="0.003866834">
+    <testsuite name="src/config/auth.test.ts" timestamp="2025-08-09T11:20:12.504Z" hostname="b4837af7dd83" tests="14" failures="0" errors="0" skipped="0" time="0.003866834">
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; should return null for LOGIN_WITH_GOOGLE" time="0.001035584">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; should return null for CLOUD_SHELL" time="0.000187042">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_GEMINI &gt; should return null if GEMINI_API_KEY is set" time="0.000162125">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_GEMINI &gt; should return an error message if GEMINI_API_KEY is not set" time="0.000213166">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_VERTEX_AI &gt; should return null if GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION are set" time="0.0002765">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_VERTEX_AI &gt; should return null if GOOGLE_API_KEY is set" time="0.00016375">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_VERTEX_AI &gt; should return an error message if no required environment variables are set" time="0.000132375">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return null if OPENAI_API_KEY and OPENAI_BASE_URL are set for external API" time="0.000134792">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return null if only base URL is set for local LLM" time="0.000169125">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return null if LOCAL_LLM_BASE_URL is set for local LLM" time="0.000187583">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return null if LOCAL_LLM_BASE_URL is set with host.docker.internal" time="0.000130666">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return an error message if API KEY is not set for external API" time="0.000130666">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return an error message if no base URL is set" time="0.000123708">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; should return an error message for an invalid auth method" time="0.000129375">
+        </testcase>
+    </testsuite>
+</testsuites>
