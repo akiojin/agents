@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { Colors } from '../colors.js';
 import { MaxSizedBox } from './shared/MaxSizedBox.js';
+import { useTerminalSize } from '../hooks/useTerminalSize.js';
 
 interface Memory {
   id: string;
@@ -37,14 +38,11 @@ interface NetworkHealth {
 }
 
 interface SynapticMemoryDashboardProps {
-  terminalWidth: number;
-  terminalHeight: number;
+  // プロップなし - 内部でuseTerminalSizeを使用
 }
 
-export const SynapticMemoryDashboard: React.FC<SynapticMemoryDashboardProps> = ({
-  terminalWidth,
-  terminalHeight,
-}) => {
+export const SynapticMemoryDashboard: React.FC<SynapticMemoryDashboardProps> = () => {
+  const { columns: terminalWidth, rows: terminalHeight } = useTerminalSize();
   const [activeTab, setActiveTab] = useState<'memories' | 'synapses' | 'health' | 'config'>('memories');
   const [memories, setMemories] = useState<Memory[]>([]);
   const [synapses, setSynapses] = useState<SynapticConnection[]>([]);

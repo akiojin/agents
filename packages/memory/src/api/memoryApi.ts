@@ -148,6 +148,13 @@ export class MemoryAPI {
   }
 
   /**
+   * 汎用記憶保存（ツール用）
+   */
+  async storeGeneral(content: any, tags: string[] = []): Promise<string> {
+    return await this.memorySystem.store(content, tags);
+  }
+
+  /**
    * 記憶の使用とフィードバック
    */
   async useMemory(memoryId: string): Promise<void> {

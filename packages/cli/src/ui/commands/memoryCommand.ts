@@ -138,9 +138,9 @@ export const memoryCommand: SlashCommand = {
         );
 
         return {
-          type: 'ui',
-          component: 'SynapticVisualization',
-          props: { mode: 'network' },
+          type: 'message',
+          messageType: 'info',
+          content: 'Memory network visualization feature coming soon',
         };
       },
     },

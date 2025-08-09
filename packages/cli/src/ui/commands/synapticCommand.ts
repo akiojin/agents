@@ -17,12 +17,7 @@ export function synapticCommand(
   args: string[],
   context: CommandContext,
 ): SynapticCommandResult {
-  const { terminalSize } = context;
-  
-  const component = React.createElement(SynapticMemoryDashboard, {
-    terminalWidth: terminalSize.columns,
-    terminalHeight: terminalSize.rows,
-  });
+  const component = React.createElement(SynapticMemoryDashboard, {});
 
   return {
     type: 'synaptic_dashboard',

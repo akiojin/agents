@@ -2,15 +2,16 @@
 
 ## プロジェクト概要
 
-**@akiojin/agents** は、MCPプロトコルをベースとした拡張可能な自律型コーディングエージェントシステムです。完全オープンソースで無料提供され、ReActパターンによる思考と行動のループを実装し、複数のLLMプロバイダーとの連携、並列タスク処理、Serenaメモリシステムとの統合を特徴としています。
+**@akiojin/agents** は、Google Gemini CLIをベースに拡張された自律型コーディングエージェントシステムです。MCPプロトコルサポート、複数LLMプロバイダー対応、高度なメモリ管理機能を追加し、完全オープンソースで提供されています。
 
 ### 基本情報
 
 - **プロジェクト名**: @akiojin/agents
-- **現在のバージョン**: 0.1.0
-- **開発ブランチ**: feature/feature-requirements
+- **現在のバージョン**: 0.1.10
+- **ベースプロジェクト**: Google Gemini CLI
+- **開発ブランチ**: main
 - **ライセンス**: MIT
-- **メイン技術**: TypeScript, Bun, MCP Protocol, ReAct Pattern
+- **メイン技術**: TypeScript, Node.js 20+, MCP Protocol, Gemini CLI Core
 
 ## 実装済みコンポーネント
 
@@ -146,16 +147,16 @@ export function createProvider(config: Config): LLMProvider {
 }
 ```
 
-### 5. Bunランタイム対応
+### 5. Gemini CLIベース実装
 
 **実装状況**: ✅ 完了
 
 **特徴**:
 
-- パフォーマンス最適化されたJavaScriptランタイム
-- 高速なパッケージ管理
-- ネイティブTypeScriptサポート
-- 内蔵テストランナー
+- Google Gemini CLIのコア機能を継承
+- packages/cli: ユーザーインターフェース
+- packages/core: バックエンド処理とAPI連携
+- Node.js 20+での安定動作
 
 **package.json設定**:
 
@@ -163,14 +164,15 @@ export function createProvider(config: Config): LLMProvider {
 {
   "type": "module",
   "engines": {
-    "node": ">=18.0.0",
-    "bun": ">=1.0.0"
+    "node": ">=20.0.0"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "bun run src/cli.ts",
-    "build": "bun build src/cli.ts --outdir dist --target node --minify",
-    "test": "bun test",
-    "start": "bun run dist/cli.js"
+    "start": "node scripts/start.js",
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/cli",
+    "test": "npm run test --workspaces"
   }
 }
 ```
@@ -183,21 +185,20 @@ export function createProvider(config: Config): LLMProvider {
 
 **Docker環境の特徴**:
 
-- Node.js 22 (LTS) ベースイメージ
-- Bunランタイムのインストール
-- Claude Code CLI組み込み
-- Python環境（uv/uvx対応）
+- Node.js 20-slim ベースイメージ
+- Gemini CLIコア機能搭載
+- Claude Code CLI組み込み（予定）
+- MCP Server対応
 - GitHub CLI統合
 - Docker-in-Docker対応
 
 **インストール済みツール**:
 
-- Bun (最新版)
-- Claude Code CLI (@anthropic-ai/claude-code)
+- Node.js 20+ / npm最新版
+- Gemini CLI Core (packages/*)
 - GitHub CLI (gh)
-- uv/uvx (Python package manager)
 - Docker CLI + Compose Plugin
-- npm/pip 最新版
+- ChromaDB連携（docker-compose）
 
 ### 7. テスト環境
 
@@ -223,7 +224,8 @@ export function createProvider(config: Config): LLMProvider {
 ### コア技術
 
 - **TypeScript 5.3.3**: 型安全性とモダンJS機能
-- **Bun 1.0+**: 高速ランタイムとパッケージマネージャー
+- **Node.js 20+**: 安定したランタイム環境
+- **Gemini CLI Core**: Googleの基盤技術を活用
 - **MCP Protocol**: Model Context Protocolによるツール統合
 
 ### 依存関係
@@ -250,11 +252,11 @@ export function createProvider(config: Config): LLMProvider {
 
 ```json
 {
-  "@types/bun": "^1.1.0",
+  "@types/node": "^20.0.0",
   "typescript": "^5.3.3",
-  "eslint": "^8.56.0",
-  "prettier": "^3.2.4",
-  "vitest": "^1.2.0"
+  "eslint": "^9.24.0",
+  "prettier": "^3.5.3",
+  "vitest": "^3.2.4"
 }
 ```
 
@@ -265,14 +267,15 @@ export function createProvider(config: Config): LLMProvider {
 - **Factory Pattern**: LLMプロバイダーの動的生成
 - **Strategy Pattern**: 複数プロバイダーの統一インターフェース
 
-## 現在のバージョン：v0.1.0
+## 現在のバージョン：v0.1.10
 
 ### リリース内容
 
+- **Gemini CLIベース**: Google Gemini CLIの堅牢な基盤を活用
 - **基本CLI機能**: 初期化、チャット、タスク実行、監視
-- **マルチプロバイダー対応**: OpenAI、Anthropic、ローカルLLM
+- **マルチプロバイダー対応**: Gemini、OpenAI、Anthropic、ローカルLLM
 - **MCP基盤**: ツール登録・実行システム
-- **Bunランタイム**: パフォーマンス最適化
+- **Node.js環境**: 安定した実行環境
 - **Docker化**: 本格運用可能な環境
 
 ### パッケージ情報
@@ -280,9 +283,9 @@ export function createProvider(config: Config): LLMProvider {
 ```json
 {
   "name": "@akiojin/agents",
-  "version": "0.1.0",
-  "description": "オープンソースで完全無料の自律型コーディングエージェント",
-  "keywords": ["ai", "agent", "llm", "mcp", "cli", "coding-assistant", "bun"],
+  "version": "0.1.10",
+  "description": "Google Gemini CLIベースの拡張型自律コーディングエージェント",
+  "keywords": ["ai", "agent", "llm", "mcp", "cli", "coding-assistant", "gemini", "nodejs"],
   "license": "MIT",
   "publishConfig": {
     "access": "public",
@@ -392,17 +395,17 @@ interface SerenaIntegration {
 git clone https://github.com/akiojin/agents.git
 cd agents
 
-# Bunで依存関係インストール
-bun install
+# npmで依存関係インストール
+npm install
 
 # 開発サーバー起動
-bun run dev
+npm start
 
 # テスト実行
-bun test
+npm test
 
 # ビルド
-bun run build:all
+npm run build
 ```
 
 ### Docker開発環境
@@ -423,14 +426,14 @@ docker-compose exec agents bash
 
 ## まとめ
 
-@akiojin/agentsは、現代のAI開発に必要な基盤技術を統合した、実用的で拡張可能なコーディングエージェントシステムです。v0.1.0では基本機能が完成し、今後のフェーズでより高度な並列処理、メモリ管理、エンタープライズ機能を段階的に実装予定です。
+@akiojin/agentsは、Google Gemini CLIの堅牢な基盤の上に、MCPプロトコル対応や複数LLMプロバイダー統合を追加した、実用的で拡張可能なコーディングエージェントシステムです。v0.1.10では基本機能が安定稼働し、今後のフェーズでより高度な並列処理、メモリ管理、エンタープライズ機能を段階的に実装予定です。
 
 **現在の強み**:
 
-- 堅牢なアーキテクチャ設計
-- マルチプロバイダーLLM対応
+- Gemini CLI由来の堅牢なアーキテクチャ
+- マルチプロバイダーLLM対応（Gemini、OpenAI、Anthropic）
 - MCP Protocol統合
-- Bunによる高速実行
+- Node.js 20+による安定動作
 - Docker完全対応
 
 **次のマイルストーン**: Phase 2並列処理最適化（v0.2.0）の実装開始

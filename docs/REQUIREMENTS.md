@@ -69,18 +69,23 @@
 
 ### 実行環境
 
-#### Bunランタイムでの実行
+#### Node.js環境での実行
 
 ```bash
 # グローバルインストール
-bun install -g @akiojin/agents
+npm install -g @akiojin/agents
 
 # プロジェクトディレクトリで実行
-@akiojin/agents
+agents
 
 # または直接実行
-bunx @akiojin/agents
+npx @akiojin/agents
 ```
+
+**必要要件:**
+- Node.js 20.0.0以上
+- npm または yarn
+- Docker（オプション、推奨）
 
 #### 実行モード
 
@@ -103,7 +108,7 @@ bunx @akiojin/agents
 ### パフォーマンス
 
 - 並列処理により従来の3-5倍の処理速度
-- 起動時間: 1秒以内（Bunランタイムの高速起動）
+- 起動時間: 2秒以内（Node.jsランタイム）
 - メモリ使用量: 最大2GB（ローカルLLM除く）
 - レスポンス時間: 初回応答まで3秒以内
 
@@ -140,12 +145,13 @@ bunx @akiojin/agents
 ### ランタイムとフレームワーク
 
 ```yaml
-runtime: Bun v1.0+
-language: TypeScript 5.0+
+runtime: Node.js v20.0+
+language: TypeScript 5.3+
 framework:
-  - CLI: Commander.js / Yargs
-  - UI: Ink (React for CLI)
-package_manager: Bun
+  - Base: Gemini CLI (Google)
+  - CLI: Commander.js
+  - UI: Terminal rendering (Gemini CLI)
+package_manager: npm / yarn
 ```
 
 ### 依存関係
@@ -179,8 +185,8 @@ utilities:
 
 ### 技術的制約
 
-- Bunランタイム v1.0以上が必要
-- Node.js 18以上との互換性維持
+- Node.js 20.0.0以上が必要
+- Gemini CLIベースのアーキテクチャ制約
 - ローカルLLMの実行には16GB以上のRAM推奨
 - GPUはオプション（あれば高速化）
 

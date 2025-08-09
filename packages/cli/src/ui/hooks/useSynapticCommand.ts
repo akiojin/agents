@@ -47,73 +47,13 @@ export const useSynapticCommand = () => {
     args: string,
     context: CommandContext,
   ): Promise<any> => {
-    const argParts = args.trim().split(/\s+/);
-    
-    if (argParts.length === 0 || argParts[0] === '') {
-      // メインコマンドヘルプを表示
-      const helpText = generateCommandHelp(command);
-      return {
-        type: 'message',
-        messageType: 'info',
-        content: helpText,
-      };
-    }
-
-    const subCommandName = argParts[0];
-    const subCommand = command.subCommands?.find(sc => sc.name === subCommandName);
-    
-    if (!subCommand) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: `不明なサブコマンド: ${subCommandName}\n使用可能なサブコマンド: ${command.subCommands?.map(sc => sc.name).join(', ') || 'なし'}`,
-      };
-    }
-
-    const subArgs = argParts.slice(1).join(' ');
-    
-    // サブサブコマンドの処理
-    if (subCommand.subCommands && subArgs) {
-      const subArgParts = subArgs.trim().split(/\s+/);
-      const subSubCommandName = subArgParts[0];
-      const subSubCommand = subCommand.subCommands.find(ssc => ssc.name === subSubCommandName);
-      
-      if (subSubCommand && subSubCommand.action) {
-        const subSubArgs = subArgParts.slice(1).join(' ');
-        return await subSubCommand.action(context, subSubArgs);
-      } else if (subCommand.subCommands) {
-        // サブサブコマンドヘルプを表示
-        const helpText = generateSubCommandHelp(subCommand);
-        return {
-          type: 'message',
-          messageType: 'info',
-          content: helpText,
-        };
-      }
-    }
-
-    // サブコマンドの実行
-    if (subCommand.action) {
-      return await subCommand.action(context, subArgs);
-    }
-
+    // synapticCommandは単純な関数なので、直接実行
+    const result = command(args.trim().split(/\s+/), context);
     return {
       type: 'message',
-      messageType: 'error',
-      content: `コマンド '${subCommandName}' にアクションが定義されていません`,
+      messageType: 'info',
+      content: 'Synaptic memory dashboard loaded successfully',
     };
-  };
-
-  const generateCommandHelp = (command: typeof synapticCommand): string => {
-    let help = `${command.name}: ${command.description || ''}\n\n使用可能なサブコマンド:\n`;
-    
-    if (command.subCommands) {
-      command.subCommands.forEach(subCommand => {
-        help += `  ${subCommand.name} - ${subCommand.description || ''}\n`;
-      });
-    }
-    
-    return help.trim();
   };
 
   const generateSubCommandHelp = (subCommand: any): string => {

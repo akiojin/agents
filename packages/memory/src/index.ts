@@ -55,7 +55,7 @@ export class IntegratedMemorySystem {
   /**
    * イベントから記憶すべきか判断
    */
-  async checkMemoryRelevance(event: any): boolean {
+  async checkMemoryRelevance(event: any): Promise<boolean> {
     // エラーイベント
     if (event.type === 'error' && event.resolved) {
       return true;
@@ -331,3 +331,4 @@ export class IntegratedMemorySystem {
 // エクスポート
 export { Memory, ChromaMemoryClient } from './chroma/chromaClient.js';
 export { SynapticMemoryNetwork, SynapticConnection, MemoryNode } from './synaptic/synapticNetwork.js';
+export { MemoryAPI, getMemoryAPI, MemoryEvent, MemoryAPIConfig } from './api/memoryApi.js';

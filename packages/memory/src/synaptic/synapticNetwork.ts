@@ -504,7 +504,7 @@ export class SynapticMemoryNetwork {
     const primaryNode = this.nodes.get(memoryId);
     if (!primaryNode) return;
 
-    const primaryTime = new Date(primaryNode.memory.metadata.created || Date.now());
+    const primaryTime = new Date(primaryNode.memory.metadata.created_at || Date.now());
 
     // 時系列的に近い記憶を探す（前後2時間以内）
     const timeWindow = 2 * 60 * 60 * 1000; // 2時間
@@ -512,7 +512,7 @@ export class SynapticMemoryNetwork {
     for (const [id, node] of this.nodes) {
       if (id === memoryId || results.has(id)) continue;
 
-      const nodeTime = new Date(node.memory.metadata.created || Date.now());
+      const nodeTime = new Date(node.memory.metadata.created_at || Date.now());
       const timeDiff = Math.abs(primaryTime.getTime() - nodeTime.getTime());
 
       if (timeDiff <= timeWindow) {

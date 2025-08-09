@@ -5,7 +5,7 @@
 
 import { BaseTool, ToolResult } from './tools.js';
 import { FunctionDeclaration, Type } from '@google/genai';
-import { MemoryAPI, getMemoryAPI } from '../../../memory/src/api/memoryApi.js';
+import { MemoryAPI, getMemoryAPI } from '@agents/memory';
 
 // 記憶保存ツール
 const saveMemorySchema: FunctionDeclaration = {
@@ -143,7 +143,7 @@ export class SaveMemoryTool extends BaseTool<any, ToolResult> {
           break;
         
         default:
-          memoryId = await this.memoryAPI.memorySystem.store(
+          memoryId = await this.memoryAPI.storeGeneral(
             params.content,
             params.tags || [params.type]
           );

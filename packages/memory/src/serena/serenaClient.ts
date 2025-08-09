@@ -84,7 +84,7 @@ export class SerenaMCPClient {
   /**
    * プロジェクト記憶の読み取り
    */
-  async readMemory(key?: string): ProjectMemory | any {
+  async readMemory(key?: string): Promise<ProjectMemory | any> {
     if (!this.currentProject) {
       throw new Error('No project activated');
     }

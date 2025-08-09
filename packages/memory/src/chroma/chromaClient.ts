@@ -3,7 +3,10 @@
  * ベクトルDBとしてChromaDBを使用し、記憶の保存と検索を行う
  */
 
-import { ChromaClient, Collection, Embedding } from 'chromadb';
+import { ChromaClient, Collection } from 'chromadb';
+
+// Embedding型定義（ChromaDBから利用できない場合の手動定義）
+type Embedding = number[];
 
 export interface Memory {
   id: string;
@@ -13,6 +16,8 @@ export interface Memory {
     last_accessed: Date;
     access_count: number;
     success_rate: number;
+    memory_strength?: number; // シナプス記憶強度
+    type?: string; // 記憶タイプ（error, success, discoveryなど）
     human_rating?: 'useful' | 'neutral' | 'noise';
     tags: string[];
     // シナプス結合情報
