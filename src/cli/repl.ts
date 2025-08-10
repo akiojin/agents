@@ -21,6 +21,7 @@ class AsyncREPL extends EventEmitter {
   private commandProcessor: CommandProcessor;
   private rl: readline.Interface;
   private isRunning = false;
+  private isShuttingDown = false;
   private activePromises = new Map<string, Promise<any>>();
   private statusInterval?: NodeJS.Timeout;
   
@@ -110,7 +111,12 @@ class AsyncREPL extends EventEmitter {
     });
     
     this.inputQueue.on('process:input', (task) => {
+      // 非同期でタスクを処理（即座にリターン）
       this.processTask(task);
+      // プロンプトを再表示して入力可能にする
+      if (this.isRunning && !this.isShuttingDown) {
+        this.rl.prompt();
+      }
     });
     
     this.inputQueue.on('input:completed', (task, result) => {
@@ -147,9 +153,10 @@ class AsyncREPL extends EventEmitter {
   }
 
   /**
-   * タスクの実際の処理
+   * タスクの実際の処理（非同期で実行）
    */
-  private async processTask(task: QueuedTask<any>): Promise<void> {
+  private processTask(task: QueuedTask<any>): void {
+    // Promiseを作成して非同期実行（awaitしない）
     const promise = this.commandProcessor.processTask(task)
       .then(result => {
         this.inputQueue.completeTask(task.id, result);
@@ -161,16 +168,13 @@ class AsyncREPL extends EventEmitter {
           duration: 0
         };
         this.inputQueue.completeTask(task.id, errorResult);
+      })
+      .finally(() => {
+        this.activePromises.delete(task.id);
       });
     
-    // アクティブなPromiseとして管理
+    // アクティブなPromiseとして管理（awaitしない）
     this.activePromises.set(task.id, promise);
-    
-    try {
-      await promise;
-    } finally {
-      this.activePromises.delete(task.id);
-    }
   }
 
   /**
@@ -206,6 +210,11 @@ class AsyncREPL extends EventEmitter {
     }
     
     console.log(chalk.green(`✅ [${task.id}] 完了 (${result.duration}ms)`));
+    
+    // タスク完了後もプロンプトを表示
+    if (this.isRunning && !this.isShuttingDown) {
+      this.rl.prompt();
+    }
   }
 
   /**
@@ -213,6 +222,11 @@ class AsyncREPL extends EventEmitter {
    */
   private handleTaskError(task: QueuedTask<any>, error: Error): void {
     console.log(chalk.red(`❌ [${task.id}] エラー: ${error.message}`));
+    
+    // エラー後もプロンプトを表示
+    if (this.isRunning && !this.isShuttingDown) {
+      this.rl.prompt();
+    }
   }
 
   /**
@@ -402,8 +416,10 @@ class AsyncREPL extends EventEmitter {
   private async shutdown(): Promise<void> {
     if (!this.isRunning) return;
     
-    console.log(chalk.gray('\nシステムを終了しています...'));
+    console.log(chalk.gray('
+システムを終了しています...'));
     this.isRunning = false;
+    this.isShuttingDown = true;
     
     // 状態表示停止
     if (this.statusInterval) {
