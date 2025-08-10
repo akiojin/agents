@@ -82,6 +82,7 @@ import ansiEscapes from 'ansi-escapes';
 import { OverflowProvider } from './contexts/OverflowContext.js';
 import { ShowMoreLines } from './components/ShowMoreLines.js';
 import { PrivacyNotice } from './privacy/PrivacyNotice.js';
+import { useMemoryIntegration } from './hooks/useMemoryIntegration.js';
 
 const CTRL_EXIT_PROMPT_DURATION_MS = 1000;
 
@@ -114,6 +115,15 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     handleNewMessage,
     clearConsoleMessages: clearConsoleMessagesState,
   } = useConsoleMessages();
+  
+  // Memory system integration
+  const {
+    recordErrorSolution,
+    explicitMemorize,
+    searchMemory,
+    getMemoryStats,
+    isMemoryAvailable
+  } = useMemoryIntegration({ history, config });
 
   useEffect(() => {
     const consolePatcher = new ConsolePatcher({

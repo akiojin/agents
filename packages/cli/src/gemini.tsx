@@ -40,6 +40,7 @@ import {
 } from '@indenscale/open-gemini-cli-core';
 import { validateAuthMethod } from './config/auth.js';
 import { setMaxSizedBoxDebugging } from './ui/components/shared/MaxSizedBox.js';
+import { getMemoryManager } from './memory/memoryManager.js';
 
 function getNodeMemoryArgs(config: Config): string[] {
   const totalMemoryMB = os.totalmem() / (1024 * 1024);
@@ -203,6 +204,14 @@ export async function main() {
   if (shouldBeInteractive) {
     const version = await getCliVersion();
     setWindowTitle(basename(workspaceRoot), settings);
+    
+    // Initialize memory system
+    const memoryManager = getMemoryManager({
+      projectRoot: workspaceRoot
+      // chromaUrlは省略 - MemoryManager内で環境に応じて自動判定される
+    });
+    await memoryManager.initialize();
+    
     const instance = render(
       <React.StrictMode>
         <AppWrapper
@@ -215,7 +224,10 @@ export async function main() {
       { exitOnCtrlC: false },
     );
 
-    registerCleanup(() => instance.unmount());
+    registerCleanup(() => {
+      instance.unmount();
+      memoryManager.cleanup();
+    });
     return;
   }
   // If not a TTY, read from stdin

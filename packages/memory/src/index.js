@@ -240,4 +240,5 @@ export class IntegratedMemorySystem {
 // エクスポート
 export { ChromaMemoryClient } from './chroma/chromaClient.js';
 export { SynapticMemoryNetwork } from './synaptic/synapticNetwork.js';
+export { MemoryAPI, getMemoryAPI } from './api/memoryApi.js';
 //# sourceMappingURL=index.js.map

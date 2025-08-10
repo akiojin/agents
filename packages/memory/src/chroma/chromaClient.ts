@@ -46,8 +46,8 @@ export class ChromaMemoryClient {
       const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
       
       if (isInDocker) {
-        // Docker環境内ではhost.docker.internalを使用
-        chromaHost = 'host.docker.internal';
+        // Docker環境内ではchromaコンテナ名を使用
+        chromaHost = 'chroma';
       } else {
         // ローカル環境ではlocalhostを使用
         chromaHost = 'localhost';
@@ -109,17 +109,22 @@ export class ChromaMemoryClient {
     const document = JSON.stringify(memory.content);
     
     // ChromaDBが受け付ける形式にメタデータを変換
-    const metadata: Record<string, string | number | boolean | null> = {
+    // 注意: ChromaDBはnull値を受け付けないため、除外する
+    const metadata: Record<string, string | number | boolean> = {
       created_at: memory.metadata.created_at.toISOString(),
       last_accessed: memory.metadata.last_accessed.toISOString(),
       access_count: memory.metadata.access_count,
       success_rate: memory.metadata.success_rate,
       memory_strength: memory.metadata.memory_strength || 0,
       type: memory.metadata.type || 'general',
-      human_rating: memory.metadata.human_rating || null,
       tags: JSON.stringify(memory.metadata.tags || []),
       connections: JSON.stringify(memory.metadata.connections || [])
     };
+    
+    // human_ratingがある場合のみ追加
+    if (memory.metadata.human_rating) {
+      metadata.human_rating = memory.metadata.human_rating;
+    }
 
     await this.collection.add({
       ids: [memory.id],
