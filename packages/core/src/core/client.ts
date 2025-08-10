@@ -22,7 +22,7 @@ import {
   ChatCompressionInfo,
 } from './turn.js';
 import { Config } from '../config/config.js';
-import { getCoreSystemPrompt, getCompressionPrompt } from './prompts.js';
+import { getCoreSystemPrompt, getCompressionPrompt, getDeepAgentSystemPrompt } from './prompts.js';
 import { ReadManyFilesTool } from '../tools/read-many-files.js';
 import { getResponseText } from '../utils/generateContentResponseUtilities.js';
 import { checkNextSpeaker } from '../utils/nextSpeakerChecker.js';
@@ -262,7 +262,24 @@ export class GeminiClient {
     ];
     try {
       const userMemory = this.config.getUserMemory();
-      const systemInstruction = getCoreSystemPrompt(userMemory);
+      
+      // 記憶システムの統計情報を取得
+      let memoryStats = null;
+      try {
+        // MemoryManagerが利用可能な場合のみ統計情報を取得
+        const memoryModule = await import('@agents/memory');
+        const memoryAPI = memoryModule.getMemoryAPI();
+        if (memoryAPI && typeof memoryAPI.getStatistics === 'function') {
+          const stats = await memoryAPI.getStatistics();
+          memoryStats = stats;
+        }
+      } catch (error) {
+        // 記憶システムが利用できない場合は無視
+        console.debug('Memory statistics not available:', error);
+      }
+      
+      // DeepAgentプロンプトを使用
+      const systemInstruction = getDeepAgentSystemPrompt(userMemory, memoryStats);
       const generateContentConfigWithThinking = isThinkingSupported(
         this.config.getModel(),
       )

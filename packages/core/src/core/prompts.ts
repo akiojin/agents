@@ -17,6 +17,7 @@ import { WriteFileTool } from '../tools/write-file.js';
 import process from 'node:process';
 import { isGitRepository } from '../utils/gitUtils.js';
 import { MemoryTool, GEMINI_CONFIG_DIR } from '../tools/memoryTool.js';
+import { DEEP_AGENT_SYSTEM_PROMPT } from './deep-agent-system.js';
 
 export function getCoreSystemPrompt(userMemory?: string): string {
   // if GEMINI_SYSTEM_MD is set (and not 0|false), override system prompt from file
@@ -336,4 +337,63 @@ The structure MUST be as follows:
     </current_plan>
 </state_snapshot>
 `.trim();
+}
+
+/**
+ * DeepAgentシステムプロンプトを取得
+ * @param userMemory ユーザー固有の記憶
+ * @param memoryStats 記憶システムの統計情報
+ * @returns DeepAgentシステムプロンプト
+ */
+export function getDeepAgentSystemPrompt(userMemory?: string, memoryStats?: any): string {
+  // 環境変数でGemini CLIプロンプトを強制する場合
+  const forceGeminiPrompt = process.env.USE_GEMINI_PROMPT?.toLowerCase();
+  if (forceGeminiPrompt && ['1', 'true'].includes(forceGeminiPrompt)) {
+    return getCoreSystemPrompt(userMemory);
+  }
+  
+  // 記憶システムの情報を準備
+  let memoryInfo = '';
+  if (memoryStats) {
+    memoryInfo = `
+
+## Memory System Status
+- Total memories: ${memoryStats.totalMemories || 0}
+- Average success rate: ${((memoryStats.averageSuccessRate || 0) * 100).toFixed(1)}%
+- Average access count: ${memoryStats.averageAccessCount || 0}
+- Memory system: Active and recording`;
+  }
+  
+  // 環境情報を準備
+  const cwd = process.cwd();
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const platform = process.platform;
+  const nodeVersion = process.version;
+  
+  // DeepAgentプロンプトに環境情報と記憶情報を追加
+  let deepAgentPrompt = DEEP_AGENT_SYSTEM_PROMPT;
+  
+  // Current Environmentセクションを置換
+  deepAgentPrompt = deepAgentPrompt.replace(
+    /## Current Environment[\s\S]*?(?=\n##|\n\nRemember:|$)/,
+    `## Current Environment
+
+Working directory: ${cwd}
+Platform: ${platform}
+Node version: ${nodeVersion}
+Today's date: ${today}${memoryInfo}`
+  );
+  
+  // ユーザーメモリを追加
+  const memorySuffix =
+    userMemory && userMemory.trim().length > 0
+      ? `\n\n---\n\n## User Memory\n${userMemory.trim()}`
+      : '';
+  
+  return `${deepAgentPrompt}${memorySuffix}`;
 }
