@@ -54,6 +54,7 @@ import {
   TrackedCancelledToolCall,
 } from './useReactToolScheduler.js';
 import { useSessionStats } from '../contexts/SessionContext.js';
+import { getMemoryManager } from '../../memory/memoryManager.js';
 
 export function mergePartListUnions(list: PartListUnion[]): PartListUnion {
   const resultParts: PartListUnion = [];
@@ -400,21 +401,51 @@ export const useGeminiStream = (
   );
 
   const handleErrorEvent = useCallback(
-    (eventValue: ErrorEvent['value'], userMessageTimestamp: number) => {
+    async (eventValue: ErrorEvent['value'], userMessageTimestamp: number) => {
       if (pendingHistoryItemRef.current) {
         addItem(pendingHistoryItemRef.current, userMessageTimestamp);
         setPendingHistoryItem(null);
       }
+      
+      const errorText = parseAndFormatApiError(
+        eventValue.error,
+        config.getContentGeneratorConfig()?.authType,
+        undefined,
+        config.getModel(),
+        DEFAULT_GEMINI_FLASH_MODEL,
+      );
+      
+      // 記憶システムからエラー解決策を検索
+      try {
+        const memoryManager = getMemoryManager();
+        if (memoryManager.isAvailable()) {
+          const solution = await memoryManager.findErrorSolution(errorText);
+          if (solution) {
+            // 解決策が見つかった場合、追加情報として表示
+            addItem(
+              {
+                type: MessageType.INFO,
+                text: `💡 記憶システムからの提案: ${solution}`,
+              },
+              userMessageTimestamp,
+            );
+          } else {
+            // 新しいエラーとして記録（解決策は後で更新される）
+            await memoryManager.recordError(errorText, undefined, {
+              timestamp: new Date(),
+              model: config.getModel(),
+              context: 'stream_error'
+            });
+          }
+        }
+      } catch (memoryError) {
+        console.debug('Memory system error lookup failed:', memoryError);
+      }
+      
       addItem(
         {
           type: MessageType.ERROR,
-          text: parseAndFormatApiError(
-            eventValue.error,
-            config.getContentGeneratorConfig()?.authType,
-            undefined,
-            config.getModel(),
-            DEFAULT_GEMINI_FLASH_MODEL,
-          ),
+          text: errorText,
         },
         userMessageTimestamp,
       );
@@ -556,6 +587,40 @@ export const useGeminiStream = (
 
       if (!prompt_id) {
         prompt_id = config.getSessionId() + '########' + getPromptCount();
+      }
+      
+      // タスク開始時に類似パターンを検索
+      if (!options?.isContinuation) {
+        try {
+          const memoryManager = getMemoryManager();
+          if (memoryManager.isAvailable()) {
+            // クエリのテキスト部分を抽出
+            const queryText = Array.isArray(query) 
+              ? query.map((p: any) => p.text || '').join(' ')
+              : (query as any).text || '';
+            
+            if (queryText) {
+              // 類似タスクを検索
+              const similarTasks = await memoryManager.recall(queryText, [
+                config.getTargetDir(),
+                'task_pattern'
+              ]);
+              
+              if (similarTasks && similarTasks.length > 0) {
+                // 参考情報として表示
+                addItem(
+                  {
+                    type: MessageType.INFO,
+                    text: `📚 類似タスクの記憶が ${similarTasks.length} 件見つかりました`,
+                  },
+                  userMessageTimestamp,
+                );
+              }
+            }
+          }
+        } catch (memoryError) {
+          console.debug('Memory pattern search failed:', memoryError);
+        }
       }
 
       const { queryToSend, shouldProceed } = await prepareQueryForGemini(

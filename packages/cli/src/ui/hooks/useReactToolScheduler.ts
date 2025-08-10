@@ -106,7 +106,54 @@ export function useReactToolScheduler(
   );
 
   const allToolCallsCompleteHandler: AllToolCallsCompleteHandler = useCallback(
-    (completedToolCalls) => {
+    async (completedToolCalls) => {
+      // ツール実行結果を記憶システムに記録
+      try {
+        const { getMemoryManager } = await import('../../memory/memoryManager.js');
+        const memoryManager = getMemoryManager();
+        
+        if (memoryManager.isAvailable()) {
+          for (const toolCall of completedToolCalls) {
+            if (toolCall.status === 'success') {
+              // 成功したツール実行を記録
+              const resultText = typeof toolCall.response.resultDisplay === 'string' 
+                ? toolCall.response.resultDisplay.substring(0, 200)
+                : JSON.stringify(toolCall.response.resultDisplay).substring(0, 200);
+              
+              const toolInfo = {
+                tool: toolCall.request.name,
+                args: toolCall.request.args,
+                result: resultText,
+                timestamp: new Date()
+              };
+              
+              // 成功パターンとして記録
+              await memoryManager.recordSuccess(
+                `Tool ${toolCall.request.name} executed successfully`,
+                [JSON.stringify(toolInfo)],
+                { context: 'tool_execution' }
+              );
+            } else if (toolCall.status === 'error') {
+              // エラーを記録
+              const errorInfo = {
+                tool: toolCall.request.name,
+                args: toolCall.request.args,
+                error: toolCall.response.resultDisplay,
+                timestamp: new Date()
+              };
+              
+              await memoryManager.recordError(
+                `Tool ${toolCall.request.name} failed: ${toolCall.response.resultDisplay}`,
+                undefined,
+                errorInfo
+              );
+            }
+          }
+        }
+      } catch (memoryError) {
+        console.debug('Failed to record tool execution in memory:', memoryError);
+      }
+      
       onComplete(completedToolCalls);
     },
     [onComplete],
