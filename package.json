@@ -50,9 +50,6 @@
     "telemetry": "node scripts/telemetry.js",
     "clean": "node scripts/clean.js"
   },
-  "bin": {
-    "agents": "src/cli.js"
-  },
   "files": [
     "bundle/",
     "README.md",
