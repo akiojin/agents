@@ -508,9 +508,9 @@ export class OpenAIToAgentsConverter {
         }
 
         // 如果没有内容、没有完成原因，且没有usage信息，则返回null
-        // if (parts.length === 0 && !choice.finish_reason && !finalUsage) {
-        //     return null;
-        // }
+        if (parts.length === 0 && !choice.finish_reason && !finalUsage) {
+            return null;
+        }
 
         // 映射完成原因
         const finishReasonMapping: Record<string, FinishReason> = {
@@ -545,7 +545,7 @@ export class OpenAIToAgentsConverter {
                 candidatesTokenCount: finalUsage.completion_tokens,
                 totalTokenCount: finalUsage.total_tokens,
             };
-            // console.log('[Usage Debug] Added usage metadata to response:', agentsResponse.usageMetadata);
+            console.log('[Usage Debug] Added usage metadata to response:', agentsResponse.usageMetadata);
         }
 
         return agentsResponse;

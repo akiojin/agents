@@ -25,6 +25,9 @@ import {
 } from '@google/genai';
 import { ContentGenerator, ContentGeneratorConfig } from './contentGenerator.js';
 import { AgentsToOpenAIConverter, OpenAIToAgentsConverter } from '../utils/adapter.js';
+import { logApiResponse } from '../telemetry/loggers.js';
+import { ApiResponseEvent } from '../telemetry/types.js';
+import { Config } from '../config/config.js';
 import OpenAI from 'openai';
 
 export class OpenAIContentGenerator implements ContentGenerator {
@@ -323,22 +326,22 @@ export class OpenAIContentGenerator implements ContentGenerator {
         let finalUsage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | undefined;
 
         for await (const chunk of stream) {
-            // 使用 `as any` 类型断言来处理非标准的 `usage` 字段位置
-            const usage = chunk.usage || (chunk.choices?.[0] as any)?.usage;
-            // --- 修改结束 ---
+            // OpenAI APIの標準的なストリーミングレスポンスでは、最後のチャンクでusage情報が提供される
+            // stream_options: { include_usage: true } を設定した場合のみ
+            
+            // OpenAI準拠のAPIでは、chunk.usageに直接格納される
+            if (chunk.usage) {
+                finalUsage = chunk.usage as any;
+                console.log('[Usage Debug] Received usage info in chunk:', finalUsage);
+            }
 
-            // if (usage) {
-            //     finalUsage = usage as any;
-            //     console.log('[Usage Debug] Received usage info in chunk:', finalUsage);
-            // }
-
-            // 对于包含usage信息的chunk，即使没有其他内容也要处理
-            // 传递当前chunk的usage信息（如果有的话）
+            // 対于包含usage信息的chunk，即使没有其他内容也要处理
+            // 传递当前chunk的usage信息（如果有的话）或者累积的finalUsage
             const agentsResponse = OpenAIToAgentsConverter.convertStreamingChunkToAgents(
                 chunk,
                 isJsonResponse,
                 accumulatedToolCalls,
-                chunk.usage ?? undefined // 如果chunk.usage为null，则传递undefined
+                finalUsage // 传递累积的usage信息
             );
             if (agentsResponse) {
                 yield agentsResponse;
