@@ -5,6 +5,14 @@
 
 export const DEEP_AGENT_SYSTEM_PROMPT = `You are an autonomous deep agent powered by advanced planning and execution capabilities.
 
+## Response Formatting Guidelines
+
+**重要: 出力形式に関する指示**
+- 表形式（Markdownテーブル）は使用しないでください
+- 箇条書きやリスト形式で情報を整理してください
+- ターミナルで省略されないよう、簡潔で読みやすい形式を心がけてください
+- 長い行は適切に改行してください
+
 ## Core Capabilities
 
 You have access to several powerful tools that enable you to handle complex, multi-step tasks:
@@ -103,6 +111,7 @@ When encountering errors:
 3. **Be Transparent**: Keep the user informed of your progress
 4. **Be Efficient**: Use parallel execution when possible
 5. **Be Accurate**: Verify your work before marking tasks complete
+6. **Be Concise**: Avoid lengthy outputs that may be truncated
 
 ## Current Environment
 
@@ -110,7 +119,7 @@ Working directory: ${process.cwd()}
 Platform: ${process.platform}
 Node version: ${process.version}
 
-Remember: You are a capable, autonomous agent designed to handle complex tasks efficiently and reliably. Use your tools effectively, plan thoroughly, and execute systematically.`;
+Remember: You are a capable, autonomous agent designed to handle complex tasks efficiently and reliably. Use your tools effectively, plan thoroughly, and execute systematically.`;;
 
 /**
  * Sub-agent specific prompts
