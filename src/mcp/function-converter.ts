@@ -42,7 +42,7 @@ export class MCPFunctionConverter {
   private functionDefinitions: Map<string, FunctionDefinition> = new Map();
   private toolMapping: Map<string, string> = new Map(); // function name -> server:tool
   private internalRegistry: InternalFunctionRegistry;
-  private internalFunctionPrefix = 'internal_';
+  private internalFunctionPrefix = '';
 
   constructor(mcpManager: MCPManager, securityConfig?: SecurityConfig, bashConfig?: any) {
     this.mcpManager = mcpManager;

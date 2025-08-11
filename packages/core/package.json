@@ -51,8 +51,11 @@
     "pdf-parse": "^1.1.1",
     "shell-quote": "^1.8.3",
     "simple-git": "^3.28.0",
+    "sqlite3": "^5.1.7",
     "strip-ansi": "^7.1.0",
     "undici": "^7.10.0",
+    "vscode-languageserver-protocol": "^3.17.5",
+    "vscode-uri": "^3.0.8",
     "ws": "^8.18.0",
     "xlsx": "^0.18.5"
   },
@@ -62,6 +65,7 @@
     "@types/micromatch": "^4.0.8",
     "@types/minimatch": "^5.1.2",
     "@types/node": "^20.11.24",
+    "@types/sqlite3": "^3.1.11",
     "@types/ws": "^8.5.10",
     "typescript": "^5.3.3",
     "vitest": "^3.1.1"

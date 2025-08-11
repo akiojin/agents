@@ -4,6 +4,7 @@ import { SecurityConfig, FileSystemSecurity } from './security.js';
 import { logger } from '../utils/logger.js';
 import type { FunctionDefinition } from '../mcp/function-converter.js';
 import { TodoWriteTool, TodoItem } from '../../packages/tools/todo-write.js';
+import { createCodeIntelligenceFunctions } from './code-intelligence-tools.js';
 
 /**
  * 内部関数の情報
@@ -526,7 +527,23 @@ export class InternalFunctionRegistry {
       }
     });
 
+    // コードインテリジェンス機能を登録
+    this.registerCodeIntelligenceFunctions();
+
     logger.debug(`Registered ${this.functions.size} default internal functions`);
+  }
+
+  /**
+   * Serenaと同等のコードインテリジェンス機能を登録
+   */
+  private registerCodeIntelligenceFunctions(): void {
+    const codeIntelligenceFunctions = createCodeIntelligenceFunctions();
+    
+    for (const func of codeIntelligenceFunctions) {
+      this.registerFunction(func);
+    }
+    
+    logger.debug(`Registered ${codeIntelligenceFunctions.length} code intelligence functions`);
   }
 
   /**

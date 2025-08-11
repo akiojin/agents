@@ -1,0 +1,698 @@
+/**
+ * IntelligentFileSystem
+ * コードインテリジェンスとファイルシステムを統合した高度なファイル操作システム
+ * 
+ * 特徴:
+ * - シンボル情報付きファイル読み取り
+ * - セマンティック編集サポート
+ * - 自動インデックス更新
+ * - 記憶システムとの連携
+ */
+
+import { SymbolIndex, createSymbolIndex, SymbolIndexInfo } from '../code-intelligence/symbol-index.js';
+import { TypeScriptLSPClient, createTypeScriptLSPClient } from '../code-intelligence/lsp-client.js';
+import { URI } from 'vscode-uri';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import { readFile as fsReadFile, writeFile as fsWriteFile, lstat } from 'fs/promises';
+import { existsSync } from 'fs';
+
+/**
+ * セキュリティ設定
+ */
+export interface SecurityConfig {
+  allowedDirectories: string[];
+  allowedFileExtensions?: string[];
+  blockedPaths?: string[];
+  maxFileSize?: number;
+  enabled?: boolean;
+}
+
+/**
+ * ファイルシステム操作結果
+ */
+export interface FileSystemResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+/**
+ * 基本的なファイルシステムクラス（簡易実装）
+ */
+class InternalFileSystem {
+  constructor(private securityConfig: SecurityConfig) {}
+  
+  async readFile(path: string): Promise<FileSystemResult<string>> {
+    try {
+      if (!existsSync(path)) {
+        return { success: false, error: `File not found: ${path}` };
+      }
+      const content = await fsReadFile(path, 'utf-8');
+      return { success: true, data: content };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : String(error) 
+      };
+    }
+  }
+  
+  async writeFile(path: string, content: string): Promise<FileSystemResult<void>> {
+    try {
+      await fsWriteFile(path, content, 'utf-8');
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : String(error) 
+      };
+    }
+  }
+}
+
+// ロガー（簡易実装）
+const logger = {
+  debug: (message: string, data?: any) => console.debug(message, data),
+  info: (message: string, data?: any) => console.info(message, data),
+  warn: (message: string, data?: any) => console.warn(message, data),
+  error: (message: string, data?: any) => console.error(message, data)
+};
+
+/**
+ * 拡張ファイル読み取り結果
+ */
+export interface IntelligentReadResult {
+  success: boolean;
+  content?: string;
+  error?: string;
+  symbols?: SymbolIndexInfo[];
+  dependencies?: string[];
+  imports?: string[];
+  exports?: string[];
+  lastModified?: Date;
+  cachedInIndex?: boolean;
+  fileMetadata?: {
+    lines: number;
+    size: number;
+    language: string;
+  };
+}
+
+/**
+ * セマンティック編集オプション
+ */
+export interface SemanticEditOptions {
+  mode: 'refactor' | 'insert' | 'replace' | 'delete';
+  symbol?: string;
+  newName?: string;
+  updateReferences?: boolean;
+  updateImports?: boolean;
+  afterSymbol?: string;
+  beforeSymbol?: string;
+  content?: string;
+}
+
+/**
+ * 編集履歴エントリ
+ */
+export interface EditHistoryEntry {
+  editId: string;
+  timestamp: Date;
+  filePath: string;
+  operation: string;
+  beforeState: string;
+  afterState: string;
+  affectedSymbols: string[];
+  success: boolean;
+}
+
+/**
+ * インテリジェントファイルシステムクラス
+ */
+export class IntelligentFileSystem {
+  private fileSystem: InternalFileSystem;
+  private symbolIndex?: SymbolIndex;
+  private lspClient?: TypeScriptLSPClient;
+  private currentProjectPath: string;
+  private editHistory: EditHistoryEntry[] = [];
+  private symbolCache: Map<string, SymbolIndexInfo[]> = new Map();
+  
+  // パフォーマンス統計
+  private stats = {
+    cacheHits: 0,
+    cacheMisses: 0,
+    indexingTime: 0,
+    totalReads: 0,
+    totalWrites: 0
+  };
+
+  constructor(
+    private securityConfig: SecurityConfig,
+    projectPath?: string
+  ) {
+    this.fileSystem = new InternalFileSystem(securityConfig);
+    this.currentProjectPath = projectPath || process.cwd();
+    logger.debug('IntelligentFileSystem initialized', { projectPath: this.currentProjectPath });
+  }
+
+  /**
+   * システムを初期化
+   */
+  async initialize(): Promise<void> {
+    // シンボルインデックスを初期化
+    this.symbolIndex = createSymbolIndex(this.currentProjectPath);
+    await this.symbolIndex.initialize();
+    
+    // LSPクライアントを初期化
+    this.lspClient = createTypeScriptLSPClient(this.currentProjectPath);
+    await this.lspClient.initialize();
+    
+    logger.info('IntelligentFileSystem fully initialized');
+  }
+
+  /**
+   * インテリジェントファイル読み取り
+   * シンボル情報、依存関係、メタデータを含む
+   */
+  async readFile(filePath: string, options?: {
+    includeSymbols?: boolean;
+    includeDependencies?: boolean;
+    useCache?: boolean;
+  }): Promise<IntelligentReadResult> {
+    const startTime = Date.now();
+    this.stats.totalReads++;
+
+    // 基本的なファイル読み取り
+    const basicResult = await this.fileSystem.readFile(filePath);
+    if (!basicResult.success) {
+      return basicResult;
+    }
+
+    const result: IntelligentReadResult = {
+      success: true,
+      content: basicResult.data,
+      cachedInIndex: false
+    };
+
+    // ファイルメタデータを追加
+    try {
+      const stats = await fs.stat(filePath);
+      const lines = basicResult.data!.split('\n').length;
+      const ext = path.extname(filePath).slice(1);
+      
+      result.fileMetadata = {
+        lines,
+        size: stats.size,
+        language: this.getLanguageFromExtension(ext)
+      };
+      result.lastModified = stats.mtime;
+    } catch (error) {
+      logger.warn('Failed to get file metadata', { filePath, error });
+    }
+
+    // シンボル情報を取得
+    if (options?.includeSymbols !== false && this.isCodeFile(filePath)) {
+      // キャッシュチェック
+      if (options?.useCache !== false && this.symbolCache.has(filePath)) {
+        this.stats.cacheHits++;
+        result.symbols = this.symbolCache.get(filePath);
+        result.cachedInIndex = true;
+      } else {
+        this.stats.cacheMisses++;
+        
+        // シンボル情報を取得
+        if (this.symbolIndex) {
+          const fileUri = URI.file(filePath).toString();
+          const symbols = await this.symbolIndex.findSymbols({ fileUri });
+          
+          if (symbols.length === 0 && this.lspClient) {
+            // インデックスにない場合はLSPから直接取得
+            try {
+              const docSymbols = await this.lspClient.getDocumentSymbols(fileUri);
+              // DocumentSymbolをSymbolIndexInfoに変換
+              symbols.push(...this.convertDocumentSymbolsToIndexInfo(docSymbols, fileUri));
+            } catch (error) {
+              logger.warn('Failed to get symbols from LSP', { filePath, error });
+            }
+          }
+          
+          result.symbols = symbols;
+          this.symbolCache.set(filePath, symbols);
+        }
+      }
+    }
+
+    // 依存関係を抽出
+    if (options?.includeDependencies !== false && this.isCodeFile(filePath)) {
+      const dependencies = this.extractDependencies(basicResult.data!);
+      result.imports = dependencies.imports;
+      result.exports = dependencies.exports;
+      result.dependencies = dependencies.allDeps;
+    }
+
+    const endTime = Date.now();
+    logger.debug('Intelligent file read completed', {
+      filePath,
+      duration: endTime - startTime,
+      symbolsFound: result.symbols?.length || 0,
+      cached: result.cachedInIndex
+    });
+
+    return result;
+  }
+
+  /**
+   * インテリジェントファイル書き込み
+   * 自動インデックス更新とバージョン管理
+   */
+  async writeFile(
+    filePath: string, 
+    content: string,
+    options?: {
+      updateIndex?: boolean;
+      trackHistory?: boolean;
+    }
+  ): Promise<FileSystemResult<void>> {
+    this.stats.totalWrites++;
+    
+    // 編集履歴を記録
+    let beforeState: string | undefined;
+    if (options?.trackHistory !== false) {
+      const readResult = await this.fileSystem.readFile(filePath);
+      if (readResult.success) {
+        beforeState = readResult.data;
+      }
+    }
+
+    // ファイルを書き込み
+    const writeResult = await this.fileSystem.writeFile(filePath, content);
+    if (!writeResult.success) {
+      return writeResult;
+    }
+
+    // インデックスを更新
+    if (options?.updateIndex !== false && this.symbolIndex && this.isCodeFile(filePath)) {
+      try {
+        await this.symbolIndex.indexFile(filePath);
+        // キャッシュをクリア
+        this.symbolCache.delete(filePath);
+        logger.debug('Symbol index updated for file', { filePath });
+      } catch (error) {
+        logger.error('Failed to update symbol index', { filePath, error });
+      }
+    }
+
+    // 編集履歴を保存
+    if (options?.trackHistory !== false && beforeState !== undefined) {
+      this.editHistory.push({
+        editId: this.generateEditId(),
+        timestamp: new Date(),
+        filePath,
+        operation: 'write',
+        beforeState,
+        afterState: content,
+        affectedSymbols: [],
+        success: true
+      });
+    }
+
+    return writeResult;
+  }
+
+  /**
+   * セマンティック編集
+   * シンボル理解に基づく高度な編集機能
+   */
+  async semanticEdit(
+    filePath: string,
+    options: SemanticEditOptions
+  ): Promise<FileSystemResult<{
+    updatedFiles: string[];
+    affectedSymbols: string[];
+  }>> {
+    if (!this.symbolIndex || !this.lspClient) {
+      return {
+        success: false,
+        error: 'Code intelligence not initialized'
+      };
+    }
+
+    const updatedFiles: string[] = [];
+    const affectedSymbols: string[] = [];
+
+    try {
+      switch (options.mode) {
+        case 'refactor': {
+          if (!options.symbol || !options.newName) {
+            return {
+              success: false,
+              error: 'Symbol and newName required for refactor mode'
+            };
+          }
+
+          // シンボルを検索
+          const symbols = await this.symbolIndex.findSymbols({ name: options.symbol });
+          if (symbols.length === 0) {
+            return {
+              success: false,
+              error: `Symbol not found: ${options.symbol}`
+            };
+          }
+
+          // リファクタリングを実行
+          for (const symbol of symbols) {
+            affectedSymbols.push(symbol.name);
+            
+            // 参照を更新
+            if (options.updateReferences) {
+              const references = await this.symbolIndex.findReferences(symbol.name, symbol.fileUri);
+              for (const ref of references) {
+                const refFilePath = URI.parse(ref.fileUri).fsPath;
+                const fileContent = await this.readFile(refFilePath);
+                if (fileContent.success && fileContent.content) {
+                  // シンボル名を置換
+                  const updatedContent = this.replaceSymbolInContent(
+                    fileContent.content,
+                    options.symbol,
+                    options.newName,
+                    ref
+                  );
+                  await this.writeFile(refFilePath, updatedContent);
+                  updatedFiles.push(refFilePath);
+                }
+              }
+            }
+          }
+          break;
+        }
+
+        case 'insert': {
+          if (!options.content) {
+            return {
+              success: false,
+              error: 'Content required for insert mode'
+            };
+          }
+
+          const fileContent = await this.readFile(filePath);
+          if (!fileContent.success || !fileContent.content) {
+            return {
+              success: false,
+              error: 'Failed to read file'
+            };
+          }
+
+          let insertPosition = -1;
+          
+          // 挿入位置を特定
+          if (options.afterSymbol) {
+            const symbols = await this.symbolIndex.findSymbols({ 
+              name: options.afterSymbol,
+              fileUri: URI.file(filePath).toString()
+            });
+            if (symbols.length > 0) {
+              insertPosition = this.findSymbolEndPosition(fileContent.content, symbols[0]);
+            }
+          } else if (options.beforeSymbol) {
+            const symbols = await this.symbolIndex.findSymbols({ 
+              name: options.beforeSymbol,
+              fileUri: URI.file(filePath).toString()
+            });
+            if (symbols.length > 0) {
+              insertPosition = this.findSymbolStartPosition(fileContent.content, symbols[0]);
+            }
+          }
+
+          if (insertPosition === -1) {
+            return {
+              success: false,
+              error: 'Could not determine insert position'
+            };
+          }
+
+          // コンテンツを挿入
+          const updatedContent = 
+            fileContent.content.slice(0, insertPosition) +
+            options.content +
+            fileContent.content.slice(insertPosition);
+
+          await this.writeFile(filePath, updatedContent);
+          updatedFiles.push(filePath);
+          
+          // 必要に応じてimportを更新
+          if (options.updateImports) {
+            const importsToAdd = this.detectRequiredImports(options.content);
+            if (importsToAdd.length > 0) {
+              await this.addImports(filePath, importsToAdd);
+            }
+          }
+          break;
+        }
+
+        default:
+          return {
+            success: false,
+            error: `Unsupported edit mode: ${options.mode}`
+          };
+      }
+
+      return {
+        success: true,
+        data: {
+          updatedFiles,
+          affectedSymbols
+        }
+      };
+
+    } catch (error) {
+      logger.error('Semantic edit failed', { error, options });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * プロジェクト全体のインデックスを構築
+   */
+  async indexProject(force = false): Promise<{
+    totalFiles: number;
+    totalSymbols: number;
+    duration: number;
+  }> {
+    if (!this.symbolIndex) {
+      throw new Error('Symbol index not initialized');
+    }
+
+    const startTime = Date.now();
+    const stats = await this.symbolIndex.indexProject();
+    const duration = Date.now() - startTime;
+    
+    this.stats.indexingTime += duration;
+
+    return {
+      totalFiles: stats.totalFiles,
+      totalSymbols: stats.totalSymbols,
+      duration
+    };
+  }
+
+  /**
+   * パフォーマンス統計を取得
+   */
+  getStats() {
+    return {
+      ...this.stats,
+      cacheHitRate: this.stats.cacheHits / (this.stats.cacheHits + this.stats.cacheMisses),
+      averageIndexingTime: this.stats.indexingTime / Math.max(1, this.stats.totalWrites)
+    };
+  }
+
+  /**
+   * 編集履歴を取得
+   */
+  getEditHistory(limit = 10): EditHistoryEntry[] {
+    return this.editHistory.slice(-limit);
+  }
+
+  /**
+   * システムをクリーンアップ
+   */
+  async cleanup(): Promise<void> {
+    if (this.symbolIndex) {
+      await this.symbolIndex.close();
+    }
+    if (this.lspClient) {
+      await this.lspClient.disconnect();
+    }
+    this.symbolCache.clear();
+    this.editHistory = [];
+  }
+
+  // ユーティリティメソッド
+
+  private isCodeFile(filePath: string): boolean {
+    const ext = path.extname(filePath).toLowerCase();
+    return ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'].includes(ext);
+  }
+
+  private getLanguageFromExtension(ext: string): string {
+    const languageMap: Record<string, string> = {
+      ts: 'typescript',
+      tsx: 'typescriptreact',
+      js: 'javascript',
+      jsx: 'javascriptreact',
+      mjs: 'javascript',
+      cjs: 'javascript',
+      json: 'json',
+      md: 'markdown',
+      yml: 'yaml',
+      yaml: 'yaml'
+    };
+    return languageMap[ext] || 'plaintext';
+  }
+
+  private extractDependencies(content: string): {
+    imports: string[];
+    exports: string[];
+    allDeps: string[];
+  } {
+    const imports: string[] = [];
+    const exports: string[] = [];
+    
+    // importステートメントを抽出
+    const importRegex = /import\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)\s+from\s+)?['"]([^'"]+)['"]/g;
+    let match;
+    while ((match = importRegex.exec(content)) !== null) {
+      imports.push(match[1]);
+    }
+    
+    // exportステートメントを抽出
+    const exportRegex = /export\s+(?:\{[^}]*\}\s+from\s+['"]([^'"]+)['"]|(?:default\s+)?(?:class|function|const|let|var)\s+(\w+))/g;
+    while ((match = exportRegex.exec(content)) !== null) {
+      if (match[1]) {
+        exports.push(match[1]);
+      } else if (match[2]) {
+        exports.push(match[2]);
+      }
+    }
+    
+    return {
+      imports,
+      exports,
+      allDeps: [...new Set([...imports])]
+    };
+  }
+
+  private convertDocumentSymbolsToIndexInfo(
+    symbols: any[],
+    fileUri: string
+  ): SymbolIndexInfo[] {
+    const result: SymbolIndexInfo[] = [];
+    
+    // 変換ロジックは symbol-index.ts と同様
+    for (const symbol of symbols) {
+      result.push({
+        id: this.generateSymbolId(),
+        name: symbol.name,
+        kind: symbol.kind,
+        fileUri,
+        startLine: symbol.range?.start?.line || 0,
+        startCharacter: symbol.range?.start?.character || 0,
+        endLine: symbol.range?.end?.line || 0,
+        endCharacter: symbol.range?.end?.character || 0,
+        containerName: undefined,
+        signature: symbol.detail,
+        documentation: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    
+    return result;
+  }
+
+  private replaceSymbolInContent(
+    content: string,
+    oldName: string,
+    newName: string,
+    reference: any
+  ): string {
+    // 行単位で処理
+    const lines = content.split('\n');
+    const line = lines[reference.startLine];
+    
+    if (line) {
+      const before = line.substring(0, reference.startCharacter);
+      const after = line.substring(reference.startCharacter + oldName.length);
+      lines[reference.startLine] = before + newName + after;
+    }
+    
+    return lines.join('\n');
+  }
+
+  private findSymbolEndPosition(content: string, symbol: SymbolIndexInfo): number {
+    const lines = content.split('\n');
+    let position = 0;
+    
+    for (let i = 0; i <= symbol.endLine && i < lines.length; i++) {
+      if (i < symbol.endLine) {
+        position += lines[i].length + 1; // +1 for newline
+      } else {
+        position += Math.min(symbol.endCharacter, lines[i].length);
+      }
+    }
+    
+    return position;
+  }
+
+  private findSymbolStartPosition(content: string, symbol: SymbolIndexInfo): number {
+    const lines = content.split('\n');
+    let position = 0;
+    
+    for (let i = 0; i < symbol.startLine && i < lines.length; i++) {
+      position += lines[i].length + 1; // +1 for newline
+    }
+    position += symbol.startCharacter;
+    
+    return position;
+  }
+
+  private detectRequiredImports(content: string): string[] {
+    // 簡単な実装：使用されている識別子を検出
+    // 実際にはより高度な解析が必要
+    const imports: string[] = [];
+    // TODO: 実装
+    return imports;
+  }
+
+  private async addImports(filePath: string, imports: string[]): Promise<void> {
+    // ファイルの先頭にimportを追加
+    const content = await this.readFile(filePath);
+    if (content.success && content.content) {
+      const importStatements = imports.map(imp => `import { ${imp} } from './${imp}';`).join('\n');
+      const updatedContent = importStatements + '\n\n' + content.content;
+      await this.writeFile(filePath, updatedContent);
+    }
+  }
+
+  private generateEditId(): string {
+    return `edit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private generateSymbolId(): string {
+    return `symbol_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+}
+
+/**
+ * IntelligentFileSystemインスタンスを作成
+ */
+export function createIntelligentFileSystem(
+  securityConfig: SecurityConfig,
+  projectPath?: string
+): IntelligentFileSystem {
+  return new IntelligentFileSystem(securityConfig, projectPath);
+}
