@@ -30,9 +30,13 @@ const LOCAL_MODEL_LIMITS: Record<string, TokenCount> = {
 };
 
 export function tokenLimit(model: Model): TokenCount {
+  // デバッグログ
+  console.log(`[TokenLimit Debug] Looking up limit for model: "${model}"`);
+  
   // まずローカルモデルをチェック
   const localLimit = LOCAL_MODEL_LIMITS[model.toLowerCase()];
   if (localLimit) {
+    console.log(`[TokenLimit Debug] Found local model limit: ${localLimit}`);
     return localLimit;
   }
 

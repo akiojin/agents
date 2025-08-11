@@ -16,3 +16,4 @@ export declare const SUB_AGENT_PROMPTS: {
  * Get the appropriate system prompt for an agent type
  */
 export declare function getAgentSystemPrompt(agentType?: string): string;
+//# sourceMappingURL=deep-agent-system.d.ts.map

@@ -1,0 +1,477 @@
+"use strict";
+/**
+ * Sub-agent implementation for deep agent architecture
+ * Inspired by DeepAgents and Claude Code
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.subAgentToolDefinition = exports.SubAgentManager = exports.SubAgent = void 0;
+exports.getSubAgentToolDefinition = getSubAgentToolDefinition;
+const todo_write_1 = require("../tools/todo-write");
+const gemini_adapter_1 = require("../../src/providers/gemini-adapter");
+const logger_1 = require("../../src/utils/logger");
+const agent_monitor_1 = require("./agent-monitor");
+class SubAgent {
+    constructor(idOrConfig, type, provider) {
+        this.status = 'idle';
+        // Support both old and new constructor signatures for backward compatibility
+        if (typeof idOrConfig === 'string') {
+            // New test signature: (id, type, provider)
+            this.id = idOrConfig;
+            this.type = type || 'general-purpose';
+            this.provider = provider;
+            this.config = {
+                name: this.id,
+                description: `${this.type} agent`,
+                prompt: `You are a ${this.type} agent.`,
+                provider: provider
+            };
+        }
+        else {
+            // Original signature: (config)
+            this.config = idOrConfig;
+            this.id = this.config.name;
+            this.type = this.config.name; // タイプを名前と同じに設定
+            // モデルが指定されている場合は、専用のプロバイダーを作成
+            if (this.config.model) {
+                this.provider = new gemini_adapter_1.GeminiAdapterProvider(process.env.LLM_API_KEY || 'dummy-key', this.config.model, // 指定されたモデルを使用
+                process.env.LLM_BASE_URL || 'http://localhost:1234/v1');
+            }
+            else {
+                this.provider = this.config.provider || new gemini_adapter_1.GeminiAdapterProvider(process.env.LLM_API_KEY || 'dummy-key', process.env.LLM_MODEL || 'local-model', process.env.LLM_BASE_URL || 'http://localhost:1234/v1');
+            }
+        }
+        this.todoTool = new todo_write_1.TodoWriteTool();
+        this.availableTools = new Map();
+        // Initialize default tools
+        this.initializeTools();
+        // モニターを取得（シングルトン）
+        try {
+            this.monitor = agent_monitor_1.AgentMonitor.getInstance();
+        }
+        catch (error) {
+            // モニターが利用できない場合は無視
+            logger_1.logger.debug('AgentMonitor not available:', error);
+        }
+    }
+    initializeTools() {
+        // Add TodoWrite tool by default
+        this.availableTools.set('write_todos', this.todoTool);
+        // Add other tools based on config
+        if (this.config.tools) {
+            // Tool initialization would happen here based on tool names
+            // For now, we'll just track which tools are requested
+        }
+    }
+    /**
+     * Execute a task with this sub-agent
+     */
+    async execute(task, context = {}) {
+        const startTime = Date.now();
+        this.status = 'busy';
+        this.currentTaskId = `task-${this.id}-${Date.now()}`;
+        // モニターにエージェントを登録
+        if (this.monitor) {
+            const agentInfo = {
+                agentId: this.id,
+                agentType: this.type,
+                agentName: this.config.name,
+                taskId: this.currentTaskId,
+                taskDescription: task,
+                state: agent_monitor_1.AgentExecutionState.INITIALIZING,
+                startTime: new Date(),
+                parentAgentId: context.parentContext?.agentId
+            };
+            this.monitor.registerAgent(agentInfo);
+        }
+        try {
+            // 状態を計画中に更新
+            this.updateMonitorState(agent_monitor_1.AgentExecutionState.PLANNING, { currentStep: 'タスクを分析中...' });
+            // Build the prompt with context
+            const fullPrompt = this.buildPrompt(task, context);
+            // 状態を実行中に更新
+            this.updateMonitorState(agent_monitor_1.AgentExecutionState.EXECUTING, { currentStep: 'LLMで処理中...' });
+            // Call the LLM with the prompt
+            const response = await this.processTask(fullPrompt, context);
+            // 状態を完了に更新
+            this.updateMonitorState(agent_monitor_1.AgentExecutionState.COMPLETED, {
+                currentStep: '処理完了',
+                endTime: new Date()
+            });
+            return {
+                success: true,
+                response: response,
+                files: context.files,
+                metadata: {
+                    agentId: this.id,
+                    agentType: this.type,
+                    agentName: this.config.name,
+                    duration: Date.now() - startTime,
+                    toolsUsed: Array.from(this.availableTools.keys()),
+                },
+            };
+        }
+        catch (error) {
+            logger_1.logger.error(`SubAgent ${this.config.name} error:`, error);
+            // 状態を失敗に更新
+            this.updateMonitorState(agent_monitor_1.AgentExecutionState.FAILED, {
+                error: error instanceof Error ? error.message : String(error),
+                endTime: new Date()
+            });
+            return {
+                success: false,
+                response: `Error executing sub-agent task: ${error}`,
+                metadata: {
+                    agentId: this.id,
+                    agentType: this.type,
+                    agentName: this.config.name,
+                    duration: Date.now() - startTime,
+                },
+            };
+        }
+        finally {
+            this.status = 'idle';
+            this.currentTaskId = undefined;
+        }
+    }
+    /**
+     * Get agent information
+     */
+    getAgentInfo() {
+        return {
+            id: this.id,
+            type: this.type,
+            status: this.status,
+        };
+    }
+    buildPrompt(task, context) {
+        let prompt = this.config.prompt + '\n\n';
+        // Add context information
+        if (context.files && context.files.size > 0) {
+            prompt += 'Available files:\n';
+            for (const [path, content] of context.files) {
+                prompt += `  - ${path}\n`;
+                // Optionally include file content if it's small
+                if (content.length < 500) {
+                    prompt += `    Content: ${content.substring(0, 200)}...\n`;
+                }
+            }
+            prompt += '\n';
+        }
+        // Add the task
+        prompt += `Task: ${task}\n`;
+        // Add available tools
+        prompt += '\nAvailable tools:\n';
+        for (const [name, _] of this.availableTools) {
+            prompt += `  - ${name}\n`;
+        }
+        // Add instructions for tool use
+        prompt += '\nYou can use tools by calling them in your response. Format tool calls as:\n';
+        prompt += 'TOOL_CALL: <tool_name> <parameters>\n';
+        prompt += '\nProvide your response after any tool calls.\n';
+        return prompt;
+    }
+    async processTask(prompt, context) {
+        try {
+            // Call the LLM
+            this.updateMonitorProgress(1, 4, 'LLMを呼び出し中...');
+            const llmResponse = await this.provider.chat([
+                { role: 'system', content: this.config.prompt },
+                { role: 'user', content: prompt }
+            ], {
+                temperature: 0.7,
+                maxTokens: 4000,
+            });
+            // Parse the response for tool calls
+            this.updateMonitorProgress(2, 4, 'ツール呼び出しを解析中...');
+            const toolCalls = this.parseToolCalls(llmResponse);
+            // Execute any tool calls
+            let toolResults = '';
+            if (toolCalls.length > 0) {
+                this.updateMonitorProgress(3, 4, `${toolCalls.length}個のツールを実行中...`);
+                for (let i = 0; i < toolCalls.length; i++) {
+                    const toolCall = toolCalls[i];
+                    this.updateMonitorState(agent_monitor_1.AgentExecutionState.EXECUTING, {
+                        currentStep: `ツール実行中: ${toolCall.name} (${i + 1}/${toolCalls.length})`
+                    });
+                    const result = await this.executeTool(toolCall.name, toolCall.params);
+                    toolResults += `Tool ${toolCall.name} result: ${JSON.stringify(result)}\n`;
+                    // モニターにツール使用を記録
+                    if (this.monitor && this.id) {
+                        this.monitor.recordToolUsage(this.id, toolCall.name);
+                    }
+                }
+            }
+            // If there were tool calls, get a final response from the LLM
+            if (toolCalls.length > 0) {
+                this.updateMonitorProgress(4, 4, '最終レスポンスを生成中...');
+                const finalResponse = await this.provider.chat([
+                    { role: 'system', content: this.config.prompt },
+                    { role: 'user', content: prompt },
+                    { role: 'assistant', content: llmResponse },
+                    { role: 'user', content: `Tool results:\n${toolResults}\n\nPlease provide your final response based on the tool results.` }
+                ], {
+                    temperature: 0.7,
+                    maxTokens: 2000,
+                });
+                return finalResponse;
+            }
+            return llmResponse;
+        }
+        catch (error) {
+            logger_1.logger.error('Error processing task with LLM:', error);
+            throw error;
+        }
+    }
+    parseToolCalls(response) {
+        const toolCalls = [];
+        const lines = response.split('\n');
+        for (const line of lines) {
+            if (line.startsWith('TOOL_CALL:')) {
+                const match = line.match(/TOOL_CALL:\s*(\w+)\s*(.*)/);
+                if (match) {
+                    const [, toolName, paramsStr] = match;
+                    try {
+                        const params = paramsStr ? JSON.parse(paramsStr) : {};
+                        toolCalls.push({ name: toolName, params });
+                    }
+                    catch {
+                        // If JSON parsing fails, treat as string parameter
+                        toolCalls.push({ name: toolName, params: paramsStr });
+                    }
+                }
+            }
+        }
+        return toolCalls;
+    }
+    async executeTool(toolName, params) {
+        const tool = this.availableTools.get(toolName);
+        if (!tool) {
+            return { error: `Tool ${toolName} not found` };
+        }
+        if (toolName === 'write_todos' && tool instanceof todo_write_1.TodoWriteTool) {
+            return await tool.execute(params);
+        }
+        // For other tools, attempt to execute if they have an execute method
+        if (typeof tool.execute === 'function') {
+            return await tool.execute(params);
+        }
+        return { error: `Tool ${toolName} does not have an execute method` };
+    }
+    getName() {
+        return this.config.name;
+    }
+    getDescription() {
+        return this.config.description;
+    }
+    getTools() {
+        return this.config.tools || [];
+    }
+    /**
+     * モニターの状態を更新
+     */
+    updateMonitorState(state, details) {
+        if (this.monitor && this.id) {
+            this.monitor.updateAgentState(this.id, state, details);
+        }
+    }
+    /**
+     * モニターの進捗を更新
+     */
+    updateMonitorProgress(current, total, currentStep) {
+        if (this.monitor && this.id) {
+            this.monitor.updateAgentProgress(this.id, current, total, currentStep);
+        }
+    }
+}
+exports.SubAgent = SubAgent;
+/**
+ * Manages multiple sub-agents
+ */
+class SubAgentManager {
+    constructor(provider) {
+        this.agents = new Map();
+        // Initialize provider
+        this.provider = provider || new gemini_adapter_1.GeminiAdapterProvider(process.env.LLM_API_KEY || 'dummy-key', process.env.LLM_MODEL || 'local-model', process.env.LLM_BASE_URL || 'http://localhost:1234/v1');
+        // 動的にエージェントプリセットを読み込む
+        try {
+            const { loadAgentPresets } = require('../agents/src/agent-prompt-loader');
+            const presets = loadAgentPresets();
+            // すべてのプリセットからエージェントを作成
+            for (const [name, preset] of presets.entries()) {
+                const agent = new SubAgent({
+                    name: preset.name,
+                    description: preset.description,
+                    prompt: preset.systemPrompt,
+                    provider: this.provider,
+                    // モデルが指定されている場合は適用
+                    model: preset.model,
+                });
+                this.agents.set(name, agent);
+                // general-purposeエージェントを記録
+                if (name === 'general-purpose') {
+                    this.generalPurposeAgent = agent;
+                }
+            }
+        }
+        catch (error) {
+            console.debug('AgentPromptLoader not available, using default agent');
+        }
+        // general-purposeエージェントが読み込まれていない場合はデフォルトを作成
+        if (!this.generalPurposeAgent) {
+            this.generalPurposeAgent = new SubAgent({
+                name: 'general-purpose',
+                description: 'A general-purpose agent with access to all tools',
+                prompt: `You are a general-purpose assistant that can help with various tasks.
+You have access to tools that you can use to complete tasks.
+Be thorough and systematic in your approach.`,
+                provider: this.provider,
+            });
+            this.agents.set('general-purpose', this.generalPurposeAgent);
+        }
+    }
+    /**
+     * Register a new sub-agent
+     */
+    registerSubAgent(config) {
+        // Ensure the sub-agent uses the same provider
+        config.provider = config.provider || this.provider;
+        const agent = new SubAgent(config);
+        this.agents.set(config.name, agent);
+    }
+    /**
+     * Get all registered sub-agents
+     */
+    getAgents() {
+        return new Map(this.agents);
+    }
+    /**
+     * Get a specific sub-agent
+     */
+    getAgent(name) {
+        return this.agents.get(name);
+    }
+    /**
+     * Remove a sub-agent
+     */
+    removeAgent(name) {
+        if (name === 'general-purpose') {
+            return false; // Can't remove the general-purpose agent
+        }
+        return this.agents.delete(name);
+    }
+    /**
+     * Execute a task with the specified agent
+     * @param taskDescription The task to execute
+     * @param agentName The name of the agent to use (defaults to 'general-purpose')
+     * @returns The execution result
+     */
+    async executeTask(taskDescription, agentName = 'general-purpose') {
+        const agent = this.agents.get(agentName) || this.generalPurposeAgent;
+        const context = {
+            task: taskDescription,
+            parentRequestId: `task-${Date.now()}`,
+            availableTools: agent.getTools(),
+            sharedMemory: new Map()
+        };
+        try {
+            const result = await agent.execute(context);
+            return result;
+        }
+        catch (error) {
+            return {
+                success: false,
+                output: '',
+                error: error instanceof Error ? error.message : String(error),
+                toolCalls: [],
+                stats: {
+                    tokensUsed: 0,
+                    executionTime: 0,
+                    toolCallCount: 0
+                }
+            };
+        }
+    }
+    /**
+     * Get all agents information
+     */
+    getAllAgents() {
+        const agents = [];
+        for (const [name, agent] of this.agents) {
+            agents.push(agent.getAgentInfo());
+        }
+        return agents;
+    }
+    /**
+     * Get agent status by ID
+     */
+    getAgentStatus(agentId) {
+        for (const [name, agent] of this.agents) {
+            const info = agent.getAgentInfo();
+            if (info.id === agentId) {
+                return info;
+            }
+        }
+        return undefined;
+    }
+    /**
+     * Clear all agents except general-purpose
+     */
+    clearAgents() {
+        const generalPurpose = this.agents.get('general-purpose');
+        this.agents.clear();
+        if (generalPurpose) {
+            this.agents.set('general-purpose', generalPurpose);
+        }
+    }
+}
+exports.SubAgentManager = SubAgentManager;
+// Tool definition for calling sub-agents
+// 動的にサブエージェントツール定義を生成する関数
+function getSubAgentToolDefinition() {
+    let agentTypes = ['general-purpose'];
+    let agentDescriptions = '- general-purpose: General-purpose agent with access to all tools';
+    try {
+        // AgentPromptLoaderから動的にエージェントタイプを取得
+        const { loadAgentPresets } = require('../agents/src/agent-prompt-loader');
+        const presets = loadAgentPresets();
+        if (presets && presets.size > 0) {
+            agentTypes = Array.from(presets.keys());
+            agentDescriptions = Array.from(presets.values())
+                .map(preset => `- ${preset.name}: ${preset.description}`)
+                .join('\n');
+        }
+    }
+    catch (error) {
+        console.debug('AgentPromptLoader not available, using default agent types');
+    }
+    return {
+        name: 'task',
+        description: `Launch a sub-agent to handle complex, multi-step tasks autonomously.
+
+Available sub-agent types:
+${agentDescriptions}
+
+When to use this tool:
+- For complex tasks requiring specialized handling
+- To isolate context for specific operations
+- When delegating subtasks`,
+        parameters: {
+            type: 'object',
+            properties: {
+                description: {
+                    type: 'string',
+                    description: 'A detailed description of the task for the sub-agent',
+                },
+                subagent_type: {
+                    type: 'string',
+                    description: 'The type of sub-agent to use',
+                    enum: agentTypes,
+                },
+            },
+            required: ['description', 'subagent_type'],
+        },
+    };
+}
+// デフォルトのエクスポート（後方互換性のため）
+exports.subAgentToolDefinition = getSubAgentToolDefinition();
+//# sourceMappingURL=sub-agent.js.map

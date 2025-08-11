@@ -43,6 +43,11 @@ export const Footer: React.FC<FooterProps> = ({
 }) => {
   const limit = tokenLimit(model);
   const percentage = promptTokenCount / limit;
+  
+  // デバッグ用ログ（開発時のみ）
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[Footer Debug] Model: ${model}, Limit: ${limit}, Token Count: ${promptTokenCount}, Percentage: ${percentage}`);
+  }
 
   const [activeFile, setActiveFile] = useState<ActiveFile | undefined>(
     undefined,

@@ -784,6 +784,7 @@ export class GeminiClient {
     await sessionManager.saveSession();
     
     console.log(`[Compression Debug] Compression complete: ${originalTokenCount} -> ${newTokenCount} tokens`);
+    console.log(`[Compression Debug] Reduction: ${Math.round((1 - (newTokenCount ?? 0) / originalTokenCount) * 100)}%`);
 
     return {
       originalTokenCount,

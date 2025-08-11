@@ -548,8 +548,7 @@ export function getSubAgentToolDefinition() {
       agentTypes = Array.from(presets.keys());
       agentDescriptions = Array.from(presets.values())
         .map(preset => `- ${preset.name}: ${preset.description}`)
-        .join('
-');
+        .join('\n');
     }
   } catch (error) {
     console.debug('AgentPromptLoader not available, using default agent types');

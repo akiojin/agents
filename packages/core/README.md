@@ -1,75 +1,172 @@
-# Open Gemini CLI
+# Core Package
 
-Open Gemini CLI is a fork of the Google Gemini CLI that empowers you with the freedom to connect and use any OpenAI-compatible API as your Agent reasoning engine.
-We believe that a powerful Agent tool should not be locked into a single ecosystem. By opening up backend choices, we hope to inspire more innovation, protect user privacy, and foster a more open and collaborative AI Agent ecosystem.
+The Core package contains the fundamental building blocks and utilities that power the Agents system. It provides essential infrastructure, type definitions, and shared functionality used throughout the platform.
 
-## 💡 Why Choose Open Gemini CLI?
+## Features
 
-With Open Gemini CLI, you can:
+- **Core Utilities**: Essential helper functions and utilities
+- **Type Definitions**: Comprehensive type definitions for the entire system
+- **Configuration Management**: Centralized configuration handling
+- **Error Handling**: Standardized error handling and reporting
+- **System Utilities**: Common system operations and utilities
 
-- **Freedom to choose MaaS providers**: No longer limited to a single cloud vendor, you can run your Agent on any platform that provides OpenAI-compatible APIs (such as Azure, Groq, Together AI, and numerous open-source model frameworks).
-- **Use locally hosted models for privacy protection**: By connecting to locally running LLMs (such as through Ollama, vLLM, LlamaEdge, etc.), you can ensure that code and data remain completely on your device, achieving the highest level of privacy and security.
-- **Mix multiple models to balance cost and efficiency**: You can configure different model providers for different tasks (such as general reasoning, code generation, visual understanding), achieving the optimal combination of cost and performance.
-- **Evaluate and compare models in Agentic tasks**: In the same complex workflows, easily switch and compare the performance of different models (such as GPT-4o, Llama3, Mixtral, Qwen2) to find the "brain" that best suits your tasks.
+## Architecture
 
-## 🚀 Quick Start
+### Core Components
 
-1. **Install prerequisites**: Ensure you have Node.js version 20 or higher installed.
-2. **Run directly via npx (recommended)**: `npx https://github.com/IndenScale/open-gemini-cli`
-3. **Or install globally**: `npm install -g @indenscale/open-gemini-cli`
-4. **Configuration**: On first run, the CLI will guide you through interactive configuration. When asked about authentication method, select the newly added "Use an OpenAI Compatible API" option.
+1. **Type System**: Complete set of TypeScript interfaces and types
+2. **Configuration Manager**: Centralized configuration handling and validation
+3. **Utility Functions**: Common utility functions used across the system
+4. **Error Handling Framework**: Standardized error handling with detailed logging
+5. **System Interfaces**: Core interfaces that define system contracts
 
-You can also configure quickly through environment variables:
+### System Flow
 
-### Global Configuration (Recommended)
+1. Components from other packages import core types and utilities
+2. Configuration is loaded through the central configuration manager
+3. System utilities provide shared functionality like logging and validation
+4. Error handling follows standardized patterns throughout the system
 
-This is the simplest way, directing all requests to the same OpenAI-compatible endpoint.
+## Key Concepts
 
-```bash
-# Your API key (required)
-export OPENAI_API_KEY="your-moonshot-api-key"
-# Your API endpoint address (required, e.g., https://api.moonshot.cn/v1)
-export OPENAI_BASE_URL="YOUR_BASE_URL"
-# The model name you want to use (optional, defaults to gpt-4o)
-export OPENAI_MODEL="kimi-k2-0711-preview"
+### Type Safety
+The core package ensures type safety across the entire system by:
+- Providing comprehensive TypeScript interfaces
+- Enforcing strict typing throughout the codebase
+- Supporting generic and flexible type definitions
+
+### Configuration Management
+Centralized configuration management provides:
+- Consistent access to system settings
+- Validation of configuration values
+- Support for multiple configuration sources
+
+### Utility Functions
+Core utilities include:
+- Logging and debugging tools
+- Data transformation and validation functions
+- System information retrieval utilities
+
+## Usage Examples
+
+### Type Usage
+```typescript
+import { AgentConfig, ToolDefinition } from '@agents/core';
+
+const config: AgentConfig = {
+  name: 'Task Manager',
+  model: 'gpt-4',
+  tools: ['fileSystem', 'command']
+};
+
+const tool: ToolDefinition = {
+  name: 'customTool',
+  description: 'A custom tool for specific operations',
+  parameters: {
+    input: { type: 'string' }
+  }
+};
 ```
 
-### Fine-grained Configuration (Advanced)(Not Implemented Yet)
+### Configuration Access
+```typescript
+import { getConfig } from '@agents/core/config';
 
-You can specify different model providers for different types of tasks to achieve ultimate optimization of cost and performance.
+// Get a specific configuration value
+const apiKey = getConfig('OPENAI_LLM_KEY');
 
-```bash
-# Main LLM reasoning using a powerful model
-export OPENAI_LLM_KEY="your-moonshot-api-key"
-export OPENAI_LLM_BASE="https://api.moonshot.cn/v1"
-export OPENAI_LLM_MODEL="kimi-k2-0711-preview"
-
-# Vision understanding (VLM) using another model
-export OPENAI_VLM_KEY="sk-..."
-export OPENAI_VLM_BASE="https://api.openai.com/v1"
-export OPENAI_VLM_MODEL="gpt-4o"
-
-# Fast, cheap tasks (like conversation history compression) using Flash models
-export OPENAI_FLASH_KEY="sk-..."
-export OPENAI_FLASH_BASE="https://api.together.xyz/v1"
-export OPENAI_FLASH_MODEL="mistralai/Mixtral-8x7B-Instruct-v0.1"
+// Get all configuration as an object
+const allConfig = getConfig();
 ```
 
-## 🛠️ Implementation Approach
+### Error Handling
+```typescript
+import { createError } from '@agents/core/errors';
 
-For transparency, we briefly explain the compatibility layer implementation approach of open-gemini-cli:
+// Create a standardized error
+const error = createError('AGENT_ERROR', 'Failed to initialize agent', {
+  code: 'INIT_ERROR',
+  details: { reason: 'Missing API key' }
+});
 
-We introduce an adapter layer (API Adaptor) that acts as a "translator" between the core Agent logic and the underlying model APIs.
+// Log the error
+console.error(error);
+```
 
-- **Request transformation**: When you issue instructions, the APIAdaptor converts Gemini's internal message and tool call format (Content[]) to OpenAI-compatible messages array format.
-- **Response transformation**: When OpenAI-compatible APIs return data in streaming (delta) format, the APIAdaptor reassembles these incremental data chunks into structurally complete GenerateContentResponse events expected by the upper-level gemini-cli logic.
+## Implementation Details
 
-This design ensures that gemini-cli's powerful Agent scheduling, tool execution, and multi-turn interaction logic can remain unchanged while seamlessly running on different reasoning backends.
+### Type Definitions
+The core package provides a comprehensive set of types including:
+- Agent and tool definitions
+- Memory and context structures
+- Configuration schemas
+- Error handling interfaces
 
-## 🔮 Future Plans
+### Configuration System
+The configuration system:
+- Supports environment variables, config files, and runtime parameters
+- Validates configuration values against defined schemas
+- Provides centralized access to all system settings
 
-We are actively enhancing file processing tools (read_file, read_many_files). Since many OpenAI-compatible models do not have native, integrated multimodal capabilities like Gemini, we will introduce a file parsing and understanding layer. This will allow the CLI to automatically convert image, PDF, and other file content into high-quality text descriptions before submitting to the core LLM, thus achieving powerful multimodal file interaction capabilities on any model.
+### Utility Functions
+Core utilities include:
+- Logging functions with different severity levels
+- Data validation and transformation helpers
+- System information retrieval (OS, version, etc.)
+- Error formatting and serialization
 
-## ❤️ Welcome Contributions
+## Integration with Other Packages
 
-open-gemini-cli is a community-driven project. We welcome contributions of any form, whether it's submitting bug reports, proposing feature suggestions, or directly contributing code. If you share the vision of this project, please join us in building a more open, free, and powerful AI Agent tool together!
+### Type System Integration
+All packages in the system use types defined in this package:
+- Agents package uses core agent and tool interfaces
+- Memory package uses core memory and context types
+- CLI package uses core configuration and error types
+
+### Configuration Management
+The core configuration system is used by:
+- Agent package to load and validate agent configurations
+- CLI package to manage command-line configuration
+- Adapter package for API provider settings
+
+### Error Handling
+The core error handling framework is used by:
+- All packages to create and report errors consistently
+- System monitoring and logging infrastructure
+- User-facing error reporting
+
+## Performance Considerations
+
+### Memory Efficiency
+The core package is designed to:
+- Minimize memory footprint through efficient type definitions
+- Use immutable data structures where appropriate
+- Avoid unnecessary object creation in utility functions
+
+### Configuration Loading
+Configuration is optimized for:
+- Fast loading and validation of configuration files
+- Efficient lookup of configuration values
+- Caching of parsed configuration data
+
+### Utility Function Performance
+Utility functions are optimized to:
+- Avoid expensive operations in hot paths
+- Use efficient algorithms for common operations
+- Minimize external dependencies
+
+## Extensibility
+
+### Type Extensions
+Developers can extend core types by:
+- Creating custom interfaces that extend base types
+- Adding new utility functions to the core system
+- Implementing custom configuration schemas
+
+### Configuration Extensions
+The configuration system supports:
+- Custom configuration providers (e.g., database-backed config)
+- Environment-specific configuration overrides
+- Hierarchical configuration management
+
+This core package provides the foundation that enables all other packages to work together cohesively, ensuring consistency and reliability throughout the Agents system.

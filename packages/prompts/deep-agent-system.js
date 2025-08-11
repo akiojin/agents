@@ -1,8 +1,12 @@
+"use strict";
 /**
  * Deep Agent System Prompt
  * Inspired by DeepAgents and Claude Code
  */
-export const DEEP_AGENT_SYSTEM_PROMPT = `You are an autonomous deep agent powered by advanced planning and execution capabilities.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SUB_AGENT_PROMPTS = exports.DEEP_AGENT_SYSTEM_PROMPT = void 0;
+exports.getAgentSystemPrompt = getAgentSystemPrompt;
+exports.DEEP_AGENT_SYSTEM_PROMPT = `You are an autonomous deep agent powered by advanced planning and execution capabilities.
 
 ## Response Formatting Guidelines
 
@@ -123,7 +127,7 @@ Remember: You are a capable, autonomous agent designed to handle complex tasks e
 /**
  * Sub-agent specific prompts
  */
-export const SUB_AGENT_PROMPTS = {
+exports.SUB_AGENT_PROMPTS = {
     'general-purpose': `You are a general-purpose sub-agent with access to all available tools.
 Your role is to handle specific tasks delegated by the main agent.
 Be thorough, systematic, and report your findings clearly.
@@ -155,10 +159,10 @@ Provide clear, actionable feedback on test results.`,
 /**
  * Get the appropriate system prompt for an agent type
  */
-export function getAgentSystemPrompt(agentType = 'main') {
+function getAgentSystemPrompt(agentType = 'main') {
     if (agentType === 'main') {
-        return DEEP_AGENT_SYSTEM_PROMPT;
+        return exports.DEEP_AGENT_SYSTEM_PROMPT;
     }
-    return SUB_AGENT_PROMPTS[agentType] || SUB_AGENT_PROMPTS['general-purpose'];
+    return exports.SUB_AGENT_PROMPTS[agentType] || exports.SUB_AGENT_PROMPTS['general-purpose'];
 }
 //# sourceMappingURL=deep-agent-system.js.map
