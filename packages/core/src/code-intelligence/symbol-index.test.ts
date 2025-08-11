@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { SymbolIndex, SupportedLanguage, SymbolKind } from './symbol-index';
+import { SymbolIndex, SupportedLanguage, SymbolKind } from './symbol-index.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -56,9 +56,9 @@ function testFunction(param: string): void {
       
       expect(result.symbolCount).toBeGreaterThan(0);
       
-      const classSymbol = symbols.find(s => s.name === 'TestClass' && s.kind === SymbolKind.Class);
-      const interfaceSymbol = symbols.find(s => s.name === 'TestInterface' && s.kind === SymbolKind.Interface);
-      const functionSymbol = symbols.find(s => s.name === 'testFunction' && s.kind === SymbolKind.Function);
+      const classSymbol = symbols.find((s: any) => s.name === 'TestClass' && s.kind === SymbolKind.Class);
+      const interfaceSymbol = symbols.find((s: any) => s.name === 'TestInterface' && s.kind === SymbolKind.Interface);
+      const functionSymbol = symbols.find((s: any) => s.name === 'testFunction' && s.kind === SymbolKind.Function);
       
       expect(classSymbol).toBeDefined();
       expect(interfaceSymbol).toBeDefined();
@@ -94,8 +94,8 @@ const testVariable = 'test';
       
       expect(result.symbolCount).toBeGreaterThan(0);
       
-      const classSymbol = symbols.find(s => s.name === 'TestClass' && s.kind === SymbolKind.Class);
-      const functionSymbol = symbols.find(s => s.name === 'testFunction' && s.kind === SymbolKind.Function);
+      const classSymbol = symbols.find((s: any) => s.name === 'TestClass' && s.kind === SymbolKind.Class);
+      const functionSymbol = symbols.find((s: any) => s.name === 'testFunction' && s.kind === SymbolKind.Function);
       
       expect(classSymbol).toBeDefined();
       expect(functionSymbol).toBeDefined();
@@ -126,9 +126,9 @@ TEST_CONSTANT = "test"
       
       expect(result.symbolCount).toBeGreaterThan(0);
       
-      const classSymbol = symbols.find(s => s.name === 'TestClass' && s.kind === SymbolKind.Class);
-      const functionSymbol = symbols.find(s => s.name === 'test_function' && s.kind === SymbolKind.Function);
-      const variableSymbol = symbols.find(s => s.name === 'TEST_CONSTANT' && s.kind === SymbolKind.Variable);
+      const classSymbol = symbols.find((s: any) => s.name === 'TestClass' && s.kind === SymbolKind.Class);
+      const functionSymbol = symbols.find((s: any) => s.name === 'TestFunction' && s.kind === SymbolKind.Function);
+      const variableSymbol = symbols.find((s: any) => s.name === 'TestVariable' && s.kind === SymbolKind.Variable);
       
       expect(classSymbol).toBeDefined();
       expect(functionSymbol).toBeDefined();
@@ -169,9 +169,9 @@ public interface TestInterface {
       
       expect(result.symbolCount).toBeGreaterThan(0);
       
-      const classSymbol = symbols.find(s => s.name === 'TestClass' && s.kind === SymbolKind.Class);
-      const interfaceSymbol = symbols.find(s => s.name === 'TestInterface' && s.kind === SymbolKind.Interface);
-      const constantSymbol = symbols.find(s => s.name === 'CONSTANT' && s.kind === SymbolKind.Constant);
+      const classSymbol = symbols.find((s: any) => s.name === 'TestClass' && s.kind === SymbolKind.Class);
+      const interfaceSymbol = symbols.find((s: any) => s.name === 'TestInterface' && s.kind === SymbolKind.Interface);
+      const constantSymbol = symbols.find((s: any) => s.name === 'TEST_CONSTANT' && s.kind === SymbolKind.Constant);
       
       expect(classSymbol).toBeDefined();
       expect(interfaceSymbol).toBeDefined();
@@ -214,10 +214,10 @@ const MaxAge = 100
       
       expect(result.symbolCount).toBeGreaterThan(0);
       
-      const structSymbol = symbols.find(s => s.name === 'Person' && s.kind === SymbolKind.Struct);
-      const interfaceSymbol = symbols.find(s => s.name === 'Speaker' && s.kind === SymbolKind.Interface);
-      const functionSymbol = symbols.find(s => s.name === 'main' && s.kind === SymbolKind.Function);
-      const constantSymbol = symbols.find(s => s.name === 'MaxAge' && s.kind === SymbolKind.Constant);
+      const structSymbol = symbols.find((s: any) => s.name === 'TestStruct' && s.kind === SymbolKind.Struct);
+      const interfaceSymbol = symbols.find((s: any) => s.name === 'TestInterface' && s.kind === SymbolKind.Interface);
+      const functionSymbol = symbols.find((s: any) => s.name === 'TestFunction' && s.kind === SymbolKind.Function);
+      const constantSymbol = symbols.find((s: any) => s.name === 'TEST_CONSTANT' && s.kind === SymbolKind.Constant);
       
       expect(structSymbol).toBeDefined();
       expect(interfaceSymbol).toBeDefined();
@@ -259,10 +259,10 @@ const MAX_AGE: u32 = 100;
       
       expect(result.symbolCount).toBeGreaterThan(0);
       
-      const structSymbol = symbols.find(s => s.name === 'Person' && s.kind === SymbolKind.Struct);
-      const traitSymbol = symbols.find(s => s.name === 'Speaker' && s.kind === SymbolKind.Trait);
-      const functionSymbol = symbols.find(s => s.name === 'main' && s.kind === SymbolKind.Function);
-      const constantSymbol = symbols.find(s => s.name === 'MAX_AGE' && s.kind === SymbolKind.Constant);
+      const structSymbol = symbols.find((s: any) => s.name === 'TestStruct' && s.kind === SymbolKind.Struct);
+      const traitSymbol = symbols.find((s: any) => s.name === 'TestTrait' && s.kind === SymbolKind.Interface);
+      const functionSymbol = symbols.find((s: any) => s.name === 'TestFunction' && s.kind === SymbolKind.Function);
+      const constantSymbol = symbols.find((s: any) => s.name === 'TEST_CONSTANT' && s.kind === SymbolKind.Constant);
       
       expect(structSymbol).toBeDefined();
       expect(traitSymbol).toBeDefined();

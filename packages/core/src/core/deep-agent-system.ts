@@ -168,17 +168,25 @@ export function getAgentSystemPrompt(agentType: string = 'main'): string {
   }
   
   // AgentPromptLoaderから動的にプリセットを取得
+  // 循環参照を避けるため、存在確認のみ
   try {
-    const { getAgentPreset } = require('../../agents/src/agent-prompt-loader');
-    const preset = getAgentPreset(agentType);
+    // エージェントプリセットディレクトリを確認
+    const fs = require('fs');
+    const path = require('path');
+    const presetPath = path.join(__dirname, '../../../agents/presets', `${agentType}.md`);
     
-    if (preset) {
-      // プリセットが見つかった場合はそのシステムプロンプトを返す
-      return preset.systemPrompt;
+    if (fs.existsSync(presetPath)) {
+      // プリセットファイルが存在する場合、動的インポート
+      const { getAgentPreset } = require('../../../agents/src/agent-prompt-loader');
+      const preset = getAgentPreset(agentType);
+      
+      if (preset) {
+        return preset.systemPrompt;
+      }
     }
   } catch (error) {
-    // AgentPromptLoaderが利用できない場合は静的な定義にフォールバック
-    console.debug('AgentPromptLoader not available, using static prompts:', error);
+    // エラーの場合は静的定義にフォールバック
+    console.debug('Failed to load agent preset:', error);
   }
   
   // フォールバック: 静的に定義されたプロンプトまたはgeneral-purpose

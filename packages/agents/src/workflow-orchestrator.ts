@@ -129,32 +129,66 @@ export class WorkflowOrchestrator {
     this.setState(WorkflowState.ANALYZING);
     
     try {
-      // メインエージェントを使用してリクエストを解析
+      // LLMを使用してリクエストを解析
       const analysisPrompt = `
-Analyze the following user request and extract requirements:
+Analyze the following user request and extract requirements.
 
 Request: ${request.description}
 
 Context: ${JSON.stringify(request.context || {})}
 Constraints: ${(request.constraints || []).join(', ')}
 
-Please provide:
-1. Functional requirements (what needs to be done)
-2. Non-functional requirements (performance, security, etc.)
-3. Constraints (limitations, dependencies)
-4. Success criteria (how to measure completion)
+Please provide a structured analysis with:
+1. Functional requirements (specific features/actions to implement)
+2. Non-functional requirements (performance, security, scalability)
+3. Constraints (technical limitations, dependencies)
+4. Success criteria (measurable outcomes)
 5. Estimated complexity (low/medium/high)
 
-Format the response as a structured analysis.`;
+Respond in JSON format:
+{
+  "functionalRequirements": ["requirement1", "requirement2"],
+  "nonFunctionalRequirements": ["requirement1", "requirement2"],
+  "constraints": ["constraint1", "constraint2"],
+  "successCriteria": ["criteria1", "criteria2"],
+  "estimatedComplexity": "low|medium|high"
+}`;
 
-      // ここでLLMを使用して解析（実装簡略化のため、デモデータを返す）
+      try {
+        // LLMに解析を依頼
+        const response = await this.provider.generateContent({
+          messages: [{
+            role: 'user',
+            content: analysisPrompt
+          }],
+          temperature: 0.3,
+          maxTokens: 1000
+        });
+
+        // レスポンスをパース
+        const content = response.content || '';
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            functionalRequirements: parsed.functionalRequirements || [],
+            nonFunctionalRequirements: parsed.nonFunctionalRequirements || [],
+            constraints: [...(request.constraints || []), ...(parsed.constraints || [])],
+            successCriteria: parsed.successCriteria || [],
+            estimatedComplexity: parsed.estimatedComplexity || 'medium'
+          };
+        }
+      } catch (llmError) {
+        console.warn('LLM analysis failed, using fallback extraction:', llmError);
+      }
+
+      // フォールバック: 簡易的な抽出
       const requirements: Requirements = {
         functionalRequirements: this.extractFunctionalRequirements(request.description),
         nonFunctionalRequirements: this.extractNonFunctionalRequirements(request.description),
         constraints: request.constraints || [],
-        successCriteria: this.defineSu
-
-Criteria(request.description),
+        successCriteria: this.defineSuccessCriteria(request.description),
         estimatedComplexity: this.estimateComplexity(request.description)
       };
 

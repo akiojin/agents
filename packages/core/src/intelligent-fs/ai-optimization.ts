@@ -68,6 +68,7 @@ export interface BugPrediction {
     symbol?: string;
   };
   prevention: string;
+  severity?: 'low' | 'medium' | 'high';
 }
 
 /**
@@ -120,6 +121,8 @@ export interface CodeGenerationOptions {
   style?: 'functional' | 'object-oriented' | 'mixed';
   includeTests?: boolean;
   includeDocumentation?: boolean;
+  name?: string;
+  description?: string;
 }
 
 /**
@@ -387,7 +390,7 @@ export class AIOptimizationEngine {
         
         for (const block of complexBlocks) {
           suggestions.push({
-            type: 'extract-method',
+            type: 'refactor',
             priority: method.lineCount > 50 ? 'high' : 'medium',
             title: `Extract method from ${method.name}`,
             description: `Extract ${block.description} into a separate method`,
@@ -466,7 +469,7 @@ private ${group.suggestedClassName.toLowerCase()}: ${group.suggestedClassName};
     
     for (const issue of namingIssues) {
       suggestions.push({
-        type: 'rename',
+        type: 'refactor',
         priority: 'medium',
         title: `Rename ${issue.type}: ${issue.currentName}`,
         description: `${issue.reason}`,
@@ -485,9 +488,9 @@ private ${group.suggestedClassName.toLowerCase()}: ${group.suggestedClassName};
     const suggestions: OptimizationSuggestion[] = [];
     
     // デッドコードを検出
-    const deadCodeBlocks = this.detectDeadCode(data.content);
-    const unusedVariables = this.detectUnusedVariables(data.content);
-    const unreachableCode = this.detectUnreachableCode(data.content);
+    const deadCodeBlocks = this.detectDeadCode(data.content, data.path);
+    const unusedVariables = this.detectUnusedVariables(data.content, data.path);
+    const unreachableCode = this.detectUnreachableCode(data.content, data.path);
     
     // デッドコードブロック
     for (const deadBlock of deadCodeBlocks) {
@@ -797,7 +800,7 @@ Add observer management to subject class.
     return issues;
   }
   
-  private detectUnusedVariables(content: string): Array<{
+  private detectUnusedVariables(content: string, filePath: string): Array<{
     name: string;
     line: number;
     type: string;
@@ -854,7 +857,7 @@ Add observer management to subject class.
     return unused;
   }
   
-  private detectUnreachableCode(content: string): Array<{
+  private detectUnreachableCode(content: string, filePath: string): Array<{
     line: number;
     description: string;
   }> {
@@ -1384,7 +1387,7 @@ Add observer management to subject class.
     }
     
     // 6. デッドコード検出
-    const deadCode = this.detectDeadCode(data.content);
+    const deadCode = this.detectDeadCode(data.content, data.path);
     for (const dead of deadCode) {
       smells.push({
         type: 'dead-code',
@@ -1400,7 +1403,7 @@ Add observer management to subject class.
     }
     
     // 7. マジックナンバー検出
-    const magicNumbers = this.detectMagicNumbers(data.content);
+    const magicNumbers = this.detectMagicNumbers(data.content, data.path);
     for (const magic of magicNumbers) {
       smells.push({
         type: 'complex-condition', // 既存のタイプを再利用
@@ -1716,11 +1719,30 @@ Add observer management to subject class.
     return matrix[str2.length][str1.length];
   }
   
-  private detectDeadCode(content: string): Array<{ line: number; description: string }> {
+  private detectDeadCode(content: string, filePath: string): Array<{ line: number; description: string }> {
     const deadCode: Array<{ line: number; description: string }> = [];
     const lines = content.split('\n');
     
     let unreachableCode = false;
+    
+    // 未使用メソッドを検出
+    const methods = this.extractMethods(content);
+    const methodCalls = content.match(/\.\s*[a-zA-Z_$][a-zA-Z0-9_$]*\s*\(/g) || [];
+    const functionCalls = content.match(/[a-zA-Z_$][a-zA-Z0-9_$]*\s*\(/g) || [];
+    
+    for (const method of methods) {
+      const isUsed = methodCalls.some(call => call.includes(method.name)) || 
+                     functionCalls.some(call => call.includes(method.name)) ||
+                     method.name === 'constructor' || // コンストラクタは除外
+                     content.includes(`export `) && content.includes(method.name); // エクスポートされるメソッドは除外
+      
+      if (!isUsed && !method.name.startsWith('test') && method.name !== 'main') {
+        deadCode.push({
+          line: method.startLine,
+          description: `Unused method: ${method.name}`
+        });
+      }
+    }
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -1769,7 +1791,7 @@ Add observer management to subject class.
     return deadCode;
   }
   
-  private detectMagicNumbers(content: string): Array<{ line: number; value: string }> {
+  private detectMagicNumbers(content: string, filePath: string): Array<{ line: number; value: string }> {
     const magicNumbers: Array<{ line: number; value: string }> = [];
     const lines = content.split('\n');
     
@@ -1878,10 +1900,10 @@ Add observer management to subject class.
           predictions.push({
             type: 'null-pointer',
             severity: 'high',
-            line: i + 1,
+            location: { file: data.path, line: i + 1 },
             description: 'Potential null/undefined property access',
-            suggestion: 'Add null check or use optional chaining',
-            confidence: 0.8
+            likelihood: 0.8,
+            prevention: 'Add null check or use optional chaining'
           });
         }
       }
@@ -1892,10 +1914,10 @@ Add observer management to subject class.
           predictions.push({
             type: 'null-pointer',
             severity: 'high', 
-            line: i + 1,
+            location: { file: data.path, line: i + 1 },
             description: 'Potential null/undefined method call',
-            suggestion: 'Add null check before method call',
-            confidence: 0.75
+            likelihood: 0.8,
+            prevention: 'Add appropriate safety checks'
           });
         }
       }
@@ -1905,11 +1927,11 @@ Add observer management to subject class.
         predictions.push({
           type: 'array-out-of-bounds',
           severity: 'medium',
-          line: i + 1,
+          location: { file: data.path, line: i + 1 },
           description: 'Potential array index out of bounds',
-          suggestion: 'Add bounds checking before array access',
-          confidence: 0.6
-        });
+          likelihood: 0.8,
+            prevention: 'Add appropriate safety checks'
+          });
       }
 
       // リソースリークパターン（より広範囲に検索）
@@ -1917,11 +1939,11 @@ Add observer management to subject class.
         predictions.push({
           type: 'resource-leak',
           severity: 'medium',
-          line: i + 1,
+          location: { file: data.path, line: i + 1 },
           description: 'Potential resource leak - resource not properly closed',
-          suggestion: 'Ensure resources are properly closed',
-          confidence: 0.7
-        });
+          likelihood: 0.8,
+            prevention: 'Add appropriate safety checks'
+          });
       }
     }
     
@@ -1957,8 +1979,7 @@ Add observer management to subject class.
             description: `Potential null/undefined access: ${access}. Object '${objectName}' may be null or undefined`,
             location: {
               file: data.path,
-              line: i + 1,
-              symbol: access
+              line: i + 1
             },
             prevention: `Add null check: if (${objectName}) { ... } or use optional chaining: ${objectName}?.${property}`
           });
@@ -1975,8 +1996,7 @@ Add observer management to subject class.
             description: `Long method chain without null safety: ${chain}`,
             location: {
               file: data.path,
-              line: i + 1,
-              symbol: chain
+              line: i + 1
             },
             prevention: 'Use optional chaining or break into multiple null-safe steps'
           });
@@ -2023,8 +2043,7 @@ Add observer management to subject class.
             description: `Potential array bounds violation: ${access}. Index '${indexExpr}' may exceed array bounds`,
             location: {
               file: data.path,
-              line: i + 1,
-              symbol: access
+              line: i + 1
             },
             prevention: `Add bounds check: if (${indexExpr} < ${arrayName}.length) { ... } or use safe access method`
           });
@@ -2112,10 +2131,9 @@ Add observer management to subject class.
               type: 'ResourceLeak',
               description: `Potential resource leak: ${resourceMethod} without proper cleanup`,
               location: {
-                file: data.path,
-                line: i + 1,
-                symbol: varName || resourceMethod
-              },
+              file: data.path,
+              line: i + 1
+            },
               prevention: `Ensure resource is properly closed using ${cleanupMethods.join(' or ')} in a finally block or use try-with-resources pattern`
             });
           }

@@ -466,9 +466,9 @@ export function createProjectManagementFunctions(): InternalFunction[] {
           success: true,
           message: 'Project indexed successfully',
           stats: {
-            totalFiles: stats.totalFiles,
-            totalSymbols: stats.totalSymbols,
-            duration: `${stats.duration}ms`
+            filesIndexed: stats?.filesIndexed || 0,
+            success: stats?.success || false,
+            error: stats?.error || undefined
           }
         };
       } catch (error) {

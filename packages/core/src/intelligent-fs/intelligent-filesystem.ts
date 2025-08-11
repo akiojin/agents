@@ -9,7 +9,7 @@
  * - 記憶システムとの連携
  */
 
-import { SymbolIndex, createSymbolIndex, SymbolIndexInfo } from '../code-intelligence/symbol-index.js';
+import { SymbolIndex, createSymbolIndex, SymbolIndexInfo, SymbolKind } from '../code-intelligence/symbol-index.js';
 import { TypeScriptLSPClient, createTypeScriptLSPClient } from '../code-intelligence/lsp-client.js';
 import { URI } from 'vscode-uri';
 import * as path from 'path';
@@ -231,16 +231,26 @@ export class IntelligentFileSystem {
         // シンボル情報を取得
         if (this.symbolIndex) {
           const fileUri = URI.file(filePath).toString();
-          const symbols = await this.symbolIndex.findSymbols({ fileUri });
+          let symbols = await this.symbolIndex.findSymbols({ fileUri });
           
-          if (symbols.length === 0 && this.lspClient) {
-            // インデックスにない場合はLSPから直接取得
+          if (symbols.length === 0) {
+            // インデックスにない場合はファイルをインデックス
             try {
-              const docSymbols = await this.lspClient.getDocumentSymbols(fileUri);
-              // DocumentSymbolをSymbolIndexInfoに変換
-              symbols.push(...this.convertDocumentSymbolsToIndexInfo(docSymbols, fileUri));
+              await this.symbolIndex.indexFile(filePath);
+              symbols = await this.symbolIndex.findSymbols({ fileUri });
             } catch (error) {
-              logger.warn('Failed to get symbols from LSP', { filePath, error });
+              logger.warn('Failed to index file', { filePath, error });
+            }
+            
+            // まだシンボルがない場合はLSPから直接取得
+            if (symbols.length === 0 && this.lspClient) {
+              try {
+                const docSymbols = await this.lspClient.getDocumentSymbols(fileUri);
+                // DocumentSymbolをSymbolIndexInfoに変換
+                symbols.push(...this.convertDocumentSymbolsToIndexInfo(docSymbols, fileUri));
+              } catch (error) {
+                logger.warn('Failed to get symbols from LSP', { filePath, error });
+              }
             }
           }
           
@@ -655,7 +665,7 @@ export class IntelligentFileSystem {
       result.push({
         id: this.generateSymbolId(),
         name: symbol.name,
-        kind: symbolKindMap[symbol.kind] || 'unknown',
+        kind: (symbolKindMap[symbol.kind] || 'variable') as any,
         language: this.getLanguageFromExtension(path.extname(URI.parse(fileUri).fsPath).slice(1)),
         fileUri,
         startLine: symbol.range?.start?.line || 0,

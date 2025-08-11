@@ -301,7 +301,7 @@ export class SubAgentManager {
     
     // 動的にエージェントプリセットを読み込む
     try {
-      const { loadAgentPresets } = require('./src/agent-prompt-loader');
+      const { loadAgentPresets } = require('../agents/src/agent-prompt-loader');
       const presets = loadAgentPresets();
       
       // すべてのプリセットからエージェントを作成
@@ -396,6 +396,43 @@ Be thorough and systematic in your approach.`,
   }
 
   /**
+   * Execute a task with the specified agent
+   * @param taskDescription The task to execute
+   * @param agentName The name of the agent to use (defaults to 'general-purpose')
+   * @returns The execution result
+   */
+  async executeTask(
+    taskDescription: string, 
+    agentName: string = 'general-purpose'
+  ): Promise<SubAgentResult> {
+    const agent = this.agents.get(agentName) || this.generalPurposeAgent;
+    
+    const context: SubAgentContext = {
+      task: taskDescription,
+      parentRequestId: `task-${Date.now()}`,
+      availableTools: agent.getTools(),
+      sharedMemory: new Map()
+    };
+    
+    try {
+      const result = await agent.execute(context);
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        output: '',
+        error: error instanceof Error ? error.message : String(error),
+        toolCalls: [],
+        stats: {
+          tokensUsed: 0,
+          executionTime: 0,
+          toolCallCount: 0
+        }
+      };
+    }
+  }
+
+  /**
    * Get all agents information
    */
   getAllAgents(): Array<{ id: string; type: string; status: 'idle' | 'busy' }> {
@@ -439,7 +476,7 @@ export function getSubAgentToolDefinition() {
   
   try {
     // AgentPromptLoaderから動的にエージェントタイプを取得
-    const { loadAgentPresets } = require('./src/agent-prompt-loader');
+    const { loadAgentPresets } = require('../agents/src/agent-prompt-loader');
     const presets = loadAgentPresets();
     
     if (presets && presets.size > 0) {
