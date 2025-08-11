@@ -103,6 +103,30 @@ export class UiTelemetryService extends EventEmitter {
   #metrics: SessionMetrics = createInitialMetrics();
   #lastPromptTokenCount = 0;
 
+  /**
+   * 圧縮後にトークンカウントをリセット
+   * @param newTokenCount 圧縮後の新しいトークン数
+   * @param modelName 対象のモデル名
+   */
+  resetTokenCountAfterCompression(newTokenCount: number, modelName: string) {
+    const modelMetrics = this.getOrCreateModelMetrics(modelName);
+    
+    // 現在の累積トークン数をログ出力（デバッグ用）
+    console.log(`[UiTelemetry] Resetting token count for ${modelName}: ${modelMetrics.tokens.prompt} -> ${newTokenCount}`);
+    
+    // プロンプトトークンを新しい値に設定
+    modelMetrics.tokens.prompt = newTokenCount;
+    
+    // 最後のプロンプトトークンカウントも更新
+    this.#lastPromptTokenCount = newTokenCount;
+    
+    // 更新をemit
+    this.emit('update', {
+      metrics: this.#metrics,
+      lastPromptTokenCount: this.#lastPromptTokenCount,
+    });
+  }
+
   addEvent(event: UiEvent) {
     switch (event['event.name']) {
       case EVENT_API_RESPONSE:

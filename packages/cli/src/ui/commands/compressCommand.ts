@@ -6,6 +6,7 @@
 
 import { HistoryItemCompression, MessageType } from '../types.js';
 import { SlashCommand } from './types.js';
+import { uiTelemetryService } from '@indenscale/open-gemini-cli-core';
 
 export const compressCommand: SlashCommand = {
   name: 'compress',
@@ -40,6 +41,14 @@ export const compressCommand: SlashCommand = {
         ?.getGeminiClient()
         ?.tryCompressChat(promptId, true);
       if (compressed) {
+        // 圧縮後のトークンカウントをuiTelemetryServiceにリセット
+        const model = context.services.config?.getModel() || 'unknown';
+        uiTelemetryService.resetTokenCountAfterCompression(
+          compressed.newTokenCount,
+          model
+        );
+        console.log(`[Compress Command] Token count reset to ${compressed.newTokenCount} for ${model}`);
+        
         ui.addItem(
           {
             type: MessageType.COMPRESSION,
