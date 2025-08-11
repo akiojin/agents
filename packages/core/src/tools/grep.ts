@@ -210,20 +210,61 @@ export class GrepTool extends BaseTool<GrepToolParams, ToolResult> {
       const matchCount = matches.length;
       const matchTerm = matchCount === 1 ? 'match' : 'matches';
 
+      // 出力サイズ制限の追加 (100KB)
+      const MAX_OUTPUT_SIZE = 100 * 1024;
+      const MAX_FILES_TO_SHOW = 50;
+      const MAX_MATCHES_PER_FILE = 100;
+      
       let llmContent = `Found ${matchCount} ${matchTerm} for pattern "${params.pattern}" in path "${searchDirDisplay}"${params.include ? ` (filter: "${params.include}")` : ''}:\n---\n`;
-
+      
+      let filesShown = 0;
+      let truncated = false;
+      
       for (const filePath in matchesByFile) {
-        llmContent += `File: ${filePath}\n`;
-        matchesByFile[filePath].forEach((match) => {
+        if (filesShown >= MAX_FILES_TO_SHOW) {
+          truncated = true;
+          break;
+        }
+        
+        const fileMatches = matchesByFile[filePath];
+        const matchesToShow = Math.min(fileMatches.length, MAX_MATCHES_PER_FILE);
+        
+        llmContent += `File: ${filePath}`;
+        if (fileMatches.length > MAX_MATCHES_PER_FILE) {
+          llmContent += ` (showing ${matchesToShow} of ${fileMatches.length} matches)`;
+        }
+        llmContent += '\n';
+        
+        for (let i = 0; i < matchesToShow; i++) {
+          const match = fileMatches[i];
           const trimmedLine = match.line.trim();
           llmContent += `L${match.lineNumber}: ${trimmedLine}\n`;
-        });
+          
+          // サイズチェック
+          if (llmContent.length > MAX_OUTPUT_SIZE) {
+            truncated = true;
+            break;
+          }
+        }
+        
         llmContent += '---\n';
+        filesShown++;
+        
+        if (truncated) break;
+      }
+      
+      if (truncated) {
+        const remainingFiles = Object.keys(matchesByFile).length - filesShown;
+        if (remainingFiles > 0) {
+          llmContent += `\n[Output truncated. ${remainingFiles} more files with matches not shown. Consider narrowing your search pattern or specifying a more specific path.]`;
+        } else {
+          llmContent += `\n[Output truncated due to size limit. Consider narrowing your search pattern for more complete results.]`;
+        }
       }
 
       return {
         llmContent: llmContent.trim(),
-        returnDisplay: `Found ${matchCount} ${matchTerm}`,
+        returnDisplay: `Found ${matchCount} ${matchTerm}${truncated ? ' (output truncated)' : ''}`,
       };
     } catch (error) {
       console.error(`Error during GrepLogic execution: ${error}`);
