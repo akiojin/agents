@@ -168,6 +168,10 @@ private/
 # Dockerボリューム（ローカル開発用）
 .docker/volumes/
 
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
 # その他
 *.orig
 .history/
