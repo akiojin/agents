@@ -685,6 +685,43 @@ export class IntelligentFileSystem {
   private generateSymbolId(): string {
     return `symbol_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
+
+  /**
+   * プロジェクト内のファイルをリスト
+   */
+  async listProjectFiles(projectPath?: string): Promise<string[]> {
+    const targetPath = projectPath || this.projectPath || process.cwd();
+    const files: string[] = [];
+    
+    async function walk(dir: string): Promise<void> {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        
+        // Skip common directories to ignore
+        if (entry.isDirectory()) {
+          if (['.git', 'node_modules', 'dist', 'build', '.next', '.cache'].includes(entry.name)) {
+            continue;
+          }
+          await walk(fullPath);
+        } else if (entry.isFile()) {
+          // Include source files
+          if (/\.(ts|tsx|js|jsx|py|java|cpp|c|cs|go|rs|rb|php)$/.test(entry.name)) {
+            files.push(fullPath);
+          }
+        }
+      }
+    }
+    
+    try {
+      await walk(targetPath);
+    } catch (error) {
+      logger.error('Failed to list project files:', error);
+    }
+    
+    return files;
+  }
 }
 
 /**

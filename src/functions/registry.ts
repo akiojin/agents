@@ -530,6 +530,13 @@ export class InternalFunctionRegistry {
     // コードインテリジェンス機能を登録
     this.registerCodeIntelligenceFunctions();
 
+    // IntelligentFileSystem統合を初期化（環境変数で制御）
+    if (process.env.ENABLE_INTELLIGENT_FS !== 'false') {
+      this.initializeIntelligentIntegration().catch(error => {
+        logger.error('Failed to initialize IntelligentFileSystem integration:', error);
+      });
+    }
+
     logger.debug(`Registered ${this.functions.size} default internal functions`);
   }
 
@@ -544,6 +551,20 @@ export class InternalFunctionRegistry {
     }
     
     logger.debug(`Registered ${codeIntelligenceFunctions.length} code intelligence functions`);
+  }
+
+  /**
+   * IntelligentFileSystem統合を初期化
+   */
+  private async initializeIntelligentIntegration(): Promise<void> {
+    try {
+      const { integrateIntelligentFunctions } = await import('./intelligent-registry-integration.js');
+      await integrateIntelligentFunctions(this);
+      logger.info('IntelligentFileSystem integration initialized successfully');
+    } catch (error) {
+      logger.error('Failed to load IntelligentFileSystem integration:', error);
+      // 統合が失敗しても基本機能は動作を続ける
+    }
   }
 
   /**
