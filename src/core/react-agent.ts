@@ -301,25 +301,17 @@ export class ReActAgent extends Agent {
       console.log('  [R] 拒否 - 実行をキャンセル');
       console.log('  [E] 編集 - パラメータを編集（実装予定）\n');
       
-      // ここでユーザー入力を待つ必要がある
-      // 実際の実装では、CLIのインタラクティブ入力または
-      // UIコンポーネントからの応答を待つ
-      
-      // 仮の自動承認（デモ用）
+      // YOLOモードの場合のみ自動承認
       if (this.config.approvalMode === ApprovalMode.YOLO) {
         // YOLOモードでは自動承認
-        await this.toolScheduler.handleConfirmationResponse(
-          awaitingApproval.request.callId,
-          ToolConfirmationOutcome.ProceedOnce
-        );
-      } else {
-        // デフォルトでは一旦承認として進める（実際の実装では入力待ち）
-        logger.info('⚠️ デモモード: 自動承認されました');
+        logger.info('🚀 YOLOモード: 自動承認');
         await this.toolScheduler.handleConfirmationResponse(
           awaitingApproval.request.callId,
           ToolConfirmationOutcome.ProceedOnce
         );
       }
+      // 通常モードでは承認UIが表示され、ユーザーの入力を待つ
+      // CLIのインタラクティブUIがユーザーの選択を処理する
     }
     
     // ツール実行の完了を待つ
