@@ -3,7 +3,7 @@
  * TypeScript、JavaScript、Python、Java、Go、Rust、C#、PHP、Ruby等に対応
  */
 
-import sqlite3, { Database } from 'sqlite3';
+import { Database } from 'sqlite3';
 import { promisify } from 'util';
 import { URI } from 'vscode-uri';
 import * as path from 'path';
@@ -81,7 +81,7 @@ export interface SymbolIndexInfo {
   id: string;
   name: string;
   kind: SymbolKind;
-  language: SupportedLanguage;
+  language: string; // 互換性のためstringに変更
   fileUri: string;
   startLine: number;
   startCharacter: number;
@@ -95,6 +95,10 @@ export interface SymbolIndexInfo {
   value?: any;
   createdAt: Date;
   updatedAt: Date;
+  range?: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
 }
 
 export interface ReferenceInfo {
@@ -153,6 +157,8 @@ export class SymbolIndex {
   private isInitialized = false;
   private parsers: Map<SupportedLanguage, LanguageParser> = new Map();
   private fileLanguageCache: Map<string, SupportedLanguage> = new Map();
+  private symbolsCache: Map<string, SymbolIndexInfo[]> = new Map();
+  private referencesCache: Map<string, ReferenceInfo[]> = new Map();
 
   constructor(
     private dbPath: string,
@@ -226,6 +232,7 @@ export class SymbolIndex {
     await fs.mkdir(dbDir, { recursive: true });
 
     // SQLiteデータベース初期化
+    const sqlite3 = require('sqlite3');
     this.db = new sqlite3.Database(this.dbPath);
     await this.setupDatabase();
 
@@ -549,7 +556,10 @@ export class SymbolIndex {
             totalReferences: row.total_references,
             totalFiles: row.total_files,
             lastUpdated: new Date(),
-            indexedFiles: [] // 簡略化
+            indexedFiles: [], // 簡略化
+            languageBreakdown: {} as Record<SupportedLanguage, number>,
+            kindBreakdown: {} as Record<SymbolKind, number>,
+            averageSymbolsPerFile: row.total_files > 0 ? row.total_symbols / row.total_files : 0
           });
         } else {
           resolve(null);
@@ -562,10 +572,6 @@ export class SymbolIndex {
    * データベースを閉じる
    */
   async close(): Promise<void> {
-    if (this.lspClient) {
-      await this.lspClient.disconnect();
-    }
-
     if (this.db) {
       await new Promise<void>((resolve, reject) => {
         this.db!.close((err: any) => {
@@ -576,6 +582,8 @@ export class SymbolIndex {
     }
 
     this.isInitialized = false;
+    if (this.symbolsCache) this.symbolsCache.clear();
+    if (this.referencesCache) this.referencesCache.clear();
   }
 
   // プライベートメソッド
@@ -639,14 +647,15 @@ export class SymbolIndex {
     return files;
   }
 
-  private async processDocumentSymbols(symbols: DocumentSymbol[], fileUri: string, containerName?: string): Promise<void> {
+  private async processDocumentSymbols(symbols: any[], fileUri: string, containerName?: string): Promise<void> {
     for (const symbol of symbols) {
-      const symbolId = this.generateSymbolId(symbol, fileUri);
+      const symbolId = this.generateDocumentSymbolId(symbol, fileUri);
       
       await this.insertSymbol({
         id: symbolId,
         name: symbol.name,
         kind: symbol.kind,
+        language: this.detectLanguageFromUri(fileUri),
         fileUri,
         startLine: symbol.range.start.line,
         startCharacter: symbol.range.start.character,
@@ -731,7 +740,7 @@ export class SymbolIndex {
       VALUES ('stats', ?)`, [JSON.stringify(stats)]);
   }
 
-  private generateSymbolId(symbol: DocumentSymbol, fileUri: string): string {
+  private generateDocumentSymbolId(symbol: any, fileUri: string): string {
     const location = `${fileUri}:${symbol.range.start.line}:${symbol.range.start.character}`;
     return `${symbol.name}@${location}`;
   }
@@ -777,6 +786,38 @@ export class SymbolIndex {
    */
   private generateSymbolId(name: string, fileUri: string, line: number, character: number): string {
     return `${name}@${fileUri}:${line}:${character}_${Date.now()}`;
+  }
+
+  /**
+   * ファイルURIから言語を推定
+   */
+  private detectLanguageFromUri(fileUri: string): string {
+    const parsed = URI.parse(fileUri);
+    const ext = path.extname(parsed.path).toLowerCase();
+    
+    const languageMap: Record<string, string> = {
+      '.ts': SupportedLanguage.TypeScript,
+      '.tsx': SupportedLanguage.TypeScript,
+      '.js': SupportedLanguage.JavaScript,
+      '.jsx': SupportedLanguage.JavaScript,
+      '.py': SupportedLanguage.Python,
+      '.java': SupportedLanguage.Java,
+      '.go': SupportedLanguage.Go,
+      '.rs': SupportedLanguage.Rust,
+      '.cs': SupportedLanguage.CSharp,
+      '.php': SupportedLanguage.PHP,
+      '.rb': SupportedLanguage.Ruby,
+      '.swift': SupportedLanguage.Swift,
+      '.kt': SupportedLanguage.Kotlin,
+      '.cpp': SupportedLanguage.Cpp,
+      '.cc': SupportedLanguage.Cpp,
+      '.cxx': SupportedLanguage.Cpp,
+      '.c': SupportedLanguage.C,
+      '.h': SupportedLanguage.C,
+      '.hpp': SupportedLanguage.Cpp
+    };
+    
+    return languageMap[ext] || SupportedLanguage.JavaScript;
   }
 }
 
@@ -852,8 +893,9 @@ class TypeScriptParser implements LanguageParser {
     if (!name || !kind) return null;
 
     // 修飾子を抽出
-    if (node.modifiers) {
-      modifiers = node.modifiers.map(mod => {
+    const nodeModifiers = ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined;
+    if (nodeModifiers) {
+      modifiers = nodeModifiers.map(mod => {
         switch (mod.kind) {
           case ts.SyntaxKind.PublicKeyword: return 'public';
           case ts.SyntaxKind.PrivateKeyword: return 'private';
@@ -1116,8 +1158,118 @@ class JavaParser implements LanguageParser {
   }
   
   private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
-    // Java用の正規表現パース実装（簡易版）
-    return [];
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // パッケージ宣言
+      package: /^package\s+([\w\.]+);/,
+      // インポート文
+      import: /^import\s+(?:static\s+)?([\w\.]+(?:\.\*)?);/,
+      // クラス宣言
+      class: /^(?:\s*(?:public|private|protected)?\s*)?(?:abstract\s+|final\s+)?class\s+(\w+)/,
+      // インターフェース宣言
+      interface: /^(?:\s*(?:public|private|protected)?\s*)?interface\s+(\w+)/,
+      // 列挙型宣言
+      enum: /^(?:\s*(?:public|private|protected)?\s*)?enum\s+(\w+)/,
+      // メソッド宣言
+      method: /^\s*(?:(?:public|private|protected)\s+)?(?:static\s+)?(?:final\s+)?(?:abstract\s+)?(?:synchronized\s+)?[\w<>\[\]]+\s+(\w+)\s*\(/,
+      // フィールド宣言
+      field: /^\s*(?:(?:public|private|protected)\s+)?(?:static\s+)?(?:final\s+)?[\w<>\[\]]+\s+(\w+)(?:\s*=.*)?;/,
+      // 定数宣言
+      constant: /^\s*(?:public\s+)?static\s+final\s+[\w<>\[\]]+\s+(\w+)\s*=/
+    };
+
+    let currentClass: string | undefined;
+    let currentPackage: string | undefined;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || line.startsWith('//') || line.startsWith('/*')) continue;
+      
+      // パッケージ宣言
+      let match = patterns.package.exec(line);
+      if (match) {
+        currentPackage = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Package, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // インポート文
+      match = patterns.import.exec(line);
+      if (match) {
+        const importName = match[1].split('.').pop() || match[1];
+        symbols.push(this.createSymbol(importName, SymbolKind.Import, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // クラス宣言
+      match = patterns.class.exec(line);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // インターフェース宣言
+      match = patterns.interface.exec(line);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Interface, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // 列挙型宣言
+      match = patterns.enum.exec(line);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Enum, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // メソッド宣言
+      match = patterns.method.exec(line);
+      if (match && currentClass && !line.includes('=')) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Method, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // 定数宣言
+      match = patterns.constant.exec(line);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Constant, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // フィールド宣言
+      match = patterns.field.exec(line);
+      if (match && currentClass && !line.includes('(')) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Field, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.Java,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1126,7 +1278,156 @@ class GoParser implements LanguageParser {
   extensions = ['.go'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // パッケージ宣言
+      package: /^package\s+(\w+)/,
+      // インポート文
+      import: /^\s*"([^"]+)"/,
+      importAlias: /^\s*(\w+)\s+"([^"]+)"/,
+      // 関数宣言
+      function: /^func\s+(\w+)\s*\(/,
+      // メソッド宣言
+      method: /^func\s*\([^)]*\)\s*(\w+)\s*\(/,
+      // 型宣言
+      type: /^type\s+(\w+)\s+(?:struct|interface)/,
+      // 構造体宣言
+      struct: /^type\s+(\w+)\s+struct/,
+      // インターフェース宣言
+      interface: /^type\s+(\w+)\s+interface/,
+      // 変数宣言
+      variable: /^var\s+(\w+)/,
+      // 定数宣言
+      constant: /^const\s+(\w+)/,
+      // 構造体フィールド
+      field: /^\s+(\w+)\s+[\w\[\]\.]+(?:\s+`[^`]*`)?$/
+    };
+
+    let currentStruct: string | undefined;
+    let currentPackage: string | undefined;
+    let inStructBody = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('//')) continue;
+      
+      // パッケージ宣言
+      let match = patterns.package.exec(trimmedLine);
+      if (match) {
+        currentPackage = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Package, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // インポート文（エイリアスあり）
+      match = patterns.importAlias.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Import, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // インポート文（エイリアスなし）
+      match = patterns.import.exec(trimmedLine);
+      if (match) {
+        const importName = match[1].split('/').pop() || match[1];
+        symbols.push(this.createSymbol(importName, SymbolKind.Import, i, trimmedLine.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 構造体宣言
+      match = patterns.struct.exec(trimmedLine);
+      if (match) {
+        currentStruct = match[1];
+        inStructBody = true;
+        symbols.push(this.createSymbol(match[1], SymbolKind.Struct, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // インターフェース宣言
+      match = patterns.interface.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Interface, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // 型宣言
+      match = patterns.type.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // 関数宣言
+      match = patterns.function.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Function, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // メソッド宣言
+      match = patterns.method.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Method, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // 変数宣言
+      match = patterns.variable.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Variable, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // 定数宣言
+      match = patterns.constant.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Constant, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // 構造体のフィールド
+      if (inStructBody && currentStruct) {
+        if (trimmedLine === '}') {
+          inStructBody = false;
+          currentStruct = undefined;
+        } else {
+          match = patterns.field.exec(line);
+          if (match && !match[1].includes('func')) {
+            symbols.push(this.createSymbol(match[1], SymbolKind.Field, i, line.indexOf(match[1]), filePath, currentStruct));
+          }
+        }
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.Go,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1135,7 +1436,180 @@ class RustParser implements LanguageParser {
   extensions = ['.rs'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // 構造体宣言
+      struct: /^(?:pub\s+)?struct\s+(\w+)/,
+      // 列挙型宣言
+      enum: /^(?:pub\s+)?enum\s+(\w+)/,
+      // トレイト宣言
+      trait: /^(?:pub\s+)?trait\s+(\w+)/,
+      // 実装ブロック
+      impl: /^impl(?:\s*<[^>]*>)?\s+(\w+)/,
+      // 関数宣言
+      function: /^(?:pub\s+)?(?:unsafe\s+)?(?:extern\s+(?:"[^"]*"\s+)?)?fn\s+(\w+)/,
+      // モジュール宣言
+      module: /^(?:pub\s+)?mod\s+(\w+)/,
+      // 定数宣言
+      constant: /^(?:pub\s+)?const\s+(\w+)/,
+      // 静的変数宣言
+      static: /^(?:pub\s+)?static\s+(?:mut\s+)?(\w+)/,
+      // 型エイリアス
+      typeAlias: /^(?:pub\s+)?type\s+(\w+)/,
+      // マクロ宣言
+      macro: /^macro_rules!\s+(\w+)/,
+      // use文
+      use: /^use\s+.*::(\w+)/,
+      // 構造体フィールド
+      field: /^\s*(?:pub\s+)?(\w+):\s*[\w<>]+/
+    };
+
+    let currentStruct: string | undefined;
+    let currentImpl: string | undefined;
+    let inStructBody = false;
+    let inImplBody = false;
+    let braceDepth = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('//')) continue;
+      
+      // 構造体宣言
+      let match = patterns.struct.exec(trimmedLine);
+      if (match) {
+        currentStruct = match[1];
+        inStructBody = trimmedLine.includes('{') && !trimmedLine.includes('}');
+        symbols.push(this.createSymbol(match[1], SymbolKind.Struct, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 列挙型宣言
+      match = patterns.enum.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Enum, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // トレイト宣言
+      match = patterns.trait.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Trait, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // impl宣言
+      match = patterns.impl.exec(trimmedLine);
+      if (match) {
+        currentImpl = match[1];
+        inImplBody = trimmedLine.includes('{') && !trimmedLine.includes('}');
+        continue;
+      }
+      
+      // 関数宣言
+      match = patterns.function.exec(trimmedLine);
+      if (match) {
+        const containerName = inImplBody ? currentImpl : undefined;
+        const kind = inImplBody ? SymbolKind.Method : SymbolKind.Function;
+        symbols.push(this.createSymbol(match[1], kind, i, line.indexOf(match[1]), filePath, containerName));
+        continue;
+      }
+      
+      // モジュール宣言
+      match = patterns.module.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Module, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 定数宣言
+      match = patterns.constant.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Constant, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 静的変数宣言
+      match = patterns.static.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Variable, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 型エイリアス
+      match = patterns.typeAlias.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // マクロ宣言
+      match = patterns.macro.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Macro, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // use文
+      match = patterns.use.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Import, i, trimmedLine.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 構造体フィールド
+      if (inStructBody && currentStruct) {
+        if (trimmedLine.includes('}')) {
+          inStructBody = false;
+          currentStruct = undefined;
+        } else {
+          match = patterns.field.exec(line);
+          if (match) {
+            symbols.push(this.createSymbol(match[1], SymbolKind.Field, i, line.indexOf(match[1]), filePath, currentStruct));
+          }
+        }
+      }
+      
+      // ブロックの深さを追跡
+      if (inImplBody) {
+        braceDepth += (trimmedLine.match(/{/g) || []).length;
+        braceDepth -= (trimmedLine.match(/}/g) || []).length;
+        if (braceDepth <= 0) {
+          inImplBody = false;
+          currentImpl = undefined;
+          braceDepth = 0;
+        }
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.Rust,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1144,7 +1618,161 @@ class CSharpParser implements LanguageParser {
   extensions = ['.cs'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // 名前空間宣言
+      namespace: /^namespace\s+([\w\.]+)/,
+      // using文
+      using: /^using\s+([\w\.]+)/,
+      // クラス宣言
+      class: /^(?:\s*(?:public|private|protected|internal)?\s*)?(?:abstract\s+|sealed\s+|static\s+)?class\s+(\w+)/,
+      // インターフェース宣言
+      interface: /^(?:\s*(?:public|private|protected|internal)?\s*)?interface\s+(\w+)/,
+      // 構造体宣言
+      struct: /^(?:\s*(?:public|private|protected|internal)?\s*)?struct\s+(\w+)/,
+      // 列挙型宣言
+      enum: /^(?:\s*(?:public|private|protected|internal)?\s*)?enum\s+(\w+)/,
+      // メソッド宣言
+      method: /^\s*(?:(?:public|private|protected|internal)\s+)?(?:static\s+)?(?:virtual\s+)?(?:override\s+)?(?:abstract\s+)?[\w<>\[\]]+\s+(\w+)\s*\(/,
+      // プロパティ宣言
+      property: /^\s*(?:(?:public|private|protected|internal)\s+)?(?:static\s+)?[\w<>\[\]]+\s+(\w+)\s*\{/,
+      // フィールド宣言
+      field: /^\s*(?:(?:public|private|protected|internal)\s+)?(?:static\s+)?(?:readonly\s+)?[\w<>\[\]]+\s+(\w+)(?:\s*[=;])/,
+      // 定数宣言
+      constant: /^\s*(?:public\s+)?const\s+[\w<>\[\]]+\s+(\w+)\s*=/,
+      // イベント宣言
+      event: /^\s*(?:(?:public|private|protected|internal)\s+)?event\s+[\w<>\[\]]+\s+(\w+)/,
+      // デリゲート宣言
+      delegate: /^(?:\s*(?:public|private|protected|internal)?\s*)?delegate\s+[\w<>\[\]]+\s+(\w+)/
+    };
+
+    let currentNamespace: string | undefined;
+    let currentClass: string | undefined;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('//') || trimmedLine.startsWith('/*')) continue;
+      
+      // 名前空間宣言
+      let match = patterns.namespace.exec(trimmedLine);
+      if (match) {
+        currentNamespace = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Namespace, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // using文
+      match = patterns.using.exec(trimmedLine);
+      if (match) {
+        const importName = match[1].split('.').pop() || match[1];
+        symbols.push(this.createSymbol(importName, SymbolKind.Import, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // クラス宣言
+      match = patterns.class.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // インターフェース宣言
+      match = patterns.interface.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Interface, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // 構造体宣言
+      match = patterns.struct.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Struct, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // 列挙型宣言
+      match = patterns.enum.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Enum, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // デリゲート宣言
+      match = patterns.delegate.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Function, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // メソッド宣言
+      match = patterns.method.exec(line);
+      if (match && currentClass && !trimmedLine.includes('=') && !trimmedLine.includes('{') && trimmedLine.includes('(')) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Method, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // プロパティ宣言
+      match = patterns.property.exec(line);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Property, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // イベント宣言
+      match = patterns.event.exec(line);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Event, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // 定数宣言
+      match = patterns.constant.exec(line);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Constant, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // フィールド宣言
+      match = patterns.field.exec(line);
+      if (match && currentClass && !trimmedLine.includes('(') && !trimmedLine.includes('{')) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Field, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.CSharp,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1153,7 +1781,133 @@ class PHPParser implements LanguageParser {
   extensions = ['.php'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // 名前空間宣言
+      namespace: /^namespace\s+([\w\\]+);/,
+      // use文
+      use: /^use\s+([\w\\]+)/,
+      // クラス宣言
+      class: /^(?:(?:final|abstract)\s+)?class\s+(\w+)/,
+      // インターフェース宣言
+      interface: /^interface\s+(\w+)/,
+      // トレイト宣言
+      trait: /^trait\s+(\w+)/,
+      // 関数宣言
+      function: /^function\s+(\w+)\s*\(/,
+      // メソッド宣言
+      method: /^\s*(?:(?:public|private|protected)\s+)?(?:static\s+)?(?:final\s+)?function\s+(\w+)\s*\(/,
+      // プロパティ宣言
+      property: /^\s*(?:(?:public|private|protected)\s+)?(?:static\s+)?\$?(\w+)\s*[=;]/,
+      // 定数宣言
+      constant: /^\s*(?:const\s+|define\([\'"](\w+)[\'"])/
+    };
+
+    let currentNamespace: string | undefined;
+    let currentClass: string | undefined;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('//') || trimmedLine.startsWith('/*') || trimmedLine.startsWith('#')) continue;
+      
+      // 名前空間宣言
+      let match = patterns.namespace.exec(trimmedLine);
+      if (match) {
+        currentNamespace = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Namespace, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // use文
+      match = patterns.use.exec(trimmedLine);
+      if (match) {
+        const importName = match[1].split('\\').pop() || match[1];
+        symbols.push(this.createSymbol(importName, SymbolKind.Import, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // クラス宣言
+      match = patterns.class.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // インターフェース宣言
+      match = patterns.interface.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Interface, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // トレイト宣言
+      match = patterns.trait.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Trait, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // 関数宣言（グローバル）
+      match = patterns.function.exec(trimmedLine);
+      if (match && !currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Function, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // メソッド宣言
+      match = patterns.method.exec(line);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Method, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // プロパティ宣言
+      match = patterns.property.exec(line);
+      if (match && currentClass && !line.includes('(')) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Property, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // 定数宣言
+      match = patterns.constant.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Constant, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.PHP,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1162,7 +1916,101 @@ class RubyParser implements LanguageParser {
   extensions = ['.rb'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // モジュール宣言
+      module: /^module\s+(\w+)/,
+      // クラス宣言
+      class: /^class\s+(\w+)/,
+      // メソッド宣言
+      method: /^\s*def\s+(\w+)/,
+      // 定数宣言
+      constant: /^(\w+)\s*=\s*[A-Z]/,
+      // インスタンス変数
+      instanceVar: /@(\w+)/,
+      // クラス変数
+      classVar: /@@(\w+)/
+    };
+
+    let currentModule: string | undefined;
+    let currentClass: string | undefined;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('#')) continue;
+      
+      // モジュール宣言
+      let match = patterns.module.exec(trimmedLine);
+      if (match) {
+        currentModule = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Module, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // クラス宣言
+      match = patterns.class.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentModule));
+        continue;
+      }
+      
+      // メソッド宣言
+      match = patterns.method.exec(line);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Method, i, line.indexOf(match[1]), filePath, currentClass || currentModule));
+        continue;
+      }
+      
+      // 定数宣言
+      match = patterns.constant.exec(trimmedLine);
+      if (match && match[1].match(/^[A-Z]/)) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Constant, i, line.indexOf(match[1]), filePath, currentClass || currentModule));
+        continue;
+      }
+      
+      // インスタンス変数
+      match = patterns.instanceVar.exec(trimmedLine);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Property, i, line.indexOf('@' + match[1]), filePath, currentClass));
+      }
+      
+      // クラス変数
+      match = patterns.classVar.exec(trimmedLine);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Variable, i, line.indexOf('@@' + match[1]), filePath, currentClass));
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.Ruby,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1171,7 +2019,140 @@ class SwiftParser implements LanguageParser {
   extensions = ['.swift'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // インポート文
+      import: /^import\s+(\w+)/,
+      // クラス宣言
+      class: /^(?:(?:public|private|internal|fileprivate|open)\s+)?(?:final\s+)?class\s+(\w+)/,
+      // 構造体宣言
+      struct: /^(?:(?:public|private|internal|fileprivate)\s+)?struct\s+(\w+)/,
+      // プロトコル宣言
+      protocol: /^(?:(?:public|private|internal|fileprivate)\s+)?protocol\s+(\w+)/,
+      // 列挙型宣言
+      enum: /^(?:(?:public|private|internal|fileprivate)\s+)?enum\s+(\w+)/,
+      // 関数宣言
+      function: /^(?:(?:public|private|internal|fileprivate)\s+)?(?:static\s+)?func\s+(\w+)\s*\(/,
+      // イニシャライザ
+      initializer: /^(?:(?:public|private|internal|fileprivate)\s+)?(?:convenience\s+|required\s+)?init\s*\(/,
+      // プロパティ宣言
+      property: /^\s*(?:(?:public|private|internal|fileprivate)\s+)?(?:static\s+)?(?:let|var)\s+(\w+)/,
+      // タイプエイリアス
+      typeAlias: /^(?:(?:public|private|internal|fileprivate)\s+)?typealias\s+(\w+)/,
+      // 拡張
+      extension: /^extension\s+(\w+)/
+    };
+
+    let currentClass: string | undefined;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('//') || trimmedLine.startsWith('/*')) continue;
+      
+      // インポート文
+      let match = patterns.import.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Import, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // クラス宣言
+      match = patterns.class.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 構造体宣言
+      match = patterns.struct.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Struct, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // プロトコル宣言
+      match = patterns.protocol.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Interface, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 列挙型宣言
+      match = patterns.enum.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Enum, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 拡張
+      match = patterns.extension.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        continue;
+      }
+      
+      // 関数宣言
+      match = patterns.function.exec(line);
+      if (match) {
+        const kind = currentClass ? SymbolKind.Method : SymbolKind.Function;
+        symbols.push(this.createSymbol(match[1], kind, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // イニシャライザ
+      match = patterns.initializer.exec(line);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol('init', SymbolKind.Constructor, i, line.indexOf('init'), filePath, currentClass));
+        continue;
+      }
+      
+      // プロパティ宣言
+      match = patterns.property.exec(line);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Property, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // タイプエイリアス
+      match = patterns.typeAlias.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.Swift,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1180,7 +2161,145 @@ class KotlinParser implements LanguageParser {
   extensions = ['.kt', '.kts'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // パッケージ宣言
+      package: /^package\s+([\.\w]+)/,
+      // インポート文
+      import: /^import\s+([\.\w]+)/,
+      // クラス宣言
+      class: /^(?:(?:public|private|protected|internal)\s+)?(?:abstract\s+|final\s+|open\s+|sealed\s+|data\s+|inner\s+)?class\s+(\w+)/,
+      // インターフェース宣言
+      interface: /^(?:(?:public|private|protected|internal)\s+)?interface\s+(\w+)/,
+      // オブジェクト宣言
+      object: /^(?:(?:public|private|protected|internal)\s+)?object\s+(\w+)/,
+      // 列挙型宣言
+      enum: /^(?:(?:public|private|protected|internal)\s+)?enum\s+class\s+(\w+)/,
+      // 関数宣言
+      function: /^(?:(?:public|private|protected|internal)\s+)?(?:suspend\s+)?fun\s+(<[^>]+>\s+)?(\w+)\s*\(/,
+      // プロパティ宣言
+      property: /^\s*(?:(?:public|private|protected|internal)\s+)?(?:val|var)\s+(\w+)/,
+      // 定数宣言
+      constant: /^\s*const\s+val\s+(\w+)/,
+      // タイプエイリアス
+      typeAlias: /^(?:(?:public|private|protected|internal)\s+)?typealias\s+(\w+)/
+    };
+
+    let currentPackage: string | undefined;
+    let currentClass: string | undefined;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('//') || trimmedLine.startsWith('/*')) continue;
+      
+      // パッケージ宣言
+      let match = patterns.package.exec(trimmedLine);
+      if (match) {
+        currentPackage = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Package, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // インポート文
+      match = patterns.import.exec(trimmedLine);
+      if (match) {
+        const importName = match[1].split('.').pop() || match[1];
+        symbols.push(this.createSymbol(importName, SymbolKind.Import, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // クラス宣言
+      match = patterns.class.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // インターフェース宣言
+      match = patterns.interface.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Interface, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // オブジェクト宣言
+      match = patterns.object.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Object, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // 列挙型宣言
+      match = patterns.enum.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Enum, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+      
+      // 関数宣言
+      match = patterns.function.exec(line);
+      if (match) {
+        const functionName = match[2];
+        const kind = currentClass ? SymbolKind.Method : SymbolKind.Function;
+        symbols.push(this.createSymbol(functionName, kind, i, line.indexOf(functionName), filePath, currentClass || currentPackage));
+        continue;
+      }
+      
+      // 定数宣言
+      match = patterns.constant.exec(line);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Constant, i, line.indexOf(match[1]), filePath, currentClass || currentPackage));
+        continue;
+      }
+      
+      // プロパティ宣言
+      match = patterns.property.exec(line);
+      if (match && currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Property, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // タイプエイリアス
+      match = patterns.typeAlias.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentPackage));
+        continue;
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.Kotlin,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1189,7 +2308,150 @@ class CppParser implements LanguageParser {
   extensions = ['.cpp', '.cc', '.cxx', '.hpp'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // 名前空間宣言
+      namespace: /^namespace\s+(\w+)/,
+      // インクルード文
+      include: /^#include\s*[<"](\w+)[">]/,
+      // クラス宣言
+      class: /^(?:template\s*<[^>]*>\s*)?class\s+(\w+)/,
+      // 構造体宣言
+      struct: /^(?:template\s*<[^>]*>\s*)?struct\s+(\w+)/,
+      // 列挙型宣言
+      enum: /^enum\s+(?:class\s+)?(\w+)/,
+      // 関数宣言
+      function: /^(?:template\s*<[^>]*>\s*)?(?:(?:inline|static|virtual|explicit|friend)\s+)*[\w:<>\*&\s]+\s+(\w+)\s*\([^)]*\)\s*(?:const)?\s*[;{]/,
+      // コンストラクタ
+      constructor: /^\s*(\w+)\s*\([^)]*\)\s*:/,
+      // デストラクタ
+      destructor: /^\s*~(\w+)\s*\([^)]*\)/,
+      // マクロ
+      macro: /^#define\s+(\w+)/,
+      // using文
+      using: /^using\s+(?:namespace\s+)?(\w+)/,
+      // typedef
+      typedef: /^typedef\s+[^;]+\s+(\w+)\s*;/
+    };
+
+    let currentNamespace: string | undefined;
+    let currentClass: string | undefined;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('//') || trimmedLine.startsWith('/*')) continue;
+      
+      // 名前空間宣言
+      let match = patterns.namespace.exec(trimmedLine);
+      if (match) {
+        currentNamespace = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Namespace, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // インクルード文
+      match = patterns.include.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Import, i, trimmedLine.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // クラス宣言
+      match = patterns.class.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // 構造体宣言
+      match = patterns.struct.exec(trimmedLine);
+      if (match) {
+        currentClass = match[1];
+        symbols.push(this.createSymbol(match[1], SymbolKind.Struct, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+      
+      // 列挙型宣言
+      match = patterns.enum.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Enum, i, line.indexOf(match[1]), filePath, currentClass || currentNamespace));
+        continue;
+      }
+      
+      // コンストラクタ
+      match = patterns.constructor.exec(line);
+      if (match && currentClass && match[1] === currentClass) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Constructor, i, line.indexOf(match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // デストラクタ
+      match = patterns.destructor.exec(line);
+      if (match && currentClass && match[1] === currentClass) {
+        symbols.push(this.createSymbol('~' + match[1], SymbolKind.Method, i, line.indexOf('~' + match[1]), filePath, currentClass));
+        continue;
+      }
+      
+      // 関数宣言
+      match = patterns.function.exec(line);
+      if (match && !['if', 'for', 'while', 'switch'].includes(match[1])) {
+        const kind = currentClass ? SymbolKind.Method : SymbolKind.Function;
+        symbols.push(this.createSymbol(match[1], kind, i, line.indexOf(match[1]), filePath, currentClass || currentNamespace));
+        continue;
+      }
+      
+      // マクロ
+      match = patterns.macro.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Macro, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // using文
+      match = patterns.using.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Import, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // typedef
+      match = patterns.typedef.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath, currentNamespace));
+        continue;
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.Cpp,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
@@ -1198,7 +2460,117 @@ class CParser implements LanguageParser {
   extensions = ['.c', '.h'];
   
   async parseFile(filePath: string, content: string): Promise<SymbolIndexInfo[]> {
-    return [];
+    return this.parseWithRegex(filePath, content);
+  }
+  
+  private parseWithRegex(filePath: string, content: string): SymbolIndexInfo[] {
+    const symbols: SymbolIndexInfo[] = [];
+    const lines = content.split('\n');
+    const fileUri = URI.file(filePath).toString();
+    
+    const patterns = {
+      // インクルード文
+      include: /^#include\s*[<"](\w+)[">]/,
+      // 構造体宣言
+      struct: /^(?:typedef\s+)?struct\s+(\w+)/,
+      // 列挙型宣言
+      enum: /^(?:typedef\s+)?enum\s+(\w+)/,
+      // 関数宣言
+      function: /^(?:static\s+|extern\s+|inline\s+)*[\w\s\*]+\s+(\w+)\s*\([^)]*\)\s*[{;]/,
+      // 関数プロトタイプ
+      prototype: /^(?:static\s+|extern\s+)*[\w\s\*]+\s+(\w+)\s*\([^)]*\)\s*;/,
+      // マクロ
+      macro: /^#define\s+(\w+)/,
+      // typedef
+      typedef: /^typedef\s+[^;]+\s+(\w+)\s*;/,
+      // 全域変数
+      globalVar: /^(?:static\s+|extern\s+)?(?:const\s+)?[\w\s\*]+\s+(\w+)\s*(?:=.*)?;/
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      if (!trimmedLine || trimmedLine.startsWith('//') || trimmedLine.startsWith('/*')) continue;
+      
+      // インクルード文
+      let match = patterns.include.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Import, i, trimmedLine.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 構造体宣言
+      match = patterns.struct.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Struct, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 列挙型宣言
+      match = patterns.enum.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Enum, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 関数プロトタイプ
+      match = patterns.prototype.exec(line);
+      if (match && !['if', 'for', 'while', 'switch', 'return'].includes(match[1])) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Function, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 関数宣言
+      match = patterns.function.exec(line);
+      if (match && !['if', 'for', 'while', 'switch', 'return'].includes(match[1]) && !trimmedLine.includes('=')) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Function, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // マクロ
+      match = patterns.macro.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Macro, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // typedef
+      match = patterns.typedef.exec(trimmedLine);
+      if (match) {
+        symbols.push(this.createSymbol(match[1], SymbolKind.Class, i, line.indexOf(match[1]), filePath));
+        continue;
+      }
+      
+      // 全域変数（関数外）
+      if (!line.startsWith(' ') && !line.startsWith('\t')) {
+        match = patterns.globalVar.exec(line);
+        if (match && !line.includes('(') && !['if', 'for', 'while', 'switch', 'return', 'int', 'char', 'float', 'double', 'void'].includes(match[1])) {
+          symbols.push(this.createSymbol(match[1], SymbolKind.Variable, i, line.indexOf(match[1]), filePath));
+        }
+      }
+    }
+
+    return symbols;
+  }
+  
+  private createSymbol(name: string, kind: SymbolKind, line: number, column: number, filePath: string, containerName?: string): SymbolIndexInfo {
+    const fileUri = URI.file(filePath).toString();
+    
+    return {
+      id: `${name}@${fileUri}:${line}:${column}_${Date.now()}`,
+      name,
+      kind,
+      language: SupportedLanguage.C,
+      fileUri: '',
+      startLine: line,
+      startCharacter: column,
+      endLine: line,
+      endCharacter: column + name.length,
+      containerName,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   }
 }
 
