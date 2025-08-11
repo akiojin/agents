@@ -646,6 +646,22 @@ export class GeminiClient {
       return null;
     }
 
+    let compressBeforeIndex = findIndexAfterFraction(
+      curatedHistory,
+      1 - this.COMPRESSION_PRESERVE_THRESHOLD,
+    );
+    // Find the first user message after the index. This is the start of the next turn.
+    while (
+      compressBeforeIndex < curatedHistory.length &&
+      (curatedHistory[compressBeforeIndex]?.role === 'model' ||
+        isFunctionResponse(curatedHistory[compressBeforeIndex]))
+    ) {
+      compressBeforeIndex++;
+    }
+
+    const historyToCompress = curatedHistory.slice(0, compressBeforeIndex);
+    const historyToKeep = curatedHistory.slice(compressBeforeIndex);
+
     // セッションマネージャーを取得
     const sessionManager = getSessionManager();
     
@@ -653,14 +669,12 @@ export class GeminiClient {
     sessionManager.updateHistory(curatedHistory);
     sessionManager.updateTokenCount(originalTokenCount);
 
-    // 重要: 全履歴をAIに送って、AIに重要な部分を判断させる
-    // AIは全体を見て、何を保持すべきか判断できる
-    this.getChat().setHistory(curatedHistory);
+    this.getChat().setHistory(historyToCompress);
 
     const { text: summary } = await this.getChat().sendMessage(
       {
         message: {
-          text: 'Analyze the ENTIRE conversation history. First, reason in your scratchpad about what information is crucial to preserve. Then, generate the <state_snapshot> that captures ALL important information from the entire conversation.',
+          text: 'First, reason in your scratchpad. Then, generate the <state_snapshot>.',
         },
         config: {
           systemInstruction: { text: getCompressionPrompt() },
@@ -670,11 +684,6 @@ export class GeminiClient {
     );
     
     // 圧縮後の新しい履歴を作成
-    // 要約には全体の重要情報が含まれているので、最新の履歴は不要
-    // ただし、直近の数メッセージは詳細を保持するために残す
-    const recentMessages = Math.min(4, Math.floor(curatedHistory.length * 0.1));
-    const veryRecentHistory = curatedHistory.slice(-recentMessages);
-    
     const compressedHistory = [
       {
         role: 'user' as const,
@@ -682,9 +691,9 @@ export class GeminiClient {
       },
       {
         role: 'model' as const,
-        parts: [{ text: 'Got it. I have the full context from the state snapshot. Ready to continue.' }],
+        parts: [{ text: 'Got it. Thanks for the additional context!' }],
       },
-      ...veryRecentHistory,
+      ...historyToKeep,
     ];
     
     this.chat = await this.startChat(compressedHistory);
