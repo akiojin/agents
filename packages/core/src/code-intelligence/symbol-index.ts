@@ -1119,8 +1119,12 @@ class PythonParser implements LanguageParser {
       // トップレベル変数
       if (!/^\s/.test(line)) {
         match = patterns.variable.exec(line);
-        if (match && !['class', 'def', 'import', 'from', 'if', 'for', 'while', 'try'].includes(match[1])) {
-          symbols.push(this.createSymbol(match[1], SymbolKind.Variable, i, match.index || 0, filePath));
+        if (match) {
+          const varName = match[1];
+          // 予約語でない場合のみ変数として扱う
+          if (!['class', 'def', 'import', 'from', 'if', 'for', 'while', 'try', 'elif', 'else', 'except', 'finally', 'with', 'as', 'return'].includes(varName)) {
+            symbols.push(this.createSymbol(varName, SymbolKind.Variable, i, match.index || 0, filePath));
+          }
         }
       }
     }

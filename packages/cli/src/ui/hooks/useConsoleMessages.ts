@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ConsoleMessageItem } from '../types.js';
+import { ConsoleLogger } from '../utils/consoleLogger.js';
 
 export interface UseConsoleMessagesReturn {
   consoleMessages: ConsoleMessageItem[];
@@ -19,6 +20,23 @@ export function useConsoleMessages(): UseConsoleMessagesReturn {
   );
   const messageQueueRef = useRef<ConsoleMessageItem[]>([]);
   const messageQueueTimeoutRef = useRef<number | null>(null);
+  const loggerRef = useRef<ConsoleLogger | null>(null);
+
+  // ConsoleLoggerの初期化
+  useEffect(() => {
+    if (!loggerRef.current) {
+      loggerRef.current = new ConsoleLogger();
+      // 古いログファイルのクリーンアップ
+      ConsoleLogger.cleanupOldLogs();
+    }
+    return () => {
+      // クリーンアップ時にロガーを閉じる
+      if (loggerRef.current) {
+        loggerRef.current.close();
+        loggerRef.current = null;
+      }
+    };
+  }, []);
 
   const processMessageQueue = useCallback(() => {
     if (messageQueueRef.current.length === 0) {
@@ -27,6 +45,11 @@ export function useConsoleMessages(): UseConsoleMessagesReturn {
 
     const newMessagesToAdd = messageQueueRef.current;
     messageQueueRef.current = [];
+
+    // ファイルにログを記録
+    if (loggerRef.current) {
+      loggerRef.current.logMessages(newMessagesToAdd);
+    }
 
     setConsoleMessages((prevMessages) => {
       const newMessages = [...prevMessages];

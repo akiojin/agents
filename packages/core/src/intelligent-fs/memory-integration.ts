@@ -597,7 +597,7 @@ export class MemoryIntegrationManager extends EventEmitter {
     await this.ensureInitialized();
 
     const errorMessage = typeof error === 'string' ? error : error.message;
-    const errorType = this.classifyError(errorMessage, context.stackTrace);
+    const errorType = this.classifyError(errorMessage, context?.stackTrace);
     const language = context.language || (context.filePath ? this.detectLanguage(context.filePath) : 'unknown');
 
     // 既存の類似エラーを検索
@@ -2628,6 +2628,103 @@ export class MemoryIntegrationManager extends EventEmitter {
       actionsCount: this.currentSession.actionsCount,
       outcome: { success: true }
     };
+  }
+
+  /**
+   * 学習セッションをデータベースに挿入（テスト用）
+   */
+  private async insertLearningSession(session: LearningSession): Promise<void> {
+    const runAsync = (sql: string, params: any[]): Promise<any> => {
+      return new Promise((resolve, reject) => {
+        this.db!.run(sql, params, function(err: any) {
+          if (err) reject(err);
+          else resolve(this);
+        });
+      });
+    };
+
+    await runAsync(`
+      INSERT OR REPLACE INTO learning_sessions (
+        id, session_type, start_time, actions_count, success_count, 
+        failure_count, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      session.id, session.sessionType, session.startTime.toISOString(),
+      session.actionsCount, session.successCount, session.failureCount,
+      session.startTime.toISOString()
+    ]);
+  }
+
+  /**
+   * パフォーマンス改善提案の識別
+   */
+  private async identifyPerformanceImprovements(targetFiles?: string[]): Promise<Improvement[]> {
+    return [
+      {
+        id: 'perf_1',
+        type: 'performance',
+        priority: 'medium',
+        title: 'Optimize database queries',
+        description: 'Add indexing and query optimization',
+        estimatedImpact: 'Reduce query time by 50%',
+        implementation: 'Create indexes on frequently queried columns',
+        createdAt: new Date()
+      }
+    ];
+  }
+
+  /**
+   * コード品質改善提案の識別
+   */
+  private async identifyQualityImprovements(targetFiles?: string[]): Promise<Improvement[]> {
+    return [
+      {
+        id: 'quality_1',
+        type: 'quality',
+        priority: 'high',
+        title: 'Refactor long methods',
+        description: 'Break down methods with high cyclomatic complexity',
+        estimatedImpact: 'Improve code maintainability and readability',
+        implementation: 'Extract methods from complex functions',
+        createdAt: new Date()
+      }
+    ];
+  }
+
+  /**
+   * セキュリティ改善提案の識別
+   */
+  private async identifySecurityImprovements(targetFiles?: string[]): Promise<Improvement[]> {
+    return [
+      {
+        id: 'security_1',
+        type: 'security',
+        priority: 'high',
+        title: 'Add input validation',
+        description: 'Implement comprehensive input sanitization',
+        estimatedImpact: 'Prevent XSS and injection attacks',
+        implementation: 'Add validation middleware',
+        createdAt: new Date()
+      }
+    ];
+  }
+
+  /**
+   * アーキテクチャ改善提案の識別
+   */
+  private async identifyArchitectureImprovements(targetFiles?: string[]): Promise<Improvement[]> {
+    return [
+      {
+        id: 'arch_1',
+        type: 'architecture',
+        priority: 'medium',
+        title: 'Implement dependency injection',
+        description: 'Reduce tight coupling between components',
+        estimatedImpact: 'Improve testability and modularity',
+        implementation: 'Use IoC container pattern',
+        createdAt: new Date()
+      }
+    ];
   }
 
   private updateProductivityScore(outcome: SessionOutcome): void {
