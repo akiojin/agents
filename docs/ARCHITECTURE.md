@@ -1,96 +1,91 @@
-# @akiojin/agents Architecture Overview (Based on Gemini CLI)
+# AGENTS アーキテクチャ
 
-This document provides a high-level overview of the @akiojin/agents architecture, which extends the Google Gemini CLI with additional AI providers, MCP protocol support, and advanced memory management.
+## 概要
 
-## Core components
+AGENTSは、ChromaDBをベースとした記憶システムを実装しています。このシステムは以下の主要コンポーネントから構成されています：
 
-The @akiojin/agents system builds upon the Gemini CLI foundation and is composed of the following main packages and extensions:
+1. **ChromaDBクライアント** (`packages/memory/src/chroma/`)
+   - ChromaDBとの接続と操作を担当
+   - 記憶の保存、検索、更新、取得機能を提供
 
-1.  **CLI package (`packages/cli`):**
-    - **Purpose:** This contains the user-facing portion of the Gemini CLI, such as handling the initial user input, presenting the final output, and managing the overall user experience.
-    - **Key functions contained in the package:**
-      - [Input processing](./cli/commands.md)
-      - History management
-      - Display rendering
-      - [Theme and UI customization](./cli/themes.md)
-      - [CLI configuration settings](./cli/configuration.md)
+2. **シナプス結合ネットワーク** (`packages/memory/src/synaptic/`)
+   - 人間の脳のシナプス結合を模倣し、記憶間の関連性を管理
+   - ヘブ則学習（Hebbian Learning）を実装
+   - 時間経過による記憶の減衰（忘却曲線）を考慮
+   - 競合学習（Competitive Learning）を実装
 
-2.  **Core package (`packages/core`):**
-    - **Purpose:** This acts as the backend for the Gemini CLI. It receives requests sent from `packages/cli`, orchestrates interactions with the Gemini API, and manages the execution of available tools.
-    - **Key functions contained in the package:**
-      - API client for communicating with the Google Gemini API
-      - Prompt construction and management
-      - Tool registration and execution logic
-      - State management for conversations or sessions
-      - Server-side configuration
+3. **統合記憶システム** (`packages/memory/src/index.ts`)
+   - ChromaDBとシナプスネットワークを統合
+   - 記憶の保存、検索、使用、フィードバック機能を提供
+   - 自動減衰機能を実装
 
-3.  **Tools (`packages/core/src/tools/`):**
-    - **Purpose:** These are individual modules that extend the capabilities of the Gemini model, allowing it to interact with the local environment (e.g., file system, shell commands, web fetching).
-    - **Interaction:** `packages/core` invokes these tools based on requests from the Gemini model.
+4. **APIインターフェース** (`packages/memory/src/api/`)
+   - AGENTSのツールシステムと統合するためのインターフェース
+   - イベント記録、エラー解決、プロジェクト情報管理機能を提供
 
-## @akiojin/agents Extensions
+## 詳細設計
 
-Building on top of the Gemini CLI foundation, @akiojin/agents adds:
+### ChromaDBクライアント
+- ChromaDBサーバーへの接続設定を自動化（Docker環境内ではhost.docker.internal、ローカル環境ではlocalhost）
+- 記憶の保存、検索、更新、取得機能を提供
+- メタデータを保存し、記憶の属性（作成日時、アクセス回数、成功率など）を管理
+- リトライロジックを実装し、ChromaDBサーバーへの接続失敗に対応
 
-4.  **Agents Extensions (`src/`):**
-    - **Purpose:** Additional functionality specific to the agents system
-    - **Key components:**
-      - `src/cli.ts`: Enhanced CLI entry point with agent-specific commands
-      - `src/core/`: Agent core logic and ReAct pattern implementation
-      - `src/providers/`: Multi-LLM provider support (OpenAI, Anthropic, Local)
-      - `src/mcp/`: MCP (Model Context Protocol) integration for tool extensibility
-      - `src/utils/`: Utility functions and configuration management
+### シナプス結合ネットワーク
+- ヘブ則学習を実装し、関連する記憶の結合強度を動的に調整
+- 時間経過による記憶の減衰（忘却曲線）を考慮
+- 競合学習を実装し、文脈に応じた記憶の選択が可能
+- 文脈依存検索を実装し、より適切な記憶の取得が可能
+- シナプス結合の強度調整は単純なヘブ則に基づいている
+- アクセスパターンの学習と予測機能を実装
 
-5.  **MCP Integration:**
-    - **Serena MCP**: Advanced code exploration and editing capabilities
-    - **Custom MCP servers**: Support for additional tool servers via MCP protocol
-    - **Parallel tool execution**: Enhanced performance through concurrent operations
+### 統合記憶システム
+- 記憶の保存、検索、使用、フィードバック機能を一元的に管理
+- 自動減衰機能により、不要な記憶の整理が可能
+- 成功/失敗フィードバックをもとに記憶の品質を向上
+- 記憶の重要度評価は単純な計算に基づいている
 
-6.  **Multi-Provider LLM Support:**
-    - **Google Gemini**: Original Gemini CLI integration (default)
-    - **OpenAI**: GPT-4, GPT-3.5 support
-    - **Anthropic**: Claude 3 family support
-    - **Local LLMs**: Support for local models via LM Studio, Ollama, etc.
+### APIインターフェース
+- AGENTSのツールシステムと統合しやすい設計
+- イベント記録、エラー解決、プロジェクト情報管理機能を提供
+- システムの初期化処理が複雑で、エラー処理が不十分
 
-7.  **Advanced Memory System:**
-    - **Serena Memory**: Persistent project context and knowledge
-    - **ChromaDB Integration**: Vector database for semantic memory
-    - **Synaptic Networks**: Brain-inspired memory management (planned)
+## シナプス記憶システムの詳細
 
-## Interaction Flow
+### 脳神経ネットワーク模倣
+- 人間の脳の記憶形成メカニズムを模倣
+- 最大3段階の記憶活性化伝播（減衰率0.7）
+- Ebbinghausの忘却曲線による時間経過記憶減衰
+- LTP/LTDによる記憶強度調整
 
-A typical interaction with @akiojin/agents follows this enhanced flow:
+### 記憶の活性化と伝播
+- 記憶が活性化されると、関連する記憶も同時に活性化される
+- 活性化は最大3段階まで伝播し、減衰率0.7で減少
+- 活性化レベルが一定以上になると、記憶のアクセス回数が増加
 
-1.  **User input:** The user types a prompt or command into the terminal, which is managed by `packages/cli`.
-2.  **Request to core:** `packages/cli` sends the user's input to `packages/core`.
-3.  **Provider Selection:** The agent system selects the appropriate LLM provider based on configuration or task requirements.
-4.  **Request processed:** The core package:
-    - Constructs an appropriate prompt for the selected LLM API (Gemini, OpenAI, Anthropic, or Local)
-    - Includes conversation history, available tool definitions, and MCP tool capabilities
-    - Sends the prompt to the selected LLM API
-5.  **LLM Response:** The LLM processes the prompt and returns a response. This response might be a direct answer or a request to use one of the available tools (including MCP tools).
-6.  **Tool execution (if applicable):**
-    - When the LLM requests a tool, the core package prepares to execute it
-    - Tools can be from the original Gemini CLI toolkit or MCP servers
-    - If the requested tool can modify the file system or execute shell commands, the user is first given details of the tool and its arguments, and the user must approve the execution
-    - Read-only operations, such as reading files, might not require explicit user confirmation to proceed
-    - MCP tools follow their own execution protocols and permissions
-    - Once confirmed, or if confirmation is not required, the core package executes the relevant action
-    - The result is sent back to the LLM by the core package
-    - The LLM processes the tool result and generates a final response
-7.  **Response to CLI:** The core package sends the final response back to the CLI package.
-8.  **Display to user:** The CLI package formats and displays the response to the user in the terminal.
+### 記憶の学習と強化
+- ヘブ則学習を実装し、関連する記憶の結合強度を動的に調整
+- 長期増強（LTP）と長期抑制（LTD）の仕組みを導入
+- 時間経過による記憶減衰（忘却曲線）を考慮
 
-## Key Design Principles
+### 競合学習
+- 同じ文脈内の記憶間で競合し、より適切な記憶が選択される
+- 競合学習の強度は動的に調整可能
 
-### Inherited from Gemini CLI
-- **Modularity:** Separating the CLI (frontend) from the Core (backend) allows for independent development and potential future extensions
-- **Extensibility:** The tool system is designed to be extensible, allowing new capabilities to be added
-- **User experience:** The CLI focuses on providing a rich and interactive terminal experience
+### アクセスパターン学習
+- 記憶のアクセス履歴を記録し、パターンを学習
+- 現在の文脈に基づいて記憶の予測を行う
 
-### @akiojin/agents Additions
-- **Multi-Provider Flexibility:** Support for multiple LLM providers allows users to choose based on cost, performance, or privacy needs
-- **MCP Protocol Standard:** Adoption of the Model Context Protocol ensures compatibility with a growing ecosystem of tools
-- **Memory Persistence:** Advanced memory systems maintain context across sessions for better continuity
-- **Parallel Processing:** Concurrent tool execution and task handling for improved performance
-- **Open Source First:** Complete transparency and community-driven development
+## システムの初期化プロセス
+1. ChromaDBクライアントの初期化
+2. シナプス結合ネットワークの初期化
+3. 記憶の復元（ChromaDBからすべての記憶を読み込み）
+4. シナプス結合情報の復元
+5. 自動減衰機能の開始
+
+## システムの使用フロー
+1. 記憶の保存: 新しい記憶をChromaDBに保存し、シナプスネットワークに追加
+2. 記憶の検索: 文脈依存検索やベクトル検索で記憶を取得
+3. 記憶の使用: 記憶が活性化され、関連する記憶も伝播的に活性化
+4. 記憶のフィードバック: 成功/失敗に応じて記憶の品質を向上
+5. 自動減衰: 経過時間に応じて記憶の重要度を低下させ、不要な記憶を整理

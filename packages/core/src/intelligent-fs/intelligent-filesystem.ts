@@ -84,7 +84,8 @@ const logger = {
  */
 export interface IntelligentReadResult {
   success: boolean;
-  content?: string;
+  path: string;
+  content: string;
   error?: string;
   symbols?: SymbolIndexInfo[];
   dependencies?: string[];
@@ -186,12 +187,18 @@ export class IntelligentFileSystem {
     // 基本的なファイル読み取り
     const basicResult = await this.fileSystem.readFile(filePath);
     if (!basicResult.success) {
-      return basicResult;
+      return {
+        success: false,
+        path: filePath,
+        content: '',
+        error: basicResult.error
+      };
     }
 
     const result: IntelligentReadResult = {
       success: true,
-      content: basicResult.data,
+      path: filePath,
+      content: basicResult.data || '',
       cachedInIndex: false
     };
 
@@ -684,6 +691,20 @@ export class IntelligentFileSystem {
 
   private generateSymbolId(): string {
     return `symbol_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * 通常のファイル読み取り（AI最適化エンジン用）
+   */
+  async readFile(filePath: string): Promise<FileSystemResult<string>> {
+    return this.fileSystem.readFile(filePath);
+  }
+
+  /**
+   * 通常のファイル書き込み（AI最適化エンジン用）
+   */
+  async writeFile(filePath: string, content: string): Promise<FileSystemResult<void>> {
+    return this.fileSystem.writeFile(filePath, content);
   }
 
   /**

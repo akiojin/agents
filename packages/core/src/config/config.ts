@@ -34,6 +34,7 @@ import {
   MemoryStatsTool,
 } from '../tools/memory-tool.js';
 import { WebSearchTool } from '../tools/web-search.js';
+import { TodoWriteTool } from '../tools/todo-write-tool.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -645,6 +646,8 @@ export class Config {
     registerCoreTool(MemoryFeedbackTool);
     registerCoreTool(MemoryStatsTool);
     registerCoreTool(WebSearchTool, this);
+    // TODOツールを登録（重要な機能）
+    registerCoreTool(TodoWriteTool);
 
     await registry.discoverTools();
     return registry;

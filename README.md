@@ -10,8 +10,6 @@ Agents provides:
 - **Agents CLI Integration**: AI integration for diverse AI reasoning capabilities  
 - **Synaptic Memory System**: Advanced memory management with brain-inspired neural networks for persistent knowledge and context
 - **MCP Tools Integration**: Model Context Protocol tools including Serena for intelligent code exploration
-- **IntelligentFileSystem**: Code intelligence integrated file operations with automatic symbol analysis and type inference
-- **AI Optimization Engine**: Automated code quality analysis, bug prediction, and refactoring suggestions
 - **Docker Development Environment**: Fully containerized development setup with all necessary tools pre-installed
 
 ## 📋 必要条件

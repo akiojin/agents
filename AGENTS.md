@@ -6,3 +6,27 @@
 * ストリーミング出力、受動的ツール呼び出し、主動的ツール呼び出し、マルチラウンド主動的ツール呼び出しなどの高度な機能をサポートします。
 * グローバル構成（OPENAI_LLM_KEY、OPENAI_LLM_BASE、OPENAI_LLM_MODEL）と細やかな構成（タスクタイプごとに異なるモデルを構成）をサポートします。
 * アーキテクチャはモジュール化設計で、ContentGenerator 抽象層、AgentsToOpenAIConverter、OpenAIToAgentsConverter の3つの変換器クラスを含み、リクエストとレスポンスのフォーマット変換を処理します。
+* 記憶システムはChromaDBとシナプス結合ネットワークを統合し、人間の記憶メカニズムに近い機能を実現しています。
+
+## 記憶システムの詳細
+
+AGENTSは、ChromaDBをベースとした記憶システムを実装しています。このシステムは以下の主要コンポーネントから構成されています：
+
+1. **ChromaDBクライアント** (`packages/memory/src/chroma/`)
+   - ChromaDBとの接続と操作を担当
+   - 記憶の保存、検索、更新、取得機能を提供
+
+2. **シナプス結合ネットワーク** (`packages/memory/src/synaptic/`)
+   - 人間の脳のシナプス結合を模倣し、記憶間の関連性を管理
+   - ヘブ則学習（Hebbian Learning）を実装
+   - 時間経過による記憶の減衰（忘却曲線）を考慮
+   - 競合学習（Competitive Learning）を実装
+
+3. **統合記憶システム** (`packages/memory/src/index.ts`)
+   - ChromaDBとシナプスネットワークを統合
+   - 記憶の保存、検索、使用、フィードバック機能を提供
+   - 自動減衰機能を実装
+
+4. **APIインターフェース** (`packages/memory/src/api/`)
+   - AGENTSのツールシステムと統合するためのインターフェース
+   - イベント記録、エラー解決、プロジェクト情報管理機能を提供

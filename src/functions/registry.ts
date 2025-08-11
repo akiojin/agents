@@ -576,6 +576,20 @@ export class InternalFunctionRegistry {
   }
 
   /**
+   * 外部から関数を登録（統合用）
+   */
+  register(func: InternalFunction): void {
+    this.registerFunction(func);
+  }
+
+  /**
+   * 関数を取得
+   */
+  get(name: string): InternalFunction | undefined {
+    return this.functions.get(name);
+  }
+
+  /**
    * 関数の登録を解除
    */
   unregisterFunction(name: string): boolean {

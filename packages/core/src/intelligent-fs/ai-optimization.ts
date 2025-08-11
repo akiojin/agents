@@ -150,7 +150,7 @@ export class AIOptimizationEngine {
       return this.metricsCache.get(filePath)!;
     }
 
-    const readResult = await this.intelligentFS.readFileIntelligent(filePath);
+    const readResult = await this.intelligentFS.readFile(filePath);
     if (!readResult.success || !readResult.data) {
       throw new Error(`Failed to read file: ${filePath}`);
     }
@@ -177,7 +177,7 @@ export class AIOptimizationEngine {
       return this.predictionsCache.get(filePath)!;
     }
 
-    const readResult = await this.intelligentFS.readFileIntelligent(filePath);
+    const readResult = await this.intelligentFS.readFile(filePath);
     if (!readResult.success || !readResult.data) {
       throw new Error(`Failed to read file: ${filePath}`);
     }
