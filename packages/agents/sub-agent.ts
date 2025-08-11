@@ -13,6 +13,7 @@ export interface SubAgentConfig {
   prompt: string;
   tools?: string[];
   provider?: GeminiAdapterProvider;
+  model?: string;  // エージェント固有のモデル指定
 }
 
 export interface SubAgentContext {
@@ -39,6 +40,7 @@ export class SubAgent {
   private todoTool: TodoWriteTool;
   private availableTools: Map<string, any>;
   private provider: GeminiAdapterProvider | any;
+  private model?: string;  // エージェント固有のモデル
   private status: 'idle' | 'busy' = 'idle';
 
   constructor(idOrConfig: string | SubAgentConfig, type?: string, provider?: any) {
@@ -58,12 +60,22 @@ export class SubAgent {
       // Original signature: (config)
       this.config = idOrConfig;
       this.id = this.config.name;
-      this.type = 'general-purpose';
-      this.provider = this.config.provider || new GeminiAdapterProvider(
-        process.env.LLM_API_KEY || 'dummy-key',
-        process.env.LLM_MODEL || 'local-model',
-        process.env.LLM_BASE_URL || 'http://localhost:1234/v1'
-      );
+      this.type = this.config.name;  // タイプを名前と同じに設定
+      
+      // モデルが指定されている場合は、専用のプロバイダーを作成
+      if (this.config.model) {
+        this.provider = new GeminiAdapterProvider(
+          process.env.LLM_API_KEY || 'dummy-key',
+          this.config.model,  // 指定されたモデルを使用
+          process.env.LLM_BASE_URL || 'http://localhost:1234/v1'
+        );
+      } else {
+        this.provider = this.config.provider || new GeminiAdapterProvider(
+          process.env.LLM_API_KEY || 'dummy-key',
+          process.env.LLM_MODEL || 'local-model',
+          process.env.LLM_BASE_URL || 'http://localhost:1234/v1'
+        );
+      }
     }
     
     this.todoTool = new TodoWriteTool();
@@ -287,17 +299,46 @@ export class SubAgentManager {
       process.env.LLM_BASE_URL || 'http://localhost:1234/v1'
     );
     
-    // Create a general-purpose agent by default
-    this.generalPurposeAgent = new SubAgent({
-      name: 'general-purpose',
-      description: 'A general-purpose agent with access to all tools',
-      prompt: `You are a general-purpose assistant that can help with various tasks.
+    // 動的にエージェントプリセットを読み込む
+    try {
+      const { loadAgentPresets } = require('./src/agent-prompt-loader');
+      const presets = loadAgentPresets();
+      
+      // すべてのプリセットからエージェントを作成
+      for (const [name, preset] of presets.entries()) {
+        const agent = new SubAgent({
+          name: preset.name,
+          description: preset.description,
+          prompt: preset.systemPrompt,
+          provider: this.provider,
+          // モデルが指定されている場合は適用
+          model: preset.model,
+        });
+        
+        this.agents.set(name, agent);
+        
+        // general-purposeエージェントを記録
+        if (name === 'general-purpose') {
+          this.generalPurposeAgent = agent;
+        }
+      }
+    } catch (error) {
+      console.debug('AgentPromptLoader not available, using default agent');
+    }
+    
+    // general-purposeエージェントが読み込まれていない場合はデフォルトを作成
+    if (!this.generalPurposeAgent) {
+      this.generalPurposeAgent = new SubAgent({
+        name: 'general-purpose',
+        description: 'A general-purpose agent with access to all tools',
+        prompt: `You are a general-purpose assistant that can help with various tasks.
 You have access to tools that you can use to complete tasks.
 Be thorough and systematic in your approach.`,
-      provider: this.provider,
-    });
-    
-    this.agents.set('general-purpose', this.generalPurposeAgent);
+        provider: this.provider,
+      });
+      
+      this.agents.set('general-purpose', this.generalPurposeAgent);
+    }
   }
 
   /**
@@ -391,30 +432,55 @@ Be thorough and systematic in your approach.`,
 }
 
 // Tool definition for calling sub-agents
-export const subAgentToolDefinition = {
-  name: 'task',
-  description: `Launch a sub-agent to handle complex, multi-step tasks autonomously.
+// 動的にサブエージェントツール定義を生成する関数
+export function getSubAgentToolDefinition() {
+  let agentTypes = ['general-purpose'];
+  let agentDescriptions = '- general-purpose: General-purpose agent with access to all tools';
+  
+  try {
+    // AgentPromptLoaderから動的にエージェントタイプを取得
+    const { loadAgentPresets } = require('./src/agent-prompt-loader');
+    const presets = loadAgentPresets();
+    
+    if (presets && presets.size > 0) {
+      agentTypes = Array.from(presets.keys());
+      agentDescriptions = Array.from(presets.values())
+        .map(preset => `- ${preset.name}: ${preset.description}`)
+        .join('
+');
+    }
+  } catch (error) {
+    console.debug('AgentPromptLoader not available, using default agent types');
+  }
+  
+  return {
+    name: 'task',
+    description: `Launch a sub-agent to handle complex, multi-step tasks autonomously.
 
 Available sub-agent types:
-- general-purpose: General-purpose agent with access to all tools
+${agentDescriptions}
 
 When to use this tool:
 - For complex tasks requiring specialized handling
 - To isolate context for specific operations
 - When delegating subtasks`,
-  parameters: {
-    type: 'object',
-    properties: {
-      description: {
-        type: 'string',
-        description: 'A detailed description of the task for the sub-agent',
+    parameters: {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+          description: 'A detailed description of the task for the sub-agent',
+        },
+        subagent_type: {
+          type: 'string',
+          description: 'The type of sub-agent to use',
+          enum: agentTypes,
+        },
       },
-      subagent_type: {
-        type: 'string',
-        description: 'The type of sub-agent to use',
-        enum: ['general-purpose'],
-      },
+      required: ['description', 'subagent_type'],
     },
-    required: ['description', 'subagent_type'],
-  },
-};
+  };
+}
+
+// デフォルトのエクスポート（後方互換性のため）
+export const subAgentToolDefinition = getSubAgentToolDefinition();

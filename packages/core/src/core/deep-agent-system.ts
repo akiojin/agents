@@ -3,6 +3,8 @@
  * Inspired by DeepAgents and Claude Code
  */
 
+// AgentPromptLoaderのインポート（動的インポート）
+// 循環依存を避けるため、必要時に動的インポート
 export const DEEP_AGENT_SYSTEM_PROMPT = `You are an autonomous deep agent powered by advanced planning and execution capabilities.
 
 ## Response Formatting Guidelines
@@ -165,5 +167,20 @@ export function getAgentSystemPrompt(agentType: string = 'main'): string {
     return DEEP_AGENT_SYSTEM_PROMPT;
   }
   
+  // AgentPromptLoaderから動的にプリセットを取得
+  try {
+    const { getAgentPreset } = require('../../agents/src/agent-prompt-loader');
+    const preset = getAgentPreset(agentType);
+    
+    if (preset) {
+      // プリセットが見つかった場合はそのシステムプロンプトを返す
+      return preset.systemPrompt;
+    }
+  } catch (error) {
+    // AgentPromptLoaderが利用できない場合は静的な定義にフォールバック
+    console.debug('AgentPromptLoader not available, using static prompts:', error);
+  }
+  
+  // フォールバック: 静的に定義されたプロンプトまたはgeneral-purpose
   return SUB_AGENT_PROMPTS[agentType] || SUB_AGENT_PROMPTS['general-purpose'];
 }
