@@ -62,3 +62,4 @@ export * from './tools/mcp-tool.js';
 // Export telemetry functions
 export * from './telemetry/index.js';
 export { sessionId } from './utils/session.js';
+export { SessionManager, getSessionManager, SessionData, SessionHistory } from './utils/session-manager.js';

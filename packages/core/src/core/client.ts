@@ -43,6 +43,7 @@ import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
 import { LoopDetectionService } from '../services/loopDetectionService.js';
 import { FileParserService, VLMService } from '../services/fileParserService.js';
 import { CompositeVLMService } from '../services/vlmService.js';
+import { getSessionManager } from '../utils/session-manager.js';
 import * as path from 'path';
 
 function isThinkingSupported(model: string) {
@@ -661,6 +662,13 @@ export class GeminiClient {
     const historyToCompress = curatedHistory.slice(0, compressBeforeIndex);
     const historyToKeep = curatedHistory.slice(compressBeforeIndex);
 
+    // セッションマネージャーを取得
+    const sessionManager = getSessionManager();
+    
+    // 圧縮前の履歴をセッションに保存
+    sessionManager.updateHistory(curatedHistory);
+    sessionManager.updateTokenCount(originalTokenCount);
+
     this.getChat().setHistory(historyToCompress);
 
     const { text: summary } = await this.getChat().sendMessage(
@@ -674,17 +682,21 @@ export class GeminiClient {
       },
       prompt_id,
     );
-    this.chat = await this.startChat([
+    
+    // 圧縮後の新しい履歴を作成
+    const compressedHistory = [
       {
-        role: 'user',
+        role: 'user' as const,
         parts: [{ text: summary }],
       },
       {
-        role: 'model',
+        role: 'model' as const,
         parts: [{ text: 'Got it. Thanks for the additional context!' }],
       },
       ...historyToKeep,
-    ]);
+    ];
+    
+    this.chat = await this.startChat(compressedHistory);
 
     const { totalTokens: newTokenCount } =
       await this.getContentGenerator().countTokens({
@@ -696,6 +708,16 @@ export class GeminiClient {
       console.warn('Could not determine compressed history token count.');
       return null;
     }
+
+    // 新しいセッションを開始して保存
+    await sessionManager.compressAndStartNewSession(
+      compressedHistory,
+      summary || '',
+      originalTokenCount,
+      newTokenCount
+    );
+    
+    console.log(`Session compressed and saved. New session ID: ${sessionManager.getCurrentSessionId()}`);
 
     return {
       originalTokenCount,
