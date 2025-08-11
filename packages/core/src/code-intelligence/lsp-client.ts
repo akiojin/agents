@@ -336,7 +336,7 @@ export class TypeScriptLSPClient {
    */
   async disconnect(): Promise<void> {
     // 開いているドキュメントをすべて閉じる
-    for (const fileUri of this.openDocuments) {
+    for (const fileUri of Array.from(this.openDocuments)) {
       try {
         await this.closeDocument(fileUri);
       } catch (error) {

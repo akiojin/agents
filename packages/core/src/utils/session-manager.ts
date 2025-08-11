@@ -40,7 +40,7 @@ export class SessionManager {
   private sessionsDir: string;
   private history: Content[] = [];
 
-  constructor(baseDir: string = '.agents/sessions') {
+  constructor(baseDir: string = path.join(process.cwd(), '.agents', 'sessions')) {
     this.sessionsDir = baseDir;
     this.currentSession = this.createNewSession();
   }

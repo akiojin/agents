@@ -21,7 +21,7 @@ import { existsSync } from 'fs';
  * セキュリティ設定
  */
 export interface SecurityConfig {
-  allowedDirectories: string[];
+  allowedPaths: string[];
   allowedFileExtensions?: string[];
   blockedPaths?: string[];
   maxFileSize?: number;
@@ -610,7 +610,7 @@ export class IntelligentFileSystem {
     return {
       imports,
       exports,
-      allDeps: [...new Set([...imports])]
+      allDeps: Array.from(new Set(imports))
     };
   }
 
@@ -626,6 +626,7 @@ export class IntelligentFileSystem {
         id: this.generateSymbolId(),
         name: symbol.name,
         kind: symbol.kind,
+        language: this.getLanguageFromExtension(path.extname(URI.parse(fileUri).fsPath).slice(1)),
         fileUri,
         startLine: symbol.range?.start?.line || 0,
         startCharacter: symbol.range?.start?.character || 0,

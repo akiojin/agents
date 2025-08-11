@@ -7,14 +7,52 @@ import { createMemoryIntegrationManager } from '../../packages/core/src/intellig
 import { createAIOptimizationEngine } from '../../packages/core/src/intelligent-fs/ai-optimization.js';
 import { logger } from '../utils/logger.js';
 
+// 統合状態管理
+let integrationState = {
+  initialized: false,
+  registeredFunctions: new Set(),
+  intelligentFS: null,
+  memoryManager: null,
+  aiEngine: null
+};
+
 /**
  * IntelligentFileSystem機能をレジストリに統合
  */
+/**
+ * 統合状態を取得
+ */
+export function getIntegrationState() {
+  return integrationState;
+}
+
+/**
+ * IntelligentFileSystem統合をクリーンアップ
+ */
+export async function cleanupIntelligentIntegration() {
+  if (integrationState.intelligentFS) {
+    await integrationState.intelligentFS.cleanup();
+  }
+  if (integrationState.memoryManager) {
+    await integrationState.memoryManager.close();
+  }
+  if (integrationState.aiEngine) {
+    integrationState.aiEngine.clearCache();
+  }
+  
+  // 状態をリセット
+  integrationState.initialized = false;
+  integrationState.registeredFunctions.clear();
+  integrationState.intelligentFS = null;
+  integrationState.memoryManager = null;
+  integrationState.aiEngine = null;
+}
+
 export async function integrateIntelligentFunctions(registry) {
   try {
-    // セキュリティ設定（基本的な設定を使用）
+    // セキュリティ設定（SecurityConfigインターフェースに合わせて修正）
     const securityConfig = {
-      allowedDirectories: [process.cwd()],
+      allowedPaths: [process.cwd()],
       allowedFileExtensions: ['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.rs', '.cs', '.php', '.rb', '.swift', '.kt', '.cpp', '.c'],
       maxFileSize: 10 * 1024 * 1024, // 10MB
       enabled: true
@@ -30,6 +68,12 @@ export async function integrateIntelligentFunctions(registry) {
     
     // AI最適化エンジンを初期化
     const aiEngine = createAIOptimizationEngine(intelligentFS, memoryManager);
+
+    // 統合状態を更新
+    integrationState.intelligentFS = intelligentFS;
+    integrationState.memoryManager = memoryManager;
+    integrationState.aiEngine = aiEngine;
+    integrationState.initialized = true;
 
     // インテリジェントファイル読み取り機能
     registry.registerFunction({
@@ -179,63 +223,62 @@ export async function integrateIntelligentFunctions(registry) {
 
     // コード品質分析
     registry.registerFunction({
-      name: 'analyze_code_quality',
+      name: 'AnalyzeCodeQuality',
       description: 'コードの品質メトリクスとコード臭を分析',
       parameters: {
         type: 'object',
         properties: {
-          path: {
+          file_path: {
             type: 'string',
             description: '分析するファイルのパス'
           }
         },
-        required: ['path']
+        required: ['file_path']
       },
       handler: async (params) => {
-        const metrics = await aiEngine.analyzeCodeQuality(params.path);
-        return {
-          success: true,
-          complexity: metrics.complexity,
-          maintainability: metrics.maintainability,
-          test_coverage: metrics.testCoverage,
-          code_smells: metrics.codeSmells,
-          suggestions: metrics.suggestions
-        };
+        const metrics = await aiEngine.analyzeCodeQuality(params.file_path);
+        return `Code Quality Analysis for ${params.file_path}:
+        
+Cyclomatic Complexity: ${metrics.complexity}
+Maintainability Index: ${metrics.maintainability}
+${metrics.testCoverage ? `Test Coverage: ${metrics.testCoverage}%` : ''}
+
+Code Smells (${metrics.codeSmells.length} found):
+${metrics.codeSmells.map(smell => `- ${smell.type}: ${smell.message} (${smell.severity})`).join('\n')}
+
+Optimization Suggestions (${metrics.suggestions.length} found):
+${metrics.suggestions.map(suggestion => `- ${suggestion.title}: ${suggestion.description}`).join('\n')}`;
       }
     });
 
     // バグ予測
     registry.registerFunction({
-      name: 'predict_bugs',
+      name: 'PredictBugs',
       description: 'コードのバグを予測',
       parameters: {
         type: 'object',
         properties: {
-          path: {
+          file_path: {
             type: 'string',
             description: '分析するファイルのパス'
           }
         },
-        required: ['path']
+        required: ['file_path']
       },
       handler: async (params) => {
-        const predictions = await aiEngine.predictBugs(params.path);
-        return {
-          success: true,
-          predictions: predictions.map(pred => ({
-            likelihood: pred.likelihood,
-            type: pred.type,
-            description: pred.description,
-            location: pred.location,
-            prevention: pred.prevention
-          }))
-        };
+        const predictions = await aiEngine.predictBugs(params.file_path);
+        return `Bug Predictions for ${params.file_path}:
+
+Found ${predictions.length} potential issues:
+${predictions.map(pred => 
+  `- ${pred.type} (${Math.round(pred.likelihood * 100)}% likelihood)\n  Location: ${pred.location.file}:${pred.location.line}\n  Description: ${pred.description}\n  Prevention: ${pred.prevention}`
+).join('\n\n')}`;
       }
     });
 
     // アーキテクチャ分析
     registry.registerFunction({
-      name: 'analyze_architecture',
+      name: 'AnalyzeArchitecture',
       description: 'プロジェクトのアーキテクチャを分析',
       parameters: {
         type: 'object',
@@ -260,7 +303,7 @@ export async function integrateIntelligentFunctions(registry) {
 
     // コード生成
     registry.registerFunction({
-      name: 'generate_code',
+      name: 'GenerateCode',
       description: 'AIを使用してコードを生成',
       parameters: {
         type: 'object',
@@ -304,16 +347,15 @@ export async function integrateIntelligentFunctions(registry) {
           includeDocumentation: params.include_documentation || false
         });
         
-        return {
-          success: true,
-          generated_code: code
-        };
+        return `Generated ${params.type} code:
+
+${code}`;
       }
     });
 
     // リファクタリング提案
     registry.registerFunction({
-      name: 'suggest_refactoring',
+      name: 'SuggestRefactoring',
       description: 'ファイルのリファクタリング提案を生成',
       parameters: {
         type: 'object',
@@ -407,6 +449,16 @@ export async function integrateIntelligentFunctions(registry) {
         };
       }
     });
+
+    // 登録された関数を追跡
+    const functionNames = [
+      'intelligent_read_file', 'semantic_edit', 'index_project',
+      'AnalyzeCodeQuality', 'PredictBugs', 'AnalyzeArchitecture', 
+      'GenerateCode', 'SuggestRefactoring', 'get_intelligent_fs_stats',
+      'get_memory_stats', 'cleanup_intelligent_fs'
+    ];
+    
+    functionNames.forEach(name => integrationState.registeredFunctions.add(name));
 
     logger.info(`Successfully integrated ${11} IntelligentFileSystem functions to registry`);
     

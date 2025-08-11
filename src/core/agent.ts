@@ -374,16 +374,101 @@ export class AgentCore extends EventEmitter {
               tool_choice: this.availableFunctions.length > 0 ? 'auto' as const : undefined
             };
             
-            // GPT-OSSは強制ツール指定をサポートしないためautoのみ使用
-            // 代わりにserenaツールを上位に配置して優先度を上げる
+            // ツールの優先順位を調整 - 専用ツールを優先
             if (chatOptions.tools && chatOptions.tools.length > 0) {
-              if (input.includes('ディレクトリ') || input.includes('ファイル一覧') || input.includes('構造') || input.includes('解析')) {
-                // serenaツールを配列の先頭に移動
-                const serenaTools = chatOptions.tools.filter(t => t.name.startsWith('serena_'));
-                const otherTools = chatOptions.tools.filter(t => !t.name.startsWith('serena_'));
-                chatOptions.tools = [...serenaTools, ...otherTools];
-                logger.debug('Prioritized serena tools for directory analysis');
+              const lowerInput = input.toLowerCase();
+              
+              // ツールを優先度でグループ化
+              const intelligentTools = chatOptions.tools.filter(t => 
+                t.name.includes('ReadFileIntelligent') || 
+                t.name.includes('EditFileIntelligent') ||
+                t.name.includes('AnalyzeCodeQuality') ||
+                t.name.includes('PredictBugs') ||
+                t.name.includes('AnalyzeArchitecture') ||
+                t.name.includes('GenerateOptimizedCode') ||
+                t.name.includes('ReadIntelligent') ||
+                t.name.includes('Intelligent')
+              );
+              
+              const fileTools = chatOptions.tools.filter(t => 
+                t.name === 'Read' || 
+                t.name === 'Write' || 
+                t.name === 'Edit' || 
+                t.name === 'MultiEdit' ||
+                t.name === 'LS' ||
+                t.name === 'Grep' ||
+                t.name === 'Glob'
+              );
+              
+              const shellTool = chatOptions.tools.filter(t => 
+                t.name === 'Shell' || 
+                t.name === 'Bash' ||
+                t.name === 'execute_command' ||
+                t.name === 'run_shell_command'
+              );
+              
+              const otherTools = chatOptions.tools.filter(t => 
+                !intelligentTools.includes(t) && 
+                !fileTools.includes(t) && 
+                !shellTool.includes(t)
+              );
+              
+              // キーワードに基づいてツールの優先順位を決定
+              let orderedTools: FunctionDefinition[] = [];
+              
+              // ファイル操作の検出
+              if (lowerInput.includes('読') || lowerInput.includes('read') || 
+                  lowerInput.includes('cat') || lowerInput.includes('内容') ||
+                  lowerInput.includes('ファイルを見') || lowerInput.includes('表示')) {
+                // Readツールを優先、Shellは最後
+                orderedTools = [...fileTools, ...intelligentTools, ...otherTools, ...shellTool];
+                logger.debug('Prioritized Read/file tools for file reading');
+              } 
+              else if (lowerInput.includes('ls') || lowerInput.includes('ディレクトリ') || 
+                       lowerInput.includes('一覧') || lowerInput.includes('list') ||
+                       lowerInput.includes('フォルダ') || lowerInput.includes('ファイル')) {
+                // LSツールを優先、Shellは最後
+                orderedTools = [...fileTools, ...intelligentTools, ...otherTools, ...shellTool];
+                logger.debug('Prioritized LS tool for directory listing');
               }
+              else if (lowerInput.includes('検索') || lowerInput.includes('search') || 
+                       lowerInput.includes('grep') || lowerInput.includes('find') ||
+                       lowerInput.includes('探す') || lowerInput.includes('探し')) {
+                // Grep/Globツールを優先、Shellは最後
+                orderedTools = [...fileTools, ...intelligentTools, ...otherTools, ...shellTool];
+                logger.debug('Prioritized search tools');
+              }
+              else if (lowerInput.includes('編集') || lowerInput.includes('修正') || 
+                       lowerInput.includes('edit') || lowerInput.includes('変更') ||
+                       lowerInput.includes('書き込') || lowerInput.includes('追加')) {
+                // Edit/Writeツールを優先、Shellは最後
+                orderedTools = [...fileTools, ...intelligentTools, ...otherTools, ...shellTool];
+                logger.debug('Prioritized edit tools');
+              }
+              else if (lowerInput.includes('解析') || lowerInput.includes('分析') || 
+                       lowerInput.includes('理解') || lowerInput.includes('品質') ||
+                       lowerInput.includes('バグ') || lowerInput.includes('アーキテクチャ')) {
+                // IntelligentFileSystemツールを優先
+                orderedTools = [...intelligentTools, ...fileTools, ...otherTools, ...shellTool];
+                logger.debug('Prioritized IntelligentFileSystem analysis tools');
+              }
+              else if (lowerInput.includes('コマンド') || lowerInput.includes('実行') ||
+                       lowerInput.includes('npm') || lowerInput.includes('git') ||
+                       lowerInput.includes('docker') || lowerInput.includes('build')) {
+                // 明示的にコマンド実行が必要な場合のみShellを使用
+                orderedTools = [...shellTool, ...fileTools, ...intelligentTools, ...otherTools];
+                logger.debug('Shell tool prioritized for explicit command execution');
+              }
+              else {
+                // デフォルト：専用ツールを優先、Shellは最後
+                orderedTools = [...intelligentTools, ...fileTools, ...otherTools, ...shellTool];
+                logger.debug('Using default tool priority: specialized tools first, Shell last');
+              }
+              
+              chatOptions.tools = orderedTools;
+              
+              // デバッグ情報
+              logger.debug(`Tool priority adjusted: ${orderedTools.slice(0, 5).map(t => t.name).join(', ')}...`);
             }
             
             // Function Callingの状態をログに記録

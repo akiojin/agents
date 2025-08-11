@@ -6,7 +6,7 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
-import sqlite3, { Database } from 'sqlite3';
+import { Database } from 'sqlite3';
 import { EventEmitter } from 'events';
 
 /**
@@ -114,6 +114,7 @@ export class MemoryIntegrationManager extends EventEmitter {
 
     // SQLiteデータベースを初期化
     const dbPath = path.join(this.memoryPath, 'memory.db');
+    const sqlite3 = require('sqlite3');
     this.db = new sqlite3.Database(dbPath);
     
     await this.setupDatabase();

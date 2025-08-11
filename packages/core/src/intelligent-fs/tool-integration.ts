@@ -113,7 +113,7 @@ export function createIntelligentReadFunctions(): InternalFunction[] {
         if (result.symbols && result.symbols.length > 0) {
           response.symbols = result.symbols.map(s => ({
             name: s.name,
-            kind: getSymbolKindName(s.kind),
+            kind: s.kind,
             line: s.startLine + 1,
             character: s.startCharacter + 1,
             container: s.containerName
@@ -193,7 +193,7 @@ export function createIntelligentReadFunctions(): InternalFunction[] {
       const matchingSymbols = result.symbols.filter(s => {
         const nameMatch = s.name.includes(params.symbolName);
         const kindMatch = !params.symbolKind || 
-          getSymbolKindName(s.kind).toLowerCase() === params.symbolKind.toLowerCase();
+          s.kind.toLowerCase() === params.symbolKind.toLowerCase();
         return nameMatch && kindMatch;
       });
 
@@ -201,7 +201,7 @@ export function createIntelligentReadFunctions(): InternalFunction[] {
         success: true,
         symbols: matchingSymbols.map(s => ({
           name: s.name,
-          kind: getSymbolKindName(s.kind),
+          kind: s.kind,
           location: {
             line: s.startLine + 1,
             character: s.startCharacter + 1

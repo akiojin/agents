@@ -1,5 +1,6 @@
 test*
 analyze
+.agents/sessions/
 
 # 依存関係
 node_modules/
