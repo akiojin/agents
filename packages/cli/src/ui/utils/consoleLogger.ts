@@ -32,7 +32,14 @@ export class ConsoleLogger {
     const timestamp = this.sessionStartTime;
     const suffix = rotation > 0 ? `-${rotation}` : '';
     const fileName = `agents-console-log-${timestamp}${suffix}.jsonl`;
-    return path.join(os.tmpdir(), fileName);
+    
+    // ログディレクトリを作成（.agents/logs）
+    const logDir = path.join(process.cwd(), '.agents', 'logs');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    
+    return path.join(logDir, fileName);
   }
 
   /**
@@ -173,7 +180,10 @@ export class ConsoleLogger {
    */
   public static cleanupOldLogs(): void {
     try {
-      const tmpDir = os.tmpdir();
+      const tmpDir = path.join(process.cwd(), '.agents', 'logs');
+      if (!fs.existsSync(tmpDir)) {
+        return; // ログディレクトリがなければ何もしない
+      }
       const files = fs.readdirSync(tmpDir);
       const now = Date.now();
       const maxAge = 24 * 60 * 60 * 1000; // 24時間
