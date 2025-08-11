@@ -683,6 +683,35 @@ export class GeminiClient {
     sessionManager.updateHistory(curatedHistory);
     sessionManager.updateTokenCount(originalTokenCount);
 
+    // Memory APIに圧縮前の重要情報を保存（利用可能な場合）
+    try {
+      const memoryModule = await import('@agents/memory');
+      const memoryAPI = memoryModule.getMemoryAPI();
+      
+      // 圧縮イベントをメモリに記録
+      await memoryAPI.recordEvent({
+        type: 'discovery',
+        content: {
+          event: 'compression_start',
+          sessionId: sessionManager.getCurrentSessionId(),
+          originalTokenCount,
+          historyLength: curatedHistory.length,
+          compressBeforeIndex,
+          preservedMessages: historyToKeep.length,
+        },
+        context: {
+          model: model,
+          threshold: this.COMPRESSION_TOKEN_THRESHOLD,
+        },
+        timestamp: new Date(),
+      });
+      
+      console.log('[Compression] Saved compression event to Memory API');
+    } catch (error) {
+      // Memory APIが利用できない場合は静かに無視
+      console.debug('[Compression] Memory API not available:', error);
+    }
+
     this.getChat().setHistory(historyToCompress);
 
     const { text: summary } = await this.getChat().sendMessage(
@@ -711,7 +740,35 @@ export class GeminiClient {
     ];
 
     // 圧縮後のセッションを作成
-    // sessionManager.createCompressedSession(summary);
+    const newSession = await sessionManager.compressAndStartNewSession(
+      compressedHistory,
+      summary || '',  // summaryがundefinedの場合は空文字列
+      originalTokenCount,
+      0  // newTokenCountは後で計算されるため一時的に0
+    );
+
+    // Memory APIに圧縮サマリーを保存（利用可能な場合）
+    try {
+      const memoryModule = await import('@agents/memory');
+      const memoryAPI = memoryModule.getMemoryAPI();
+      
+      // 圧縮サマリーをメモリに保存
+      await memoryAPI.recordProjectInfo(
+        `compression_summary_${newSession.id}`,
+        {
+          summary: summary,
+          sessionId: newSession.id,
+          parentSessionId: newSession.parentSessionId,
+          compressedFrom: originalTokenCount,
+          timestamp: new Date().toISOString(),
+        }
+      );
+      
+      console.log('[Compression] Saved compression summary to Memory API');
+    } catch (error) {
+      // Memory APIが利用できない場合は静かに無視
+      console.debug('[Compression] Memory API summary save failed:', error);
+    }
 
     // Reinitialize the chat with the new history.
     this.chat = await this.startChat(compressedHistory);
@@ -721,6 +778,10 @@ export class GeminiClient {
         model,
         contents: this.getChat().getHistory(true),
       });
+    
+    // 圧縮後のトークン数を更新
+    sessionManager.updateTokenCount(newTokenCount ?? 0);
+    await sessionManager.saveSession();
     
     console.log(`[Compression Debug] Compression complete: ${originalTokenCount} -> ${newTokenCount} tokens`);
 
