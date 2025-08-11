@@ -187,7 +187,7 @@ export async function createContentGenerator(
       model: config.model,
       hasApiKey: !!config.apiKey,
     });
-    return new OpenAIContentGenerator(config);
+    return new OpenAIContentGenerator(config, gcConfig);
   }
 
   throw new Error(

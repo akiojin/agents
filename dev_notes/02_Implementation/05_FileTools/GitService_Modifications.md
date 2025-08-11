@@ -1,13 +1,13 @@
 # GitService Modifications
 
 ## Overview
-The GitService has been modified to work with the Gemini CLI, replacing the original Claude-specific implementation with a Google Gemini-compatible version.
+The GitService has been modified to work with the Agents, replacing the original Claude-specific implementation with a Google Gemini-compatible version.
 
 ## Key Changes
 
 ### 1. Package and Import Changes
 - Replaced Claude-specific paths with Gemini paths
-- Updated the service to work with the Gemini CLI directory structure
+- Updated the service to work with the Agents directory structure
 
 ### 2. Directory Structure Updates
 ```typescript
@@ -26,10 +26,10 @@ private getHistoryDir(): string {
 
 ### 3. Git Configuration Changes
 - Updated the shadow git repository configuration
-- Changed user information from Claude CLI to Gemini CLI:
+- Changed user information from Claude CLI to Agents:
 ```typescript
 const gitConfigContent = 
-  '[user]\n  name = Gemini CLI\n  email = gemini-cli@google.com\n[commit]\n  gpgsign = false\n';
+  '[user]\n  name = Agents\n  email = agents@akiojin.com\n[commit]\n  gpgsign = false\n';
 ```
 
 ### 4. Core Functionality Preserved
@@ -60,7 +60,7 @@ The shadow repository uses its own git configuration to prevent inheriting user 
 The GitService is used for:
 1. Creating checkpoints of project state
 2. Restoring project to previous checkpoints
-3. Tracking changes made by the Gemini CLI
+3. Tracking changes made by the Agents
 
 ## Dependencies
 - simple-git: For git operations

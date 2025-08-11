@@ -1,10 +1,10 @@
-# Gemini CLI Artitecture
+# Agents Architecture
 
-本文档旨在记录对Gemini CLI的系统架构与实现的理解，旨在帮助用户或开发者理解其内部工作原理。
+本文档旨在记录对Agents的系统架构与实现的理解，旨在帮助用户或开发者理解其内部工作原理。
 
 ## Overview
 
-Gemini CLI采用了monorepo结构，在单一仓库内管理着多个独立但相关的包 。其中，关键的两个包是 **packages/cli** 和 **packages/core** 。
+Agents采用了monorepo结构，在单一仓库内管理着多个独立但相关的包 。其中，关键的两个包是 **packages/cli** 和 **packages/core** 。
 
 **packages/cli**: 包基于Ink（一个用于终端应用的React渲染器）构建，负责完整的用户体验：捕获用户输入、渲染动态输出以及管理对话的视觉状态 。  
 

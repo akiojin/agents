@@ -1,7 +1,7 @@
 # VLMService Implementation
 
 ## Overview
-The VLMService provides Vision-Language Model capabilities for image description in the Gemini CLI. It implements a composite pattern with multiple providers and automatic fallback mechanisms.
+The VLMService provides Vision-Language Model capabilities for image description in the Agents. It implements a composite pattern with multiple providers and automatic fallback mechanisms.
 
 ## Architecture
 

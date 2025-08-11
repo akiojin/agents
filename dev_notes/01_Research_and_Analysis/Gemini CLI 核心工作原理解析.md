@@ -1,6 +1,6 @@
-# **Gemini CLI 核心工作原理解析**
+# **Agents 核心工作原理解析**
 
-本文档旨在深入解析 Gemini CLI（命令行界面）的核心工作原理。我们将从最基础的聊天功能入手，逐步深入到流式输出、被动工具调用、主动工具调用乃至多轮主动工具调用等高级功能。通过这种渐进式的方式，帮助软件工程师全面理解该代理系统的架构、模块及具体实现。
+本文档旨在深入解析 Agents（命令行界面）的核心工作原理。我们将从最基础的聊天功能入手，逐步深入到流式输出、被动工具调用、主动工具调用乃至多轮主动工具调用等高级功能。通过这种渐进式的方式，帮助软件工程师全面理解该代理系统的架构、模块及具体实现。
 
 ## **1. 基础聊天 (Basic Chat)**
 
@@ -23,7 +23,7 @@
 
 ```mermaid
 graph TD
-    subgraph Gemini CLI Core
+    subgraph Agents Core
         A[GeminiClient] --> B(GeminiChat);
         A --> C(ContentGenerator);
         A --> D(Config);
@@ -77,7 +77,7 @@ sequenceDiagram
 
 ## **2. 流式输出 (Streaming Chat)**
 
-为了提升用户体验，避免在等待模型生成完整答案时的长时间空白，Gemini CLI 支持流式输出。模型会边生成边将内容以数据块（chunks）的形式返回。
+为了提升用户体验，避免在等待模型生成完整答案时的长时间空白，Agents 支持流式输出。模型会边生成边将内容以数据块（chunks）的形式返回。
 
 ### **2.1 功能介绍**
 
@@ -96,7 +96,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    subgraph Gemini CLI Core
+    subgraph Agents Core
         A[GeminiClient] --> T(Turn)
         T --> B(GeminiChat)
         B --> C(ContentGenerator)
@@ -173,7 +173,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    subgraph Gemini CLI Core
+    subgraph Agents Core
         A[GeminiClient] --> S(CoreToolScheduler);
         S --> R(ToolRegistry);
         R --> T1[ReadFileTool];
@@ -249,7 +249,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    subgraph Gemini CLI Core
+    subgraph Agents Core
         GC[GeminiClient] -->|1. sendMessageStream| T(Turn)
         T -->|2. run| GChat(GeminiChat)
         GChat -->|3. sendMessageStream| API[Gemini API]
@@ -407,4 +407,4 @@ sequenceDiagram
     end
 ```
 
-通过以上五个层层递进的章节，我们详细剖析了 Gemini CLI 从一个简单的聊天工具，演变为一个强大的、能够自主规划和执行复杂任务的智能代理的全过程。其模块化的设计、清晰的事件驱动流程以及强大的工具调用机制，共同构成了这个系统的核心竞争力。
+通过以上五个层层递进的章节，我们详细剖析了 Agents 从一个简单的聊天工具，演变为一个强大的、能够自主规划和执行复杂任务的智能代理的全过程。其模块化的设计、清晰的事件驱动流程以及强大的工具调用机制，共同构成了这个系统的核心竞争力。

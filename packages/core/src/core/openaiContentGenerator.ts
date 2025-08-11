@@ -32,8 +32,11 @@ import OpenAI from 'openai';
 
 export class OpenAIContentGenerator implements ContentGenerator {
     private openai: OpenAI;
+    private configForTelemetry?: Config;
+    private startTime: number = 0;
 
-    constructor(private readonly config: ContentGeneratorConfig) {
+    constructor(private readonly config: ContentGeneratorConfig, configForTelemetry?: Config) {
+        this.configForTelemetry = configForTelemetry;
         // ローカルLLMまたはOpenAI互換APIのベースURL設定
         let baseURL = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL || 'https://api.openai.com/v1';
         
@@ -243,6 +246,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
     async generateContentStream(
         request: GenerateContentParameters,
     ): Promise<AsyncGenerator<GenerateContentResponse>> {
+        this.startTime = Date.now();
         const messages = this.convertToOpenAIMessages(request.contents);
 
         // 构建OpenAI请求参数
@@ -324,6 +328,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
         const accumulatedToolCalls: Record<string, { id: string; name: string; arguments: string }> = {};
         // 累积usage信息，只在最后一个chunk中提供
         let finalUsage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | undefined;
+        let responseText = '';
 
         for await (const chunk of stream) {
             // OpenAI APIの標準的なストリーミングレスポンスでは、最後のチャンクでusage情報が提供される
@@ -335,8 +340,13 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 console.log('[Usage Debug] Received usage info in chunk:', finalUsage);
             }
 
+            // テキストコンテンツを累積
+            if (chunk.choices?.[0]?.delta?.content) {
+                responseText += chunk.choices[0].delta.content;
+            }
+
             // 対于包含usage信息的chunk，即使没有其他内容也要处理
-            // 传递当前chunk的usage信息（如果有的话）或者累积的finalUsage
+            // 传递当前chunk的usage信息（如果有的话）或者累積的finalUsage
             const agentsResponse = OpenAIToAgentsConverter.convertStreamingChunkToAgents(
                 chunk,
                 isJsonResponse,
@@ -346,6 +356,34 @@ export class OpenAIContentGenerator implements ContentGenerator {
             if (agentsResponse) {
                 yield agentsResponse;
             }
+        }
+
+        // ストリーミング終了時にAPI応答をログに記録
+        if (this.configForTelemetry && finalUsage) {
+            const durationMs = Date.now() - this.startTime;
+            const promptId = `openai_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+            
+            // GenerateContentResponseUsageMetadataを作成
+            const usageMetadata = {
+                promptTokenCount: finalUsage.prompt_tokens,
+                candidatesTokenCount: finalUsage.completion_tokens,
+                totalTokenCount: finalUsage.total_tokens,
+                cachedContentTokenCount: 0,
+                thoughtsTokenCount: 0,
+                toolUsePromptTokenCount: 0
+            };
+
+            logApiResponse(
+                this.configForTelemetry,
+                new ApiResponseEvent(
+                    this.config.model || 'gpt-3.5-turbo',
+                    durationMs,
+                    promptId,
+                    this.config.authType,
+                    usageMetadata,
+                    responseText
+                )
+            );
         }
     }
 

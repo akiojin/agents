@@ -1,4 +1,4 @@
-# Open Gemini CLI 实现说明
+# Open Agents 实现说明
 
 本文档旨在详细说明 `open-gemini-cli` 为集成 OpenAI 兼容 API 所做的核心架构改造。此前的计划文档已成功实现，本文将描述最终的实现方案。
 
