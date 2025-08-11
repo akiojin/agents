@@ -29,5 +29,10 @@
     "history": "./.agents/history",
     "logs": "./.agents/logs"
   },
-  "localEndpoint": "http://host.docker.internal:1234"
+  "localEndpoint": "http://host.docker.internal:1234",
+  "modelContextLimits": {
+    "qwen/qwen3-coder-30b": 262144,
+    "openai/gpt-oss-20b": 32768,
+    "comment": "Manual override for models that don't report context_length via API"
+  }
 }

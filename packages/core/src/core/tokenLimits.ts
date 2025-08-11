@@ -9,7 +9,33 @@ type TokenCount = number;
 
 export const DEFAULT_TOKEN_LIMIT = 1_048_576;
 
+// 既知のローカルモデルのコンテキスト長
+const LOCAL_MODEL_LIMITS: Record<string, TokenCount> = {
+  // Qwen models (256K context)
+  'qwen/qwen3-coder-30b': 262_144,
+  'qwen3-coder-30b': 262_144,
+  'qwen3-coder-30b-a3b': 262_144,
+  'qwen3-coder-30b-a3b-instruct': 262_144,
+  
+  // GPT-OSS models (32K context)
+  'openai/gpt-oss-20b': 32_768,
+  'gpt-oss-20b': 32_768,
+  
+  // Other common local models
+  'llama-3-8b': 8_192,
+  'llama-3-70b': 8_192,
+  'codellama-34b': 16_384,
+  'mistral-7b': 32_768,
+  'mixtral-8x7b': 32_768,
+};
+
 export function tokenLimit(model: Model): TokenCount {
+  // まずローカルモデルをチェック
+  const localLimit = LOCAL_MODEL_LIMITS[model.toLowerCase()];
+  if (localLimit) {
+    return localLimit;
+  }
+
   // Add other models as they become relevant or if specified by config
   // Pulled from https://ai.google.dev/gemini-api/docs/models
   switch (model) {
