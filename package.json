@@ -12,7 +12,6 @@
     "type": "git",
     "url": "git+https://github.com/akiojin/agents.git"
   },
-  
   "publishConfig": {
     "access": "public"
   },
@@ -29,7 +28,6 @@
     "test": "npm run test --workspaces",
     "test:ci": "npm run test:ci --workspaces --if-present && npm run test:scripts",
     "test:scripts": "vitest run --config ./scripts/tests/vitest.config.ts",
-    
     "lint": "eslint . --ext .ts,.tsx && eslint integration-tests",
     "lint:fix": "eslint . --fix && eslint integration-tests --fix",
     "lint:ci": "eslint . --ext .ts,.tsx --max-warnings 0 && eslint integration-tests --max-warnings 0",
@@ -83,6 +81,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^12.2.0",
     "date-fns": "^4.1.0",
+    "tiktoken": "^1.0.22",
     "yaml": "^2.8.1"
   }
 }

@@ -30,6 +30,8 @@ import { ApiResponseEvent } from '../telemetry/types.js';
 import { Config } from '../config/config.js';
 import OpenAI from 'openai';
 
+
+
 export class OpenAIContentGenerator implements ContentGenerator {
     private openai: OpenAI;
     private configForTelemetry?: Config;
@@ -403,56 +405,127 @@ export class OpenAIContentGenerator implements ContentGenerator {
         request: CountTokensParameters,
     ): Promise<CountTokensResponse> {
         try {
-            // 将内容转换为OpenAI消息格式
+            // 内容をOpenAIメッセージ形式に変換
             const messages = this.convertToOpenAIMessages(request.contents);
-
-            // 计算消息的token数量
-            // 这里使用与OpenAI API相同的计算方法
-            let totalTokens = 0;
-
-            // 每个消息都有固定的开销token
-            totalTokens += messages.length * 3; // 每个消息的格式开销
-            totalTokens += 3; // 对话的开始标记
-
-            // 计算每个消息内容的token数量
-            for (const message of messages) {
-                if (typeof message.content === 'string') {
-                    // 使用简化的token估算方法
-                    // 对于更精确的计算，建议使用tiktoken库
-                    // 但为了避免额外依赖，这里使用改进的估算方法
-                    const text = message.content;
-
-                    // 改进的token估算：
-                    // - 英文：平均4个字符 = 1个token
-                    // - 中文：平均1.5个字符 = 1个token
-                    // - 标点符号和空格：通常单独成token
-                    const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
-                    const otherChars = text.length - chineseChars;
-                    const punctuationAndSpaces = (text.match(/[\s\p{P}]/gu) || []).length;
-
-                    const estimatedTokens = Math.ceil(
-                        chineseChars / 1.5 + // 中文字符
-                        (otherChars - punctuationAndSpaces) / 4 + // 英文字符
-                        punctuationAndSpaces * 0.8 // 标点符号和空格
-                    );
-
-                    totalTokens += estimatedTokens;
-                }
-
-                // 角色标识也消耗token
-                totalTokens += 1;
+            
+            // モデル名の取得
+            const model = request.model || this.config.model || 'gpt-3.5-turbo';
+            
+            // tiktokenを使用して正確なトークン数を計算
+            let tiktoken: any;
+            try {
+                // tiktoken is an ESM module, use dynamic import
+                const tiktokenModule = await import('tiktoken');
+                tiktoken = tiktokenModule.default || tiktokenModule;
+            } catch (importError) {
+                console.warn('[OpenAI Compatible API] tiktoken not available, using estimation:', importError);
+                return this.estimateTokens(messages);
             }
 
+            // エンコーディングの取得（モデルに応じて異なる）
+            let encoding;
+            try {
+                // GPT-3.5とGPT-4系のモデルはcl100k_baseエンコーディングを使用
+                if (model.includes('gpt-4') || model.includes('gpt-3.5')) {
+                    encoding = tiktoken.encoding_for_model(model);
+                } else {
+                    // その他のモデル（ローカルモデル含む）はcl100k_baseを使用
+                    encoding = tiktoken.get_encoding('cl100k_base');
+                }
+            } catch (encodingError) {
+                console.warn('[OpenAI Compatible API] Could not get encoding, using estimation:', encodingError);
+                return this.estimateTokens(messages);
+            }
+
+            let totalTokens = 0;
+            
+            // メッセージごとのトークン計算
+            // OpenAI APIのトークン計算規則に従う
+            for (const message of messages) {
+                // メッセージのメタデータ（role等）のトークン
+                totalTokens += 3; // <|start|>{role/name}\n{content}<|end|>\n のオーバーヘッド
+                
+                // ロール名のトークン
+                totalTokens += encoding.encode(message.role).length;
+                
+                // コンテンツのトークン
+                if (typeof message.content === 'string') {
+                    totalTokens += encoding.encode(message.content).length;
+                } else if (Array.isArray(message.content)) {
+                    // マルチパートコンテンツの場合
+                    for (const part of message.content) {
+                        if (part.type === 'text' && part.text) {
+                            totalTokens += encoding.encode(part.text).length;
+                        }
+                        // 画像等の他のタイプは別途トークン計算が必要
+                    }
+                }
+                
+                // nameフィールドがある場合
+                if ('name' in message && message.name) {
+                    totalTokens += encoding.encode(message.name).length;
+                    totalTokens -= 1; // nameフィールドがある場合は1トークン減る
+                }
+            }
+            
+            // 返答用のプライミングトークン
+            totalTokens += 3;
+            
+            // エンコーディングをクリーンアップ
+            encoding.free();
+            
+            console.log(`[OpenAI Compatible API] Token count for ${model}: ${totalTokens} tokens`);
+            
             return {
-                totalTokens: Math.max(totalTokens, 1), // 确保至少返回1个token
+                totalTokens: Math.max(totalTokens, 1), // 最低1トークンを返す
             };
         } catch (error) {
-            console.error('Token counting error:', error);
-            // 返回一个合理的默认值
-            return {
-                totalTokens: 100,
-            };
+            console.error('[OpenAI Compatible API] Token counting error:', error);
+            // エラー時は推定値を使用
+            return this.estimateTokens(this.convertToOpenAIMessages(request.contents));
         }
+    }
+    
+    /**
+     * トークン数の推定（tiktokenが利用できない場合のフォールバック）
+     */
+    private estimateTokens(messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]): CountTokensResponse {
+        let totalTokens = 0;
+        
+        // メッセージのフォーマットオーバーヘッド
+        totalTokens += messages.length * 3;
+        totalTokens += 3; // 対話の開始/終了マーカー
+        
+        for (const message of messages) {
+            // ロールのトークン
+            totalTokens += 1;
+            
+            if (typeof message.content === 'string') {
+                const text = message.content;
+                
+                // 改進的なトークン推定：
+                // - 英文：平均4文字 = 1トークン
+                // - 中文：平均1.5文字 = 1トークン
+                // - 記号とスペース：通常単独でトークン
+                const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+                const otherChars = text.length - chineseChars;
+                const punctuationAndSpaces = (text.match(/[\s\p{P}]/gu) || []).length;
+                
+                const estimatedTokens = Math.ceil(
+                    chineseChars / 1.5 + // 中文文字
+                    (otherChars - punctuationAndSpaces) / 4 + // 英文文字
+                    punctuationAndSpaces * 0.8 // 記号とスペース
+                );
+                
+                totalTokens += estimatedTokens;
+            }
+        }
+        
+        console.log(`[OpenAI Compatible API] Estimated token count: ${totalTokens} tokens`);
+        
+        return {
+            totalTokens: Math.max(totalTokens, 1),
+        };
     }
 
     /**
