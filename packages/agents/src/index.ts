@@ -5,6 +5,7 @@
  * - AgentPromptLoader: エージェントプリセットの動的読み込み
  * - TaskAgentMatcher: タスクとエージェントのマッチング
  * - WorkflowOrchestrator: ワークフロー全体の統合管理
+ * - AgentMonitor: エージェント実行状況の監視・表示
  * - SubAgent, SubAgentManager: エージェント管理（sub-agent.tsから）
  */
 
@@ -35,6 +36,15 @@ export {
   TaskExecutionResult,
   WorkflowExecutionResult
 } from './workflow-orchestrator';
+
+// AgentMonitor関連
+export {
+  AgentMonitor,
+  AgentExecutionState,
+  AgentExecutionInfo,
+  ExecutionStep,
+  MonitorConfig
+} from './agent-monitor';
 
 // SubAgent関連（既存のsub-agent.tsから）
 export {

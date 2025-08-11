@@ -5,6 +5,7 @@
 
 import { ChromaClient, Collection } from 'chromadb';
 import * as process from 'process';
+import * as path from 'path';
 
 // Embedding型定義（ChromaDBから利用できない場合の手動定義）
 type Embedding = number[];
@@ -36,31 +37,44 @@ export class ChromaMemoryClient {
   private collectionName: string;
 
   constructor(collectionName: string = 'agent_memories') {
-    // ChromaDBサーバーへの接続設定
-    // Docker環境内かどうかを判定して適切なホストを選択
-    let chromaHost = process.env.CHROMA_HOST;
+    // ChromaDBの保存場所を.agents/cache/に統一
+    const chromaPath = path.join(process.cwd(), '.agents', 'cache', 'chroma');
     
-    if (!chromaHost) {
-      // ホスト名でDocker環境内かどうかを判定
-      const hostname = process.env.HOSTNAME || '';
-      const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
+    // 環境変数でサーバーモードが指定されている場合はサーバー接続を使用
+    const useServer = process.env.CHROMA_HOST || process.env.CHROMA_SERVER_MODE;
+    
+    if (useServer) {
+      // サーバーモード（既存の動作）
+      let chromaHost = process.env.CHROMA_HOST;
       
-      if (isInDocker) {
-        // Docker環境内ではchromaコンテナ名を使用
-        chromaHost = 'chroma';
-      } else {
-        // ローカル環境ではlocalhostを使用
-        chromaHost = 'localhost';
+      if (!chromaHost) {
+        // ホスト名でDocker環境内かどうかを判定
+        const hostname = process.env.HOSTNAME || '';
+        const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
+        
+        if (isInDocker) {
+          // Docker環境内ではchromaコンテナ名を使用
+          chromaHost = 'chroma';
+        } else {
+          // ローカル環境ではlocalhostを使用
+          chromaHost = 'localhost';
+        }
       }
+      
+      const chromaPort = process.env.CHROMA_PORT || '8000';
+      
+      this.client = new ChromaClient({
+        host: chromaHost,
+        port: parseInt(chromaPort),
+        ssl: false
+      });
+    } else {
+      // ローカルファイルシステムモード（新しい動作）
+      this.client = new ChromaClient({
+        path: chromaPath
+      });
     }
     
-    const chromaPort = process.env.CHROMA_PORT || '8000';
-    
-    this.client = new ChromaClient({
-      host: chromaHost,
-      port: parseInt(chromaPort),
-      ssl: false
-    });
     this.collectionName = collectionName;
     
 

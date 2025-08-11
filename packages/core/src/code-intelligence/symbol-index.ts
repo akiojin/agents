@@ -2582,6 +2582,6 @@ class CParser implements LanguageParser {
  * プロジェクト用のシンボルインデックスファクトリ（多言語対応）
  */
 export function createSymbolIndex(projectPath: string): SymbolIndex {
-  const dbPath = path.join(projectPath, '.agents', 'symbol-index.db');
+  const dbPath = path.join(projectPath, '.agents', 'cache', 'symbol-index.db');
   return new SymbolIndex(dbPath, projectPath);
 }

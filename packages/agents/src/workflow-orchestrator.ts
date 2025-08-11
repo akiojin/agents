@@ -13,6 +13,7 @@ import { SubAgentManager } from '../sub-agent';
 import { TaskAgentMatcher, Task, ParallelExecutionGroup } from './task-agent-matcher';
 import { AgentPromptLoader } from './agent-prompt-loader';
 import { GeminiAdapterProvider } from '../../core/src/providers/gemini-adapter-provider';
+import { AgentMonitor, AgentExecutionState } from './agent-monitor';
 
 // ワークフローの状態
 export enum WorkflowState {
@@ -86,9 +87,11 @@ export class WorkflowOrchestrator {
   private taskMatcher: TaskAgentMatcher;
   private agentLoader: AgentPromptLoader;
   private provider: GeminiAdapterProvider;
+  private monitor: AgentMonitor;
   private currentState: WorkflowState = WorkflowState.IDLE;
   private activePlans: Map<string, ExecutionPlan> = new Map();
   private executionResults: Map<string, WorkflowExecutionResult> = new Map();
+  private mainAgentId: string = 'workflow-orchestrator';
 
   private constructor() {
     this.agentLoader = AgentPromptLoader.getInstance();
@@ -103,6 +106,14 @@ export class WorkflowOrchestrator {
     
     // エージェントマネージャーを初期化
     this.agentManager = new SubAgentManager(this.provider);
+    
+    // モニターを初期化
+    this.monitor = AgentMonitor.getInstance({
+      updateInterval: 500,
+      showDetails: true,
+      colorize: true,
+      groupByParent: true
+    });
   }
 
   // シングルトンインスタンスを取得
@@ -405,15 +416,43 @@ Respond in JSON format:
     const startTime = Date.now();
     const taskResults: TaskExecutionResult[] = [];
     
+    // モニタリングを開始
+    this.monitor.startMonitoring();
+    
+    // メインオーケストレーターをモニターに登録
+    this.monitor.registerAgent({
+      agentId: this.mainAgentId,
+      agentType: 'orchestrator',
+      agentName: 'Workflow Orchestrator',
+      taskId: planId,
+      taskDescription: `実行計画: ${plan.tasks.length}個のタスク`,
+      state: AgentExecutionState.EXECUTING,
+      startTime: new Date()
+    });
+    
     try {
       // 実行グループごとに処理
+      let groupIndex = 0;
       for (const group of plan.executionGroups) {
-        console.log(`Executing group ${group.groupId} (parallel: ${group.canRunInParallel})`);
+        groupIndex++;
+        const groupProgress = `グループ ${groupIndex}/${plan.executionGroups.length}`;
+        
+        console.log(`\n🔄 ${groupProgress} を実行中 (並列: ${group.canRunInParallel ? 'はい' : 'いいえ'})`);
+        console.log(`   タスク数: ${group.tasks.length}`);
+        
+        // モニターの進捗を更新
+        this.monitor.updateAgentProgress(
+          this.mainAgentId,
+          groupIndex,
+          plan.executionGroups.length,
+          `${groupProgress} - ${group.canRunInParallel ? '並列実行' : '順次実行'}`
+        );
         
         if (group.canRunInParallel) {
           // 並列実行
+          console.log('   ⚡ 並列実行を開始...');
           const promises = group.tasks.map(match => 
-            this.executeTask(match.task, match.agent.name)
+            this.executeTask(match.task, match.agent.name, this.mainAgentId)
           );
           
           const results = await Promise.allSettled(promises);
@@ -437,9 +476,14 @@ Respond in JSON format:
           }
         } else {
           // 順次実行
+          console.log('   📝 順次実行を開始...');
+          let taskIndex = 0;
           for (const match of group.tasks) {
+            taskIndex++;
+            console.log(`      タスク ${taskIndex}/${group.tasks.length}: ${match.task.description}`);
+            
             try {
-              const result = await this.executeTask(match.task, match.agent.name);
+              const result = await this.executeTask(match.task, match.agent.name, this.mainAgentId);
               taskResults.push(result);
             } catch (error: any) {
               taskResults.push({
@@ -460,6 +504,16 @@ Respond in JSON format:
       const successCount = taskResults.filter(r => r.status === 'success').length;
       const failureCount = taskResults.filter(r => r.status === 'failure').length;
       
+      // モニターの状態を更新
+      this.monitor.updateAgentState(
+        this.mainAgentId,
+        failureCount === 0 ? AgentExecutionState.COMPLETED : AgentExecutionState.FAILED,
+        {
+          endTime: new Date(),
+          duration: totalDuration
+        }
+      );
+      
       const result: WorkflowExecutionResult = {
         requestId: plan.requestId,
         planId: plan.id,
@@ -473,9 +527,24 @@ Respond in JSON format:
       this.executionResults.set(plan.requestId, result);
       this.setState(result.state);
       
+      // モニタリングを停止
+      setTimeout(() => {
+        this.monitor.stopMonitoring();
+      }, 5000); // 5秒後に停止（結果を確認できるように）
+      
       return result;
     } catch (error: any) {
       this.setState(WorkflowState.FAILED);
+      
+      // モニターの状態を更新
+      this.monitor.updateAgentState(
+        this.mainAgentId,
+        AgentExecutionState.FAILED,
+        {
+          endTime: new Date(),
+          error: error.message
+        }
+      );
       
       const result: WorkflowExecutionResult = {
         requestId: plan.requestId,
@@ -488,6 +557,12 @@ Respond in JSON format:
       };
       
       this.executionResults.set(plan.requestId, result);
+      
+      // モニタリングを停止
+      setTimeout(() => {
+        this.monitor.stopMonitoring();
+      }, 5000);
+      
       return result;
     }
   }
@@ -495,26 +570,36 @@ Respond in JSON format:
   // 個別タスクを実行
   private async executeTask(
     task: Task,
-    agentName: string
+    agentName: string,
+    parentAgentId?: string
   ): Promise<TaskExecutionResult> {
     const startTime = Date.now();
     
     try {
-      console.log(`Executing task ${task.id} with agent ${agentName}`);
+      console.log(`      🤖 エージェント「${agentName}」でタスク ${task.id} を実行中...`);
+      
+      // コンテキストに親エージェントIDを追加
+      const context = parentAgentId ? { parentContext: { agentId: parentAgentId } } : {};
       
       // エージェントを使用してタスクを実行
-      const result = await this.agentManager.executeTask(task.description, agentName);
+      const result = await this.agentManager.executeTask(task.description, agentName, context);
       
-      return {
+      const taskResult: TaskExecutionResult = {
         taskId: task.id,
         agentName,
         status: result.success ? 'success' : 'failure',
-        output: result.output,
-        error: result.error,
+        output: result.response,
+        error: result.success ? undefined : result.response,
         duration: Date.now() - startTime,
         timestamp: new Date()
       };
+      
+      console.log(`      ${result.success ? '✅' : '❌'} タスク ${task.id} ${result.success ? '完了' : '失敗'} (${taskResult.duration}ms)`);
+      
+      return taskResult;
     } catch (error: any) {
+      console.log(`      ❌ タスク ${task.id} エラー: ${error.message}`);
+      
       return {
         taskId: task.id,
         agentName,
@@ -575,6 +660,7 @@ Respond in JSON format:
     this.activePlans.clear();
     this.executionResults.clear();
     this.agentManager.clearAgents();
+    this.monitor.reset();
     console.log('Workflow orchestrator reset');
   }
 }

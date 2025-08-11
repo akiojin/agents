@@ -255,7 +255,7 @@ export class MemoryIntegrationManager extends EventEmitter {
   private readonly batchSize = 50;
   private readonly batchInterval = 5000; // 5秒
 
-  constructor(memoryPath: string = '.agents/memory') {
+  constructor(memoryPath: string = '.agents/cache') {
     super();
     this.memoryPath = path.isAbsolute(memoryPath) 
       ? memoryPath 

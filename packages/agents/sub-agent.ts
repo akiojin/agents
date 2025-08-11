@@ -6,6 +6,7 @@
 import { TodoWriteTool } from '../tools/todo-write';
 import { GeminiAdapterProvider } from '../../src/providers/gemini-adapter';
 import { logger } from '../../src/utils/logger';
+import { AgentMonitor, AgentExecutionState, AgentExecutionInfo } from './agent-monitor';
 
 export interface SubAgentConfig {
   name: string;
@@ -27,6 +28,9 @@ export interface SubAgentResult {
   response: string;
   files?: Map<string, string>;
   metadata?: {
+    agentId?: string;
+    agentType?: string;
+    agentName?: string;
     toolsUsed?: string[];
     duration?: number;
     tokensUsed?: number;
@@ -42,6 +46,8 @@ export class SubAgent {
   private provider: GeminiAdapterProvider | any;
   private model?: string;  // エージェント固有のモデル
   private status: 'idle' | 'busy' = 'idle';
+  private monitor?: AgentMonitor;
+  private currentTaskId?: string;
 
   constructor(idOrConfig: string | SubAgentConfig, type?: string, provider?: any) {
     // Support both old and new constructor signatures for backward compatibility
@@ -83,6 +89,14 @@ export class SubAgent {
     
     // Initialize default tools
     this.initializeTools();
+    
+    // モニターを取得（シングルトン）
+    try {
+      this.monitor = AgentMonitor.getInstance();
+    } catch (error) {
+      // モニターが利用できない場合は無視
+      logger.debug('AgentMonitor not available:', error);
+    }
   }
 
   private initializeTools(): void {
@@ -102,13 +116,41 @@ export class SubAgent {
   async execute(task: string, context: SubAgentContext = {}): Promise<SubAgentResult> {
     const startTime = Date.now();
     this.status = 'busy';
+    this.currentTaskId = `task-${this.id}-${Date.now()}`;
+    
+    // モニターにエージェントを登録
+    if (this.monitor) {
+      const agentInfo: AgentExecutionInfo = {
+        agentId: this.id,
+        agentType: this.type,
+        agentName: this.config.name,
+        taskId: this.currentTaskId,
+        taskDescription: task,
+        state: AgentExecutionState.INITIALIZING,
+        startTime: new Date(),
+        parentAgentId: context.parentContext?.agentId
+      };
+      this.monitor.registerAgent(agentInfo);
+    }
     
     try {
+      // 状態を計画中に更新
+      this.updateMonitorState(AgentExecutionState.PLANNING, { currentStep: 'タスクを分析中...' });
+      
       // Build the prompt with context
       const fullPrompt = this.buildPrompt(task, context);
       
+      // 状態を実行中に更新
+      this.updateMonitorState(AgentExecutionState.EXECUTING, { currentStep: 'LLMで処理中...' });
+      
       // Call the LLM with the prompt
       const response = await this.processTask(fullPrompt, context);
+      
+      // 状態を完了に更新
+      this.updateMonitorState(AgentExecutionState.COMPLETED, { 
+        currentStep: '処理完了',
+        endTime: new Date()
+      });
       
       return {
         success: true,
@@ -124,6 +166,13 @@ export class SubAgent {
       };
     } catch (error) {
       logger.error(`SubAgent ${this.config.name} error:`, error);
+      
+      // 状態を失敗に更新
+      this.updateMonitorState(AgentExecutionState.FAILED, { 
+        error: error instanceof Error ? error.message : String(error),
+        endTime: new Date()
+      });
+      
       return {
         success: false,
         response: `Error executing sub-agent task: ${error}`,
@@ -136,6 +185,7 @@ export class SubAgent {
       };
     } finally {
       this.status = 'idle';
+      this.currentTaskId = undefined;
     }
   }
 
@@ -186,6 +236,7 @@ export class SubAgent {
   private async processTask(prompt: string, context: SubAgentContext): Promise<string> {
     try {
       // Call the LLM
+      this.updateMonitorProgress(1, 4, 'LLMを呼び出し中...');
       const llmResponse = await this.provider.chat([
         { role: 'system', content: this.config.prompt },
         { role: 'user', content: prompt }
@@ -195,17 +246,32 @@ export class SubAgent {
       });
       
       // Parse the response for tool calls
+      this.updateMonitorProgress(2, 4, 'ツール呼び出しを解析中...');
       const toolCalls = this.parseToolCalls(llmResponse);
       
       // Execute any tool calls
       let toolResults = '';
-      for (const toolCall of toolCalls) {
-        const result = await this.executeTool(toolCall.name, toolCall.params);
-        toolResults += `Tool ${toolCall.name} result: ${JSON.stringify(result)}\n`;
+      if (toolCalls.length > 0) {
+        this.updateMonitorProgress(3, 4, `${toolCalls.length}個のツールを実行中...`);
+        for (let i = 0; i < toolCalls.length; i++) {
+          const toolCall = toolCalls[i];
+          this.updateMonitorState(AgentExecutionState.EXECUTING, { 
+            currentStep: `ツール実行中: ${toolCall.name} (${i + 1}/${toolCalls.length})`
+          });
+          
+          const result = await this.executeTool(toolCall.name, toolCall.params);
+          toolResults += `Tool ${toolCall.name} result: ${JSON.stringify(result)}\n`;
+          
+          // モニターにツール使用を記録
+          if (this.monitor && this.id) {
+            this.monitor.recordToolUsage(this.id, toolCall.name);
+          }
+        }
       }
       
       // If there were tool calls, get a final response from the LLM
       if (toolCalls.length > 0) {
+        this.updateMonitorProgress(4, 4, '最終レスポンスを生成中...');
         const finalResponse = await this.provider.chat([
           { role: 'system', content: this.config.prompt },
           { role: 'user', content: prompt },
@@ -279,6 +345,24 @@ export class SubAgent {
   getTools(): string[] {
     return this.config.tools || [];
   }
+  
+  /**
+   * モニターの状態を更新
+   */
+  private updateMonitorState(state: AgentExecutionState, details?: Partial<AgentExecutionInfo>): void {
+    if (this.monitor && this.id) {
+      this.monitor.updateAgentState(this.id, state, details);
+    }
+  }
+  
+  /**
+   * モニターの進捗を更新
+   */
+  private updateMonitorProgress(current: number, total: number, currentStep?: string): void {
+    if (this.monitor && this.id) {
+      this.monitor.updateAgentProgress(this.id, current, total, currentStep);
+    }
+  }
 }
 
 /**
@@ -351,25 +435,6 @@ Be thorough and systematic in your approach.`,
     this.agents.set(config.name, agent);
   }
 
-  /**
-   * Execute a task with a specific sub-agent
-   */
-  async executeTask(
-    agentName: string,
-    task: string,
-    context: SubAgentContext = {}
-  ): Promise<SubAgentResult> {
-    const agent = this.agents.get(agentName);
-    
-    if (!agent) {
-      return {
-        success: false,
-        response: `Sub-agent '${agentName}' not found. Available agents: ${Array.from(this.agents.keys()).join(', ')}`,
-      };
-    }
-    
-    return agent.execute(task, context);
-  }
 
   /**
    * Get all registered sub-agents

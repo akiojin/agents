@@ -85,20 +85,24 @@ export function findIndexAfterFraction(
 }
 
 export class GeminiClient {
-  private chat?: GeminiChat;
   private contentGenerator?: ContentGenerator;
-  private embeddingModel: string;
-  private generateContentConfig: GenerateContentConfig = {
-    temperature: 0,
-    topP: 1,
-  };
+  private chat?: GeminiChat;
   private sessionTurnCount = 0;
+  /**
+   * This is the default token limit proportion used for all prompts.
+   * Individual tools can override this on a per-tool basis with the
+   * {@link SafetyConfig} parameter.
+   */
+  private readonly DEFAULT_TOKEN_LIMIT_PROPORTION = 0.8;
+  private readonly generateContentConfig: GenerateContentConfig = {};
+  private readonly embeddingModel: string = 'text-embedding-004';
   private readonly MAX_TURNS = 100;
   /**
    * Threshold for compression token count as a fraction of the model's token limit.
    * If the chat history exceeds this threshold, it will be compressed.
+   * コンテキストがほぼ満杯（90%）になった時のみ圧縮を実行するように設定
    */
-  private readonly COMPRESSION_TOKEN_THRESHOLD = 0.7;
+  private readonly COMPRESSION_TOKEN_THRESHOLD = 0.9;
   /**
    * The fraction of the latest chat history to keep. A value of 0.3
    * means that only the last 30% of the chat history will be kept after compression.
@@ -464,8 +468,6 @@ export class GeminiClient {
         });
 
       const result = await retryWithBackoff(apiCall, {
-        onPersistent429: async (authType?: string, error?: unknown) =>
-          await this.handleFlashFallback(authType, error),
         authType: this.config.getContentGeneratorConfig()?.authType,
       });
 
@@ -555,8 +557,6 @@ export class GeminiClient {
         });
 
       const result = await retryWithBackoff(apiCall, {
-        onPersistent429: async (authType?: string, error?: unknown) =>
-          await this.handleFlashFallback(authType, error),
         authType: this.config.getContentGeneratorConfig()?.authType,
       });
       return result;
@@ -638,13 +638,27 @@ export class GeminiClient {
       return null;
     }
 
-    // Don't compress if not forced and we are under the limit.
-    if (
-      !force &&
-      originalTokenCount < this.COMPRESSION_TOKEN_THRESHOLD * tokenLimit(model)
-    ) {
+    const modelTokenLimit = tokenLimit(model);
+    const threshold = this.COMPRESSION_TOKEN_THRESHOLD * modelTokenLimit;
+    const remainingTokens = modelTokenLimit - originalTokenCount;
+    const usagePercentage = Math.round(originalTokenCount / modelTokenLimit * 100);
+    
+    // デバッグログを追加（より詳細に）
+    console.log(`[Compression Debug] Model: ${model}, Token Limit: ${modelTokenLimit}`);
+    console.log(`[Compression Debug] Current Usage: ${originalTokenCount}/${modelTokenLimit} (${usagePercentage}%)`);
+    console.log(`[Compression Debug] Remaining: ${remainingTokens} tokens`);
+    console.log(`[Compression Debug] Compression Threshold: ${threshold} (${Math.round(this.COMPRESSION_TOKEN_THRESHOLD * 100)}%)`);
+    console.log(`[Compression Debug] Force flag: ${force}`);
+    
+    // 圧縮条件を判定
+    const shouldCompress = force || originalTokenCount >= threshold;
+    
+    if (!shouldCompress) {
+      console.log(`[Compression Debug] Skipping compression: usage ${usagePercentage}% is below threshold ${Math.round(this.COMPRESSION_TOKEN_THRESHOLD * 100)}%`);
       return null;
     }
+
+    console.log(`[Compression Debug] Starting compression...`);
 
     let compressBeforeIndex = findIndexAfterFraction(
       curatedHistory,
@@ -695,80 +709,51 @@ export class GeminiClient {
       },
       ...historyToKeep,
     ];
-    
+
+    // 圧縮後のセッションを作成
+    // sessionManager.createCompressedSession(summary);
+
+    // Reinitialize the chat with the new history.
     this.chat = await this.startChat(compressedHistory);
 
     const { totalTokens: newTokenCount } =
       await this.getContentGenerator().countTokens({
-        // model might change after calling `sendMessage`, so we get the newest value from config
-        model: this.config.getModel(),
-        contents: this.getChat().getHistory(),
+        model,
+        contents: this.getChat().getHistory(true),
       });
-    if (newTokenCount === undefined) {
-      console.warn('Could not determine compressed history token count.');
-      return null;
-    }
-
-    // 新しいセッションを開始して保存
-    await sessionManager.compressAndStartNewSession(
-      compressedHistory,
-      summary || '',
-      originalTokenCount,
-      newTokenCount
-    );
     
-    console.log(`Session compressed and saved. New session ID: ${sessionManager.getCurrentSessionId()}`);
-    console.log(`Compression ratio: ${((1 - newTokenCount/originalTokenCount) * 100).toFixed(1)}%`);
+    console.log(`[Compression Debug] Compression complete: ${originalTokenCount} -> ${newTokenCount} tokens`);
 
     return {
       originalTokenCount,
-      newTokenCount,
+      newTokenCount: newTokenCount ?? 0,
     };
   }
 
-  /**
-   * Handles fallback to Flash model when persistent 429 errors occur for OAuth users.
-   * Uses a fallback handler if provided by the config, otherwise returns null.
-   */
-  private async handleFlashFallback(
+  async handleQuotaError(
     authType?: string,
     error?: unknown,
-  ): Promise<string | null> {
-    // Only handle fallback for OAuth users
-    if (authType !== AuthType.LOGIN_WITH_GOOGLE) {
-      return null;
+  ): Promise<GeminiClient | null> {
+    if (error) {
+      console.warn('[Quota Error]:', getErrorMessage(error));
     }
 
+    const flashModel = DEFAULT_GEMINI_FLASH_MODEL;
     const currentModel = this.config.getModel();
-    const fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
-
-    // Don't fallback if already using Flash model
-    if (currentModel === fallbackModel) {
+    
+    if (currentModel === flashModel) {
+      console.log('[Quota Error] Already on Flash model, cannot fallback further');
       return null;
     }
 
-    // Check if config has a fallback handler (set by CLI package)
-    const fallbackHandler = this.config.flashFallbackHandler;
-    if (typeof fallbackHandler === 'function') {
-      try {
-        const accepted = await fallbackHandler(
-          currentModel,
-          fallbackModel,
-          error,
-        );
-        if (accepted !== false && accepted !== null) {
-          this.config.setModel(fallbackModel);
-          return fallbackModel;
-        }
-        // Check if the model was switched manually in the handler
-        if (this.config.getModel() === fallbackModel) {
-          return null; // Model was switched but don't continue with current prompt
-        }
-      } catch (error) {
-        console.warn('Flash fallback handler failed:', error);
-      }
-    }
-
-    return null;
+    console.log(`[Quota Error] Switching from ${currentModel} to ${flashModel} due to quota error`);
+    
+    // Update the config to use Flash model
+    this.config.setModel(flashModel);
+    
+    // Return this client with updated model
+    return this;
   }
+
+
 }

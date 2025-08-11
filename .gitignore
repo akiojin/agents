@@ -1,5 +1,6 @@
 test*
 analyze
+.agents/cache/
 .agents/sessions/
 
 # 依存関係
