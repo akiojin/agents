@@ -18,6 +18,8 @@ services:
     environment:
       # Claude Code用の環境変数
       - ANTHROPIC_API_KEY
+      - ENABLE_BACKGROUND_TASKS=1
+      - FORCE_AUTO_BACKGROUND_TASKS=1
       # Google AI用の環境変数
       - GOOGLE_API_KEY
       # GitHub統合用
