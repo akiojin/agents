@@ -14,6 +14,7 @@ import { TaskAgentMatcher, Task, ParallelExecutionGroup } from './task-agent-mat
 import { AgentPromptLoader } from './agent-prompt-loader';
 import { GeminiAdapterProvider } from '../../core/src/providers/gemini-adapter-provider';
 import { AgentMonitor, AgentExecutionState } from './agent-monitor';
+import { ApprovalInterface, ApprovalChoice, ApprovalResult } from './approval-interface';
 
 // ワークフローの状態
 export enum WorkflowState {
@@ -88,6 +89,7 @@ export class WorkflowOrchestrator {
   private agentLoader: AgentPromptLoader;
   private provider: GeminiAdapterProvider;
   private monitor: AgentMonitor;
+  private approvalInterface: ApprovalInterface;
   private currentState: WorkflowState = WorkflowState.IDLE;
   private activePlans: Map<string, ExecutionPlan> = new Map();
   private executionResults: Map<string, WorkflowExecutionResult> = new Map();
@@ -114,6 +116,9 @@ export class WorkflowOrchestrator {
       colorize: true,
       groupByParent: true
     });
+    
+    // 承認インターフェースを初期化
+    this.approvalInterface = new ApprovalInterface();
   }
 
   // シングルトンインスタンスを取得
@@ -388,21 +393,28 @@ Respond in JSON format:
     return totalDuration;
   }
 
-  // 計画を承認
-  public approvePlan(planId: string): boolean {
+  // 計画を承認（対話的に）
+  public async requestApproval(planId: string): Promise<ApprovalResult> {
     const plan = this.activePlans.get(planId);
     if (!plan) {
-      console.error(`Plan not found: ${planId}`);
-      return false;
+      throw new Error(`Plan not found: ${planId}`);
     }
     
     if (this.currentState !== WorkflowState.AWAITING_APPROVAL) {
-      console.error('Plan is not awaiting approval');
-      return false;
+      throw new Error('Plan is not awaiting approval');
     }
     
-    console.log(`Plan ${planId} approved`);
-    return true;
+    // 承認インターフェースを使用してユーザーの承認を取得
+    const approvalResult = await this.approvalInterface.requestApproval(plan);
+    
+    if (approvalResult.choice === ApprovalChoice.APPROVE) {
+      console.log(`Plan ${planId} approved by user`);
+    } else if (approvalResult.choice === ApprovalChoice.REJECT) {
+      console.log(`Plan ${planId} rejected by user: ${approvalResult.reason}`);
+      this.setState(WorkflowState.CANCELLED);
+    }
+    
+    return approvalResult;
   }
 
   // 計画を実行
@@ -623,15 +635,36 @@ Respond in JSON format:
     const plan = await this.createExecutionPlan(request, requirements);
     console.log('Execution plan created:', plan.id);
     
-    // 3. 承認が必要な場合は待機（デモでは自動承認）
+    // 3. 承認が必要な場合は対話的に承認を取得
     if (plan.approvalRequired) {
-      console.log('Plan requires approval...');
-      this.approvePlan(plan.id);
+      const approvalResult = await this.requestApproval(plan.id);
+      
+      // 承認されなかった場合は中止
+      if (approvalResult.choice !== ApprovalChoice.APPROVE) {
+        const result: WorkflowExecutionResult = {
+          requestId: plan.requestId,
+          planId: plan.id,
+          state: WorkflowState.CANCELLED,
+          taskResults: [],
+          summary: `ワークフローがユーザーによって${approvalResult.choice === ApprovalChoice.REJECT ? '拒否' : 'キャンセル'}されました`,
+          totalDuration: 0,
+          error: approvalResult.reason
+        };
+        
+        this.executionResults.set(plan.requestId, result);
+        return result;
+      }
     }
     
     // 4. 計画を実行
     const result = await this.executePlan(plan.id);
-    console.log('Workflow execution completed:', result.state);
+    
+    // 5. 実行結果のサマリーを表示
+    this.approvalInterface.displayExecutionSummary(
+      result.state === WorkflowState.COMPLETED,
+      result.summary,
+      result.totalDuration
+    );
     
     return result;
   }
@@ -661,6 +694,7 @@ Respond in JSON format:
     this.executionResults.clear();
     this.agentManager.clearAgents();
     this.monitor.reset();
+    this.approvalInterface.close();
     console.log('Workflow orchestrator reset');
   }
 }
