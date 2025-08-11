@@ -332,3 +332,18 @@ export class IntegratedMemorySystem {
 export { Memory, ChromaMemoryClient } from './chroma/chromaClient.js';
 export { SynapticMemoryNetwork, SynapticConnection, MemoryNode } from './synaptic/synapticNetwork.js';
 export { MemoryAPI, getMemoryAPI, MemoryEvent, MemoryAPIConfig } from './api/memoryApi.js';
+
+// 決定ログシステムのエクスポート
+export { DecisionLog, ActionType, ResultType } from './decision-log/index.js';
+export type {
+  Action,
+  Reason,
+  Decision,
+  WhyChain,
+  Pattern,
+  Session as DecisionSession,
+  SearchOptions as DecisionSearchOptions,
+  SearchResult as DecisionSearchResult,
+  PatternDetectionOptions,
+  Statistics as DecisionStatistics
+} from './decision-log/index.js';

@@ -1,3 +1,8 @@
-## Agents Added Memories
+## Agents
 
-* open-agents-cli 是一个 Agents CLI 的分叉版本，核心特性是支持连接任何 OpenAI 兼容 API 作为 Agent 推理引擎。它通过引入 API Adaptor 适配器层实现透明后端切换，将 Agents 内部格式转换为 OpenAI 兼容格式，并支持流式输出、被动工具调用、主动工具调用和多轮主动工具调用等高级功能。配置支持全局配置（OPENAI\_LLM\_KEY、OPENAI\_LLM\_BASE、OPENAI\_LLM\_MODEL）和精细化配置（为不同任务类型配置不同模型）。架构上采用模块化设计，包含 ContentGenerator 抽象层、AgentsToOpenAIConverter 和 OpenAIToAgentsConverter 两个转换器类来处理请求和响应的格式转换。
+* AGENTS は Gemini CLI のフォークバージョンです。
+* 主な特徴は、任意の OpenAI 互換 API をエージェント推論エンジンとして接続することをサポートすることです。
+* API Adaptor アダプター層を導入することで、バックエンドの透明な切り替えを実現し、Agents 内部フォーマットを OpenAI 互換フォーマットに変換します。
+* ストリーミング出力、受動的ツール呼び出し、主動的ツール呼び出し、マルチラウンド主動的ツール呼び出しなどの高度な機能をサポートします。
+* グローバル構成（OPENAI_LLM_KEY、OPENAI_LLM_BASE、OPENAI_LLM_MODEL）と細やかな構成（タスクタイプごとに異なるモデルを構成）をサポートします。
+* アーキテクチャはモジュール化設計で、ContentGenerator 抽象層、AgentsToOpenAIConverter、OpenAIToAgentsConverter の3つの変換器クラスを含み、リクエストとレスポンスのフォーマット変換を処理します。
