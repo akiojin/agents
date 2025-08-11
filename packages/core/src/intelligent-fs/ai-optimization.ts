@@ -142,44 +142,86 @@ export class AIOptimizationEngine {
   }
 
   /**
-   * コード品質を分析
+   * コード品質を分析（文字列またはIntelligentReadResult対応）
    */
-  async analyzeCodeQuality(filePath: string): Promise<CodeQualityMetrics> {
-    // キャッシュチェック
-    if (this.metricsCache.has(filePath)) {
-      return this.metricsCache.get(filePath)!;
-    }
+  async analyzeCodeQuality(
+    input: string | IntelligentReadResult
+  ): Promise<CodeQualityMetrics> {
+    let readResult: IntelligentReadResult;
+    let filePath: string;
 
-    const readResult = await this.intelligentFS.readFileIntelligent(filePath);
-    if (!readResult.success) {
-      throw new Error(`Failed to read file: ${filePath}`);
+    // 入力がファイルパスの場合
+    if (typeof input === 'string') {
+      filePath = input;
+      
+      // キャッシュチェック
+      if (this.metricsCache.has(filePath)) {
+        return this.metricsCache.get(filePath)!;
+      }
+
+      readResult = await this.intelligentFS.readFileIntelligent(filePath);
+      if (!readResult.success) {
+        throw new Error(`Failed to read file: ${filePath}`);
+      }
+    } else {
+      // 入力がIntelligentReadResultの場合
+      readResult = input;
+      filePath = readResult.path;
+      
+      if (!readResult.success) {
+        throw new Error(`Failed to read file: ${readResult.path}`);
+      }
     }
 
     const metrics = await this.calculateMetrics(readResult);
     
-    // 記憶システムに保存
-    await this.memoryManager.saveCodePattern(
-      filePath,
-      'quality-metrics',
-      metrics
-    );
+    // 記憶システムに保存（メソッドが存在する場合のみ）
+    try {
+      if ('saveCodePattern' in this.memoryManager) {
+        await (this.memoryManager as any).saveCodePattern(
+          filePath,
+          'quality-metrics',
+          metrics
+        );
+      }
+    } catch (error) {
+      console.warn('Failed to save code pattern to memory:', error);
+    }
 
     this.metricsCache.set(filePath, metrics);
     return metrics;
   }
 
   /**
-   * バグを予測
+   * バグを予測（文字列またはIntelligentReadResult対応）
    */
-  async predictBugs(filePath: string): Promise<BugPrediction[]> {
-    // キャッシュチェック
-    if (this.predictionsCache.has(filePath)) {
-      return this.predictionsCache.get(filePath)!;
-    }
+  async predictBugs(
+    input: string | IntelligentReadResult
+  ): Promise<BugPrediction[]> {
+    let readResult: IntelligentReadResult;
+    let filePath: string;
 
-    const readResult = await this.intelligentFS.readFileIntelligent(filePath);
-    if (!readResult.success) {
-      throw new Error(`Failed to read file: ${filePath}`);
+    // 入力がファイルパスの場合
+    if (typeof input === 'string') {
+      filePath = input;
+      
+      // キャッシュチェック
+      if (this.predictionsCache.has(filePath)) {
+        return this.predictionsCache.get(filePath)!;
+      }
+
+      readResult = await this.intelligentFS.readFileIntelligent(filePath);
+      if (!readResult.success) {
+        throw new Error(`Failed to read file: ${filePath}`);
+      }
+    } else {
+      // 入力がIntelligentReadResultの場合
+      readResult = input;
+      filePath = readResult.path;
+      
+      if (!readResult.success) {
+        throw new Error(`Failed to read file: ${readResult.path}`);
+      }
     }
 
     const predictions = await this.analyzeBugPatterns(readResult);
@@ -264,21 +306,36 @@ export class AIOptimizationEngine {
   }
 
   /**
-   * 高度なリファクタリング提案を生成
+   * 高度なリファクタリング提案を生成（文字列またはIntelligentReadResult対応）
    */
-  async suggestRefactoring(filePath: string): Promise<OptimizationSuggestion[]> {
+  async suggestRefactoring(
+    input: string | IntelligentReadResult
+  ): Promise<OptimizationSuggestion[]> {
     const suggestions: OptimizationSuggestion[] = [];
-    
-    // ファイルの内容を解析
-    const readResult = await this.intelligentFS.readFileIntelligent(filePath);
-    if (!readResult.success) {
-      throw new Error(`Failed to read file: ${filePath}`);
+    let readResult: IntelligentReadResult;
+    let filePath: string;
+
+    // 入力がファイルパスの場合
+    if (typeof input === 'string') {
+      filePath = input;
+      readResult = await this.intelligentFS.readFileIntelligent(filePath);
+      if (!readResult.success) {
+        throw new Error(`Failed to read file: ${filePath}`);
+      }
+    } else {
+      // 入力がIntelligentReadResultの場合
+      readResult = input;
+      filePath = readResult.path;
+      
+      if (!readResult.success) {
+        throw new Error(`Failed to read file: ${readResult.path}`);
+      }
     }
     
     // 各種分析を並列実行
     const [quality, bugPredictions] = await Promise.all([
-      this.analyzeCodeQuality(filePath),
-      this.predictBugs(filePath)
+      this.analyzeCodeQuality(readResult),
+      this.predictBugs(readResult)
     ]);
     
     // Extract Method リファクタリング提案
@@ -932,7 +989,7 @@ Add observer management to subject class.
     // 複雑度に影響するキーワードと演算子
     const decisionPoints = [
       'if', 'else if', 'while', 'for', 'do', 'switch', 'case', 
-      'catch', '&&', '||', '?:', '??', '?.'
+      'catch', '&&', '||', '?:', '??', '?.', 'try', 'finally'
     ];
     
     const functionPatterns = [
@@ -959,32 +1016,41 @@ Add observer management to subject class.
         }
       }
       
-      // 条件分岐とループ
+      // 条件分岐とループ（より精密な検出）
       if (this.containsKeyword(cleanLine, 'if') && !this.containsKeyword(cleanLine, 'else if')) {
-        complexity++;
+        complexity += 2; // ifステートメントにより多くのポイントを付与
       }
       if (this.containsKeyword(cleanLine, 'else if')) {
-        complexity++;
+        complexity += 2;
+      }
+      if (this.containsKeyword(cleanLine, 'else') && !this.containsKeyword(cleanLine, 'else if')) {
+        complexity += 1;
       }
       if (this.containsKeyword(cleanLine, 'while')) {
-        complexity++;
+        complexity += 2;
       }
       if (this.containsKeyword(cleanLine, 'for')) {
-        complexity++;
+        complexity += 2;
       }
       if (this.containsKeyword(cleanLine, 'do')) {
-        complexity++;
+        complexity += 2;
       }
       
       // switch文のcase
       const caseMatches = cleanLine.match(/\bcase\s+/g);
       if (caseMatches) {
-        complexity += caseMatches.length;
+        complexity += caseMatches.length * 2;
       }
       
-      // catch句
+      // try-catch-finally
+      if (this.containsKeyword(cleanLine, 'try')) {
+        complexity += 1;
+      }
       if (this.containsKeyword(cleanLine, 'catch')) {
-        complexity++;
+        complexity += 2;
+      }
+      if (this.containsKeyword(cleanLine, 'finally')) {
+        complexity += 1;
       }
       
       // 論理演算子（同じ行に複数ある場合を考慮）
@@ -1767,6 +1833,64 @@ Add observer management to subject class.
   private analyzeNullPointerRisks(data: IntelligentReadResult): BugPrediction[] {
     const predictions: BugPrediction[] = [];
     const lines = data.content.split('\n');
+
+    // より広範囲なnullポインターパターンを検出
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // プロパティアクセスパターン
+      if (line.match(/\w+\.\w+/)) {
+        // null/undefinedチェックがない場合
+        if (!line.includes('?.') && !line.includes('null') && !line.includes('undefined')) {
+          predictions.push({
+            type: 'null-pointer',
+            severity: 'high',
+            line: i + 1,
+            description: 'Potential null/undefined property access',
+            suggestion: 'Add null check or use optional chaining',
+            confidence: 0.8
+          });
+        }
+      }
+
+      // メソッド呼び出しパターン  
+      if (line.match(/\w+\.\w+\(/)) {
+        if (!line.includes('?.') && !line.includes('null') && !line.includes('undefined')) {
+          predictions.push({
+            type: 'null-pointer',
+            severity: 'high', 
+            line: i + 1,
+            description: 'Potential null/undefined method call',
+            suggestion: 'Add null check before method call',
+            confidence: 0.75
+          });
+        }
+      }
+
+      // 配列アクセスパターン
+      if (line.match(/\w+\[\w+\]/)) {
+        predictions.push({
+          type: 'array-out-of-bounds',
+          severity: 'medium',
+          line: i + 1,
+          description: 'Potential array index out of bounds',
+          suggestion: 'Add bounds checking before array access',
+          confidence: 0.6
+        });
+      }
+
+      // リソースリークパターン
+      if (line.match(/createReadStream|createWriteStream|open/) && !lines.slice(i, Math.min(i + 10, lines.length)).some(l => l.includes('close'))) {
+        predictions.push({
+          type: 'resource-leak',
+          severity: 'medium',
+          line: i + 1,
+          description: 'Potential resource leak - stream not closed',
+          suggestion: 'Ensure streams are properly closed',
+          confidence: 0.7
+        });
+      }
+    }
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];

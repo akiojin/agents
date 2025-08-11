@@ -108,13 +108,13 @@ export const Footer: React.FC<FooterProps> = ({
         {/* Sandbox表示は削除されました */}
       </Box>
 
-      {/* Right Section: Gemini Label and Console Summary */}
+      {/* Right Section: Model Label and Console Summary */}
       <Box alignItems="center">
         <Text color={Colors.AccentBlue}>
           {' '}
           {model}{' '}
           <Text color={Colors.Gray}>
-            ({((1 - percentage) * 100).toFixed(0)}% context left)
+            ({Math.max(0, (1 - percentage) * 100).toFixed(0)}% context left)
           </Text>
         </Text>
         {corgiMode && (
