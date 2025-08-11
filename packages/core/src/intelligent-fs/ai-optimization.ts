@@ -387,7 +387,7 @@ export class AIOptimizationEngine {
         
         for (const block of complexBlocks) {
           suggestions.push({
-            type: 'refactor',
+            type: 'extract-method',
             priority: method.lineCount > 50 ? 'high' : 'medium',
             title: `Extract method from ${method.name}`,
             description: `Extract ${block.description} into a separate method`,
@@ -466,7 +466,7 @@ private ${group.suggestedClassName.toLowerCase()}: ${group.suggestedClassName};
     
     for (const issue of namingIssues) {
       suggestions.push({
-        type: 'refactor',
+        type: 'rename',
         priority: 'medium',
         title: `Rename ${issue.type}: ${issue.currentName}`,
         description: `${issue.reason}`,
@@ -3862,7 +3862,7 @@ Add observer management to subject class.
   
   private generateTypeScriptClass(context: any, options: CodeGenerationOptions): string {
     const { purpose, patterns, requirements } = context;
-    const className = this.generateSmartName(purpose, 'class');
+    const className = options.name || this.generateSmartName(purpose, 'class');
     
     let template = `
 /**
@@ -3898,7 +3898,7 @@ export class ${className}`;
   
   private generateJavaScriptClass(context: any, options: CodeGenerationOptions): string {
     const { purpose, requirements } = context;
-    const className = this.generateSmartName(purpose, 'class');
+    const className = options.name || this.generateSmartName(purpose, 'class');
     
     let template = `
 /**

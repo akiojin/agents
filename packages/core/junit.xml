@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="25" failures="11" errors="0" time="7.212853295">
-    <testsuite name="src/intelligent-fs/intelligent-filesystem.test.ts" timestamp="2025-08-11T14:32:26.071Z" hostname="63accec1df8b" tests="25" failures="11" errors="0" skipped="0" time="7.212853295">
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; TypeScriptファイルを読み取り、シンボル情報を抽出できる" time="0.443723417">
+<testsuites name="vitest tests" tests="25" failures="12" errors="0" time="9.276125254">
+    <testsuite name="src/intelligent-fs/intelligent-filesystem.test.ts" timestamp="2025-08-11T14:38:50.622Z" hostname="63accec1df8b" tests="25" failures="12" errors="0" skipped="0" time="9.276125254">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; TypeScriptファイルを読み取り、シンボル情報を抽出できる" time="2.195110543">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922738336&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923120717&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922738336/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923120717/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -13,22 +13,22 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922738336/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923120717/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922738336/test.ts&apos;[39m,
-  duration: [33m269[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923120717/test.ts&apos;[39m,
+  duration: [33m1923[39m,
   symbolsFound: [33m3[39m,
   cached: [33mfalse[39m
 }
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; Pythonファイルを読み取り、シンボル情報を抽出できる" time="0.466682709">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; Pythonファイルを読み取り、シンボル情報を抽出できる" time="0.483214542">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922738780&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923122911&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922738780/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923122911/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -36,11 +36,11 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922738780/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923122911/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922738780/test.py&apos;[39m,
-  duration: [33m240[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923122911/test.py&apos;[39m,
+  duration: [33m253[39m,
   symbolsFound: [33m1[39m,
   cached: [33mfalse[39m
 }
@@ -51,11 +51,11 @@ AssertionError: expected undefined to be defined
  ❯ src/intelligent-fs/intelligent-filesystem.test.ts:127:30
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; Javaファイルを読み取り、シンボル情報を抽出できる" time="0.416592916">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; Javaファイルを読み取り、シンボル情報を抽出できる" time="0.452636709">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922739247&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923123395&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922739247/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923123395/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -63,22 +63,22 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922739247/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923123395/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922739247/Test.java&apos;[39m,
-  duration: [33m227[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923123395/Test.java&apos;[39m,
+  duration: [33m236[39m,
   symbolsFound: [33m2[39m,
   cached: [33mfalse[39m
 }
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; Goファイルを読み取り、シンボル情報を抽出できる" time="0.414236458">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; Goファイルを読み取り、シンボル情報を抽出できる" time="0.429535875">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922739663&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923123847&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922739663/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923123847/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -86,11 +86,11 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922739663/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923123847/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922739663/test.go&apos;[39m,
-  duration: [33m237[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923123847/test.go&apos;[39m,
+  duration: [33m259[39m,
   symbolsFound: [33m2[39m,
   cached: [33mfalse[39m
 }
@@ -101,11 +101,11 @@ AssertionError: expected undefined to be defined
  ❯ src/intelligent-fs/intelligent-filesystem.test.ts:199:30
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; Rustファイルを読み取り、シンボル情報を抽出できる" time="0.427687333">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 基本的なファイル操作 &gt; Rustファイルを読み取り、シンボル情報を抽出できる" time="0.419243626">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922740078&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923124277&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922740078/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923124277/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -113,11 +113,11 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922740078/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923124277/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922740078/test.rs&apos;[39m,
-  duration: [33m246[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923124277/test.rs&apos;[39m,
+  duration: [33m251[39m,
   symbolsFound: [33m0[39m,
   cached: [33mfalse[39m
 }
@@ -128,11 +128,11 @@ AssertionError: expected undefined to be defined
  ❯ src/intelligent-fs/intelligent-filesystem.test.ts:232:28
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; セマンティック編集 &gt; シンボル単位での編集ができる" time="0.420617458">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; セマンティック編集 &gt; シンボル単位での編集ができる" time="0.435738708">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922740506&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923124696&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922740506/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923124696/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -140,11 +140,11 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922740506/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923124696/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922740506/edit-test.ts&apos;[39m,
-  duration: [33m245[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923124696/edit-test.ts&apos;[39m,
+  duration: [33m255[39m,
   symbolsFound: [33m1[39m,
   cached: [33mfalse[39m
 }
@@ -162,11 +162,11 @@ AssertionError: expected false to be true // Object.is equality
  ❯ src/intelligent-fs/intelligent-filesystem.test.ts:264:34
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; セマンティック編集 &gt; 参照の自動更新ができる" time="0.20256525">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; セマンティック編集 &gt; 参照の自動更新ができる" time="0.206095791">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922740926&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923125132&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922740926/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923125132/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -174,17 +174,17 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922740926/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923125132/memory.db/memory.db
 
 多言語プロジェクトのインデックスを開始...
 
 2個のソースファイルを発見
 
-インデックス完了: /tmp/intelligent-fs-test-1754922740926/usage.ts (1シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922740926/class.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923125132/usage.ts (1シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923125132/class.ts (2シンボル, typescript)
 進捗: 500% (2/2)
 
-多言語インデックス完了: 24ms
+多言語インデックス完了: 25ms
 2ファイルから3シンボルをインデックス
 言語別内訳: {
   typescript: [33m3[39m,
@@ -203,13 +203,11 @@ Memory integration manager initialized: /tmp/intelligent-fs-test-1754922740926/m
 }
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922740926/class.ts&apos;[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923125132/class.ts&apos;[39m,
   duration: [33m0[39m,
   symbolsFound: [33m2[39m,
   cached: [33mfalse[39m
 }
-
-Symbol index updated for file { filePath: [32m&apos;/tmp/intelligent-fs-test-1754922740926/class.ts&apos;[39m }
 
             </system-out>
             <failure message="expected 0 to be greater than 0" type="AssertionError">
@@ -217,11 +215,11 @@ AssertionError: expected 0 to be greater than 0
  ❯ src/intelligent-fs/intelligent-filesystem.test.ts:305:52
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; コード品質を分析できる" time="0.427497667">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; コード品質を分析できる" time="0.415806709">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922741129&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923125338&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922741129/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923125338/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -229,26 +227,22 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922741129/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923125338/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922741129/quality-test.ts&apos;[39m,
-  duration: [33m255[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923125338/quality-test.ts&apos;[39m,
+  duration: [33m235[39m,
   symbolsFound: [33m1[39m,
   cached: [33mfalse[39m
 }
 
             </system-out>
-            <failure message="expected 4 to be greater than 5" type="AssertionError">
-AssertionError: expected 4 to be greater than 5
- ❯ src/intelligent-fs/intelligent-filesystem.test.ts:365:34
-            </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; バグを予測できる" time="0.414853208">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; バグを予測できる" time="0.438090916">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922741557&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923125754&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922741557/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923125754/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -256,11 +250,11 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922741557/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923125754/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922741557/bug-test.ts&apos;[39m,
-  duration: [33m241[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923125754/bug-test.ts&apos;[39m,
+  duration: [33m243[39m,
   symbolsFound: [33m1[39m,
   cached: [33mfalse[39m
 }
@@ -271,11 +265,11 @@ AssertionError: expected undefined to be defined
  ❯ src/intelligent-fs/intelligent-filesystem.test.ts:422:31
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; アーキテクチャを分析できる" time="0.493342">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; アーキテクチャを分析できる" time="0.506090875">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922741971&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923126192&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922741971/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923126192/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -283,45 +277,45 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922741971/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923126192/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922741971/factory.ts&apos;[39m,
-  duration: [33m294[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923126192/factory.ts&apos;[39m,
+  duration: [33m249[39m,
   symbolsFound: [33m4[39m,
   cached: [33mfalse[39m
 }
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922741971/god-class.ts&apos;[39m,
-  duration: [33m13[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923126192/god-class.ts&apos;[39m,
+  duration: [33m10[39m,
   symbolsFound: [33m1[39m,
   cached: [33mfalse[39m
 }
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922741971/singleton.ts&apos;[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923126192/singleton.ts&apos;[39m,
   duration: [33m5[39m,
   symbolsFound: [33m1[39m,
   cached: [33mfalse[39m
 }
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922741971/factory.ts&apos;[39m,
-  duration: [33m0[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923126192/factory.ts&apos;[39m,
+  duration: [33m1[39m,
   symbolsFound: [33m4[39m,
   cached: [33mtrue[39m
 }
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922741971/god-class.ts&apos;[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923126192/god-class.ts&apos;[39m,
   duration: [33m0[39m,
   symbolsFound: [33m1[39m,
   cached: [33mtrue[39m
 }
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922741971/singleton.ts&apos;[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923126192/singleton.ts&apos;[39m,
   duration: [33m0[39m,
   symbolsFound: [33m1[39m,
   cached: [33mtrue[39m
@@ -329,11 +323,11 @@ Intelligent file read completed {
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; コード生成ができる" time="0.166901834">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; コード生成ができる" time="0.173543125">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922742465&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923126698&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922742465/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923126698/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -341,7 +335,7 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922742465/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923126698/memory.db/memory.db
 
 Generating class code {
   type: [32m&apos;class&apos;[39m,
@@ -351,43 +345,17 @@ Generating class code {
 }
 
             </system-out>
-            <failure message="expected &apos;\n/**\n * Implements ui functionality…&apos; to contain &apos;UserProfile&apos;" type="AssertionError">
-AssertionError: expected &apos;\n/**\n * Implements ui functionality…&apos; to contain &apos;UserProfile&apos;
-
-- Expected
-+ Received
-
-- UserProfile
-+
-+ /**
-+  * Implements ui functionality
-+  */
-+ export class UIComponent {
-+
-+   constructor(config?: any) {
-+   }
-+
-+
-+   process(data: any): any {
-+     // TODO: Implement processing logic
-+     return data;
-+   }
-+
-+   validate(data: any): boolean {
-+     // TODO: Implement validation logic
-+     return true;
-+   }
-+ }
-+
-
- ❯ src/intelligent-fs/intelligent-filesystem.test.ts:522:29
+            <failure message="this.insertLearningSession is not a function" type="TypeError">
+TypeError: this.insertLearningSession is not a function
+ ❯ MemoryIntegrationManager.startLearningSession src/intelligent-fs/memory-integration.ts:871:18
+ ❯ src/intelligent-fs/intelligent-filesystem.test.ts:525:25
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; リファクタリング提案ができる" time="0.467466792">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; AI最適化エンジン &gt; リファクタリング提案ができる" time="0.427501667">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922742632&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923126872&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922742632/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923126872/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -395,11 +363,11 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922742632/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923126872/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922742632/refactor-test.ts&apos;[39m,
-  duration: [33m295[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923126872/refactor-test.ts&apos;[39m,
+  duration: [33m243[39m,
   symbolsFound: [33m1[39m,
   cached: [33mfalse[39m
 }
@@ -410,11 +378,11 @@ AssertionError: expected undefined to be defined
  ❯ src/intelligent-fs/intelligent-filesystem.test.ts:613:39
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; メモリ統合システム &gt; コードパターンを学習できる" time="0.156354875">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; メモリ統合システム &gt; コードパターンを学習できる" time="0.180341291">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922743099&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923127299&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922743099/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923127299/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -422,15 +390,15 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922743099/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923127299/memory.db/memory.db
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; メモリ統合システム &gt; エラーパターンを記録し学習できる" time="0.153875917">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; メモリ統合システム &gt; エラーパターンを記録し学習できる" time="0.165943958">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922743256&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923127480&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922743256/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923127480/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -438,46 +406,20 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922743256/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923127480/memory.db/memory.db
 
             </system-out>
-        </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; メモリ統合システム &gt; セッション管理ができる" time="0.158624458">
-            <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922743409&apos;[39m }
-
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922743409/.agents/symbol-index.db
-
-TypeScript LSP Client initialized successfully
-
-IntelligentFileSystem fully initialized [90mundefined[39m
-
-Database schema setup completed with all tables and indexes
-
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922743409/memory.db/memory.db
-
-Learning session started: mem_1754922743555_i15td7d11 (unit-testing)
-
-Learning session ended: mem_1754922743555_i15td7d11. Duration: 0s, Actions: 2, Success Rate: 100%
-
-            </system-out>
-            <failure message="expected +0 to be 2 // Object.is equality" type="AssertionError">
-AssertionError: expected +0 to be 2 // Object.is equality
-
-- Expected
-+ Received
-
-- 2
-+ 0
-
- ❯ src/intelligent-fs/intelligent-filesystem.test.ts:708:35
+            <failure message="Cannot read properties of undefined (reading &apos;stackTrace&apos;)" type="TypeError">
+TypeError: Cannot read properties of undefined (reading &apos;stackTrace&apos;)
+ ❯ MemoryIntegrationManager.learnFromError src/intelligent-fs/memory-integration.ts:600:64
+ ❯ src/intelligent-fs/intelligent-filesystem.test.ts:664:28
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; メモリ統合システム &gt; 改善提案を生成できる" time="0.158672791">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; メモリ統合システム &gt; セッション管理ができる" time="0.164958125">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922743568&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923127646&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922743568/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923127646/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -485,15 +427,20 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922743568/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923127646/memory.db/memory.db
 
             </system-out>
+            <failure message="this.insertLearningSession is not a function" type="TypeError">
+TypeError: this.insertLearningSession is not a function
+ ❯ MemoryIntegrationManager.startLearningSession src/intelligent-fs/memory-integration.ts:871:18
+ ❯ src/intelligent-fs/intelligent-filesystem.test.ts:674:25
+            </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; パフォーマンスとキャッシング &gt; キャッシュが正しく動作する" time="0.420878376">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; メモリ統合システム &gt; 改善提案を生成できる" time="0.185989417">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922743727&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923127811&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922743727/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923127811/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -501,17 +448,38 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922743727/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923127811/memory.db/memory.db
+
+            </system-out>
+            <failure message="this.identifyPerformanceImprovements is not a function" type="TypeError">
+TypeError: this.identifyPerformanceImprovements is not a function
+ ❯ MemoryIntegrationManager.generateImprovements src/intelligent-fs/memory-integration.ts:1213:48
+ ❯ src/intelligent-fs/intelligent-filesystem.test.ts:732:28
+            </failure>
+        </testcase>
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; パフォーマンスとキャッシング &gt; キャッシュが正しく動作する" time="0.502296125">
+            <system-out>
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923127997&apos;[39m }
+
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923127997/.agents/symbol-index.db
+
+TypeScript LSP Client initialized successfully
+
+IntelligentFileSystem fully initialized [90mundefined[39m
+
+Database schema setup completed with all tables and indexes
+
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923127997/memory.db/memory.db
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922743727/cache-test.ts&apos;[39m,
-  duration: [33m240[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923127997/cache-test.ts&apos;[39m,
+  duration: [33m245[39m,
   symbolsFound: [33m1[39m,
   cached: [33mfalse[39m
 }
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922743727/cache-test.ts&apos;[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923127997/cache-test.ts&apos;[39m,
   duration: [33m0[39m,
   symbolsFound: [33m1[39m,
   cached: [33mtrue[39m
@@ -519,11 +487,11 @@ Intelligent file read completed {
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; パフォーマンスとキャッシング &gt; 大規模プロジェクトのインデックスが作成できる" time="0.559326875">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; パフォーマンスとキャッシング &gt; 大規模プロジェクトのインデックスが作成できる" time="0.646929625">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922744148&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923128499&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922744148/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923128499/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -531,133 +499,133 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922744148/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923128499/memory.db/memory.db
 
 多言語プロジェクトのインデックスを開始...
 
 100個のソースファイルを発見
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file99.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file98.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file97.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file96.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file95.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file94.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file93.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file92.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file91.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file90.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file99.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file98.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file97.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file96.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file95.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file94.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file93.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file92.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file91.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file90.ts (2シンボル, typescript)
 進捗: 10% (10/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file9.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file89.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file88.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file87.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file86.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file85.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file84.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file83.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file82.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file81.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file9.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file89.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file88.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file87.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file86.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file85.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file84.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file83.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file82.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file81.ts (2シンボル, typescript)
 進捗: 20% (20/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file80.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file8.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file79.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file78.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file77.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file76.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file75.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file74.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file73.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file72.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file80.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file8.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file79.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file78.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file77.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file76.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file75.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file74.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file73.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file72.ts (2シンボル, typescript)
 進捗: 30% (30/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file71.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file70.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file7.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file69.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file68.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file67.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file66.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file65.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file64.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file63.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file71.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file70.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file7.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file69.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file68.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file67.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file66.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file65.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file64.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file63.ts (2シンボル, typescript)
 進捗: 40% (40/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file62.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file61.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file60.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file6.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file59.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file58.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file57.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file56.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file55.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file54.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file62.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file61.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file60.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file6.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file59.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file58.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file57.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file56.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file55.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file54.ts (2シンボル, typescript)
 進捗: 50% (50/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file53.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file52.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file51.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file50.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file5.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file49.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file48.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file47.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file46.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file45.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file53.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file52.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file51.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file50.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file5.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file49.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file48.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file47.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file46.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file45.ts (2シンボル, typescript)
 進捗: 60% (60/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file44.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file43.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file42.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file41.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file40.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file4.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file39.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file38.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file37.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file36.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file44.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file43.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file42.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file41.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file40.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file4.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file39.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file38.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file37.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file36.ts (2シンボル, typescript)
 進捗: 70% (70/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file35.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file34.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file33.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file32.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file31.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file30.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file3.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file29.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file28.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file27.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file35.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file34.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file33.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file32.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file31.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file30.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file3.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file29.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file28.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file27.ts (2シンボル, typescript)
 進捗: 80% (80/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file26.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file25.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file24.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file23.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file22.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file21.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file20.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file2.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file19.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file18.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file26.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file25.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file24.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file23.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file22.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file21.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file20.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file2.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file19.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file18.ts (2シンボル, typescript)
 進捗: 90% (90/100)
 
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file17.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file16.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file15.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file14.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file13.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file12.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file11.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file10.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file1.ts (2シンボル, typescript)
-インデックス完了: /tmp/intelligent-fs-test-1754922744148/file0.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file17.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file16.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file15.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file14.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file13.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file12.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file11.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file10.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file1.ts (2シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923128499/file0.ts (2シンボル, typescript)
 進捗: 100% (100/100)
 
-多言語インデックス完了: 385ms
+多言語インデックス完了: 438ms
 100ファイルから200シンボルをインデックス
 言語別内訳: {
   typescript: [33m200[39m,
@@ -677,11 +645,11 @@ Memory integration manager initialized: /tmp/intelligent-fs-test-1754922744148/m
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; エラーハンドリング &gt; 存在しないファイルのエラーを適切に処理する" time="0.178870417">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; エラーハンドリング &gt; 存在しないファイルのエラーを適切に処理する" time="0.15101125">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922744707&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923129146&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922744707/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923129146/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -689,15 +657,15 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922744707/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923129146/memory.db/memory.db
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; エラーハンドリング &gt; 権限のないパスへのアクセスをブロックする" time="0.158725416">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; エラーハンドリング &gt; 権限のないパスへのアクセスをブロックする" time="0.167180583">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922744886&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923129297&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922744886/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923129297/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -705,15 +673,15 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922744886/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923129297/memory.db/memory.db
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; エラーハンドリング &gt; 大きすぎるファイルを拒否する" time="0.160824458">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; エラーハンドリング &gt; 大きすぎるファイルを拒否する" time="0.167941208">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922745045&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923129464&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922745045/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923129464/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -721,15 +689,15 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922745045/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923129464/memory.db/memory.db
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; エラーハンドリング &gt; 不正な拡張子のファイルを拒否する" time="0.153472416">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; エラーハンドリング &gt; 不正な拡張子のファイルを拒否する" time="0.163615417">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922745205&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923129632&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922745205/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923129632/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -737,15 +705,15 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922745205/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923129632/memory.db/memory.db
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 統合シナリオ &gt; 完全なワークフローを実行できる" time="0.189463876">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 統合テスト &gt; 統合シナリオ &gt; 完全なワークフローを実行できる" time="0.195719707">
             <system-out>
-IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754922745359&apos;[39m }
+IntelligentFileSystem initialized { projectPath: [32m&apos;/tmp/intelligent-fs-test-1754923129796&apos;[39m }
 
-多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754922745359/.agents/symbol-index.db
+多言語対応シンボルインデックス初期化完了: /tmp/intelligent-fs-test-1754923129796/.agents/symbol-index.db
 
 TypeScript LSP Client initialized successfully
 
@@ -753,16 +721,16 @@ IntelligentFileSystem fully initialized [90mundefined[39m
 
 Database schema setup completed with all tables and indexes
 
-Memory integration manager initialized: /tmp/intelligent-fs-test-1754922745359/memory.db/memory.db
+Memory integration manager initialized: /tmp/intelligent-fs-test-1754923129796/memory.db/memory.db
 
 多言語プロジェクトのインデックスを開始...
 
 1個のソースファイルを発見
 
-インデックス完了: /tmp/intelligent-fs-test-1754922745359/src/user.service.ts (6シンボル, typescript)
+インデックス完了: /tmp/intelligent-fs-test-1754923129796/src/user.service.ts (6シンボル, typescript)
 進捗: 1000% (1/1)
 
-多言語インデックス完了: 17ms
+多言語インデックス完了: 23ms
 1ファイルから6シンボルをインデックス
 言語別内訳: {
   typescript: [33m6[39m,
@@ -781,8 +749,8 @@ Memory integration manager initialized: /tmp/intelligent-fs-test-1754922745359/m
 }
 
 Intelligent file read completed {
-  filePath: [32m&apos;/tmp/intelligent-fs-test-1754922745359/src/user.service.ts&apos;[39m,
-  duration: [33m0[39m,
+  filePath: [32m&apos;/tmp/intelligent-fs-test-1754923129796/src/user.service.ts&apos;[39m,
+  duration: [33m1[39m,
   symbolsFound: [33m6[39m,
   cached: [33mfalse[39m
 }
@@ -800,13 +768,13 @@ AssertionError: expected false to be true // Object.is equality
  ❯ src/intelligent-fs/intelligent-filesystem.test.ts:921:67
             </failure>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 単体テスト &gt; セキュリティチェック &gt; パストラバーサル攻撃を防ぐ" time="0.000272458">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 単体テスト &gt; セキュリティチェック &gt; パストラバーサル攻撃を防ぐ" time="0.000235417">
             <system-out>
 IntelligentFileSystem initialized { projectPath: [32m&apos;/safe/path&apos;[39m }
 
             </system-out>
         </testcase>
-        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 単体テスト &gt; ファイルタイプ判定 &gt; 正しくファイルタイプを判定する" time="0.000205125">
+        <testcase classname="src/intelligent-fs/intelligent-filesystem.test.ts" name="IntelligentFileSystem 単体テスト &gt; ファイルタイプ判定 &gt; 正しくファイルタイプを判定する" time="0.000180375">
             <system-out>
 IntelligentFileSystem initialized { projectPath: [32m&apos;/&apos;[39m }
 
