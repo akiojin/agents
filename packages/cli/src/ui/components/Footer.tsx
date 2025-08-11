@@ -105,20 +105,7 @@ export const Footer: React.FC<FooterProps> = ({
         justifyContent="center"
         display="flex"
       >
-        {process.env.SANDBOX && process.env.SANDBOX !== 'sandbox-exec' ? (
-          <Text color="green">
-            {process.env.SANDBOX.replace(/^gemini-(?:cli-)?/, '')}
-          </Text>
-        ) : process.env.SANDBOX === 'sandbox-exec' ? (
-          <Text color={Colors.AccentYellow}>
-            MacOS Seatbelt{' '}
-            <Text color={Colors.Gray}>({process.env.SEATBELT_PROFILE})</Text>
-          </Text>
-        ) : (
-          <Text color={Colors.AccentRed}>
-            no sandbox <Text color={Colors.Gray}>(see /docs)</Text>
-          </Text>
-        )}
+        {/* Sandbox表示は削除されました */}
       </Box>
 
       {/* Right Section: Gemini Label and Console Summary */}

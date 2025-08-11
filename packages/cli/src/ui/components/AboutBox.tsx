@@ -12,7 +12,6 @@ import { GIT_COMMIT_INFO } from '../../generated/git-commit.js';
 interface AboutBoxProps {
   cliVersion: string;
   osVersion: string;
-  sandboxEnv: string;
   modelVersion: string;
   selectedAuthType: string;
   gcpProject: string;
@@ -21,7 +20,6 @@ interface AboutBoxProps {
 export const AboutBox: React.FC<AboutBoxProps> = ({
   cliVersion,
   osVersion,
-  sandboxEnv,
   modelVersion,
   selectedAuthType,
   gcpProject,
@@ -69,16 +67,6 @@ export const AboutBox: React.FC<AboutBoxProps> = ({
       </Box>
       <Box>
         <Text>{modelVersion}</Text>
-      </Box>
-    </Box>
-    <Box flexDirection="row">
-      <Box width="35%">
-        <Text bold color={Colors.LightBlue}>
-          Sandbox
-        </Text>
-      </Box>
-      <Box>
-        <Text>{sandboxEnv}</Text>
       </Box>
     </Box>
     <Box flexDirection="row">
