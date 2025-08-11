@@ -474,7 +474,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
             // エンコーディングをクリーンアップ
             encoding.free();
             
-            console.log(`[OpenAI Compatible API] Token count for ${model}: ${totalTokens} tokens`);
+            console.log(`[OpenAI Compatible API] Token count for ${model}: ${totalTokens} tokens (via tiktoken)`);
             
             return {
                 totalTokens: Math.max(totalTokens, 1), // 最低1トークンを返す
@@ -521,7 +521,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
             }
         }
         
-        console.log(`[OpenAI Compatible API] Estimated token count: ${totalTokens} tokens`);
+        console.log(`[OpenAI Compatible API] Estimated token count: ${totalTokens} tokens (fallback estimation)`);
         
         return {
             totalTokens: Math.max(totalTokens, 1),
