@@ -20,7 +20,7 @@ import {
   Statistics,
   ResultType,
   ActionType
-} from './types';
+} from './types.js';
 
 export class DecisionLog {
   private db: Database.Database;
