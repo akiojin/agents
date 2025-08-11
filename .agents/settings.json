@@ -19,6 +19,33 @@
     "timeout": 120000,
     "maxRetries": 3
   },
+  "mcpServers": {
+    "microsoft.docs.mcp": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "context7": {
+      "type": "sse",
+      "url": "https://mcp.context7.com/sse"
+    },
+    "google-search": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-google-search"],
+      "env": {}
+    },
+    "markitdown": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["markitdown-mcp"]
+    },
+    "textlint": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["textlint", "--mcp"],
+      "env": {}
+    }
+  },
   "app": {
     "maxParallel": 5,
     "timeout": 300000,

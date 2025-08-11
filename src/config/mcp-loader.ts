@@ -10,46 +10,73 @@ import type { MCPJsonConfig, MCPJsonServerEntry, MCPServerConfig } from './types
  */
 export class MCPLoader {
   /**
-   * .mcp.jsonファイルを探して読み込む
+   * .agents/settings.jsonファイルを探して読み込む
    * @param projectRoot プロジェクトルートディレクトリ
    * @returns MCPServerConfigの配列
    */
   static async loadMCPConfig(projectRoot: string = process.cwd()): Promise<MCPServerConfig[]> {
-    const mcpJsonPath = join(projectRoot, '.mcp.json');
+    const settingsJsonPath = join(projectRoot, '.agents', 'settings.json');
     
-    if (!existsSync(mcpJsonPath)) {
-      logger.debug(`.mcp.json not found at ${mcpJsonPath}`);
+    if (!existsSync(settingsJsonPath)) {
+      logger.debug(`.agents/settings.json not found at ${settingsJsonPath}`);
       return [];
     }
 
     try {
-      logger.info(`Loading .mcp.json from ${mcpJsonPath}`);
-      const jsonContent = await readFile(mcpJsonPath, 'utf-8');
-      const mcpConfig: MCPJsonConfig = JSON.parse(jsonContent);
+      logger.info(`Loading MCP settings from ${settingsJsonPath}`);
+      const jsonContent = await readFile(settingsJsonPath, 'utf-8');
+      const settings = JSON.parse(jsonContent);
       
-      return this.convertToMCPServerConfigs(mcpConfig);
+      // settings.jsonのmcpServersフィールドを確認
+      if (!settings.mcpServers || typeof settings.mcpServers !== 'object') {
+        logger.debug('No mcpServers configuration found in .agents/settings.json');
+        return [];
+      }
+
+      return this.convertFromSettingsJson(settings.mcpServers);
     } catch (error) {
-      logger.error(`Failed to load .mcp.json: ${error}`);
-      throw new Error(`Invalid .mcp.json format: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`Failed to load .agents/settings.json: ${error}`);
+      throw new Error(`Invalid .agents/settings.json format: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
-   * MCPJsonConfigをMCPServerConfig配列に変換
+   * settings.jsonのmcpServers形式をMCPServerConfig配列に変換
+   * @param mcpServers settings.jsonから読み込んだMCPサーバー設定
+   * @returns MCPServerConfig配列
+   */
+  static convertFromSettingsJson(mcpServers: Record<string, any>): MCPServerConfig[] {
+    const configs: MCPServerConfig[] = [];
+
+    for (const [serverName, serverEntry] of Object.entries(mcpServers)) {
+      try {
+        const config = this.convertServerEntry(serverName, serverEntry);
+        configs.push(config);
+        logger.debug(`Successfully converted MCP server: ${serverName}`);
+      } catch (error) {
+        logger.warn(`Failed to convert MCP server ${serverName}: ${error}`);
+      }
+    }
+
+    logger.info(`Loaded ${configs.length} MCP servers from .agents/settings.json`);
+    return configs;
+  }
+
+  /**
+   * MCPJsonConfigをMCPServerConfig配列に変換（後方互換性のため残す）
    * @param mcpConfig .mcp.jsonから読み込んだ設定
    * @returns MCPServerConfig配列
    */
-  private static convertToMCPServerConfigs(mcpConfig: MCPJsonConfig): MCPServerConfig[] {
+  static convertToMCPServerConfigs(mcpConfig: MCPJsonConfig): MCPServerConfig[] {
     const configs: MCPServerConfig[] = [];
 
     for (const [serverName, serverEntry] of Object.entries(mcpConfig.mcpServers)) {
       try {
         const config = this.convertServerEntry(serverName, serverEntry);
-        if (config) {
-          configs.push(config);
-        }
+        configs.push(config);
+        logger.debug(`Successfully converted MCP server: ${serverName}`);
       } catch (error) {
-        logger.warn(`Skipping server ${serverName}: ${error}`);
+        logger.warn(`Failed to convert MCP server ${serverName}: ${error}`);
       }
     }
 
@@ -58,119 +85,75 @@ export class MCPLoader {
   }
 
   /**
-   * 個別のサーバーエントリを変換
+   * 個別のサーバーエントリをMCPServerConfigに変換
    * @param serverName サーバー名
-   * @param entry サーバー設定エントリ
-   * @returns MCPServerConfig または null（サポートされていない場合）
+   * @param serverEntry サーバー設定エントリ
+   * @returns MCPServerConfig
    */
-  private static convertServerEntry(serverName: string, entry: MCPJsonServerEntry): MCPServerConfig | null {
-    // stdioタイプの処理
-    if (!entry.type || entry.type === 'stdio') {
-      if (!entry.command) {
-        throw new Error(`Server ${serverName}: command is required for stdio type`);
-      }
+  private static convertServerEntry(serverName: string, serverEntry: MCPJsonServerEntry): MCPServerConfig {
+    const config: MCPServerConfig = {
+      name: serverName,
+      command: '',
+      args: [],
+      env: serverEntry.env || {}
+    };
 
-      // 環境変数の展開
-      const expandedEnv = entry.env ? this.expandEnvironmentVariables(entry.env) : undefined;
-      const expandedArgs = entry.args ? entry.args.map(arg => this.expandSpecialVariables(this.expandEnvironmentVariables({ arg }).arg)) : undefined;
+    // 接続タイプに応じた設定
+    switch (serverEntry.type) {
+      case 'stdio':
+        if (!serverEntry.command) {
+          throw new Error(`Server ${serverName}: stdio type requires 'command' field`);
+        }
+        config.command = serverEntry.command;
+        config.args = serverEntry.args || [];
+        break;
 
-      return {
-        name: serverName,
-        command: entry.command,
-        args: expandedArgs,
-        env: expandedEnv,
-      };
+      case 'sse':
+        if (!serverEntry.url) {
+          throw new Error(`Server ${serverName}: sse type requires 'url' field`);
+        }
+        config.url = serverEntry.url;
+        break;
+
+      case 'http':
+        if (!serverEntry.url) {
+          throw new Error(`Server ${serverName}: http type requires 'url' field`);
+        }
+        config.url = serverEntry.url;
+        break;
+
+      default:
+        // typeが指定されていない場合、commandがあればstdio、urlがあればhttpと推測
+        if (serverEntry.command) {
+          config.command = serverEntry.command;
+          config.args = serverEntry.args || [];
+        } else if (serverEntry.url) {
+          config.url = serverEntry.url;
+        } else {
+          throw new Error(`Server ${serverName}: Either 'command' or 'url' must be specified`);
+        }
     }
 
-    // HTTPタイプの処理
-    if (entry.type === 'http') {
-      if (!entry.url) {
-        throw new Error(`Server ${serverName}: url is required for http type`);
-      }
-
-      return {
-        name: serverName,
-        command: 'node', // HTTPクライアント用のプレースホルダー
-        args: [],
-        env: undefined,
-        url: entry.url, // HTTP URLを保存
-        type: 'http',
-      };
+    // プロジェクト固有の設定がある場合は追加
+    if (serverEntry.projectPath) {
+      config.env.PROJECT_PATH = serverEntry.projectPath;
     }
 
-    // SSEタイプの処理
-    if (entry.type === 'sse') {
-      if (!entry.url) {
-        throw new Error(`Server ${serverName}: url is required for sse type`);
-      }
-
-      return {
-        name: serverName,
-        command: 'node', // SSEクライアント用のプレースホルダー
-        args: [],
-        env: undefined,
-        url: entry.url, // SSE URLを保存
-        type: 'sse',
-      };
-    }
-
-    logger.warn(`Server ${serverName}: type '${entry.type}' is not supported yet.`);
-    return null;
+    logger.debug(`Converted server ${serverName}: type=${serverEntry.type || 'auto'}, command=${config.command || 'N/A'}, url=${config.url || 'N/A'}`);
+    return config;
   }
 
   /**
-   * 環境変数の展開処理
-   * @param obj 環境変数を含む可能性のあるオブジェクト
-   * @returns 環境変数が展開されたオブジェクト
+   * .agents/settings.jsonの存在確認
+   * @param projectRoot プロジェクトルートディレクトリ
+   * @returns .agents/settings.jsonファイルが存在するかどうか
    */
-  private static expandEnvironmentVariables(obj: Record<string, string>): Record<string, string> {
-    const expanded: Record<string, string> = {};
-
-    for (const [key, value] of Object.entries(obj)) {
-      expanded[key] = this.expandString(value);
-    }
-
-    return expanded;
+  static hasSettingsJson(projectRoot: string = process.cwd()): boolean {
+    return existsSync(join(projectRoot, '.agents', 'settings.json'));
   }
 
   /**
-   * 文字列内の環境変数を展開
-   * ${VAR_NAME} または ${VAR_NAME:-default} 形式をサポート
-   * @param str 展開対象の文字列
-   * @returns 環境変数が展開された文字列
-   */
-  private static expandString(str: string): string {
-    return str.replace(/\$\{([^}]+)\}/g, (match, varExpr) => {
-      // ${VAR_NAME:-default} 形式の処理
-      const [varName, defaultValue] = varExpr.split(':-');
-      const envValue = process.env[varName.trim()];
-      
-      if (envValue !== undefined) {
-        return envValue;
-      }
-      
-      if (defaultValue !== undefined) {
-        return defaultValue.trim();
-      }
-      
-      // 環境変数が見つからず、デフォルト値もない場合
-      logger.warn(`Environment variable ${varName} not found, keeping original: ${match}`);
-      return match;
-    });
-  }
-
-  /**
-   * 特別な変数の展開処理
-   * $(pwd) などの特殊な変数を処理
-   * @param str 展開対象の文字列
-   * @returns 特別な変数が展開された文字列
-   */
-  private static expandSpecialVariables(str: string): string {
-    return str.replace(/\$\(pwd\)/g, process.cwd());
-  }
-
-  /**
-   * .mcp.jsonの存在確認
+   * .mcp.jsonの存在確認（後方互換性のため残す）
    * @param projectRoot プロジェクトルートディレクトリ
    * @returns .mcp.jsonファイルが存在するかどうか
    */
@@ -179,7 +162,68 @@ export class MCPLoader {
   }
 
   /**
-   * .mcp.jsonの内容を検証
+   * .agents/settings.jsonの内容を検証
+   * @param projectRoot プロジェクトルートディレクトリ
+   * @returns 検証結果
+   */
+  static async validateSettingsJson(projectRoot: string = process.cwd()): Promise<{
+    valid: boolean;
+    errors: string[];
+    serverCount: number;
+  }> {
+    const settingsJsonPath = join(projectRoot, '.agents', 'settings.json');
+    const errors: string[] = [];
+    
+    if (!existsSync(settingsJsonPath)) {
+      return { valid: false, errors: ['.agents/settings.json file not found'], serverCount: 0 };
+    }
+
+    try {
+      const jsonContent = await readFile(settingsJsonPath, 'utf-8');
+      const settings = JSON.parse(jsonContent);
+
+      if (!settings.mcpServers || typeof settings.mcpServers !== 'object') {
+        // mcpServersフィールドが無い場合はエラーとせず、0サーバーとして扱う
+        return { valid: true, errors: [], serverCount: 0 };
+      }
+
+      const serverNames = Object.keys(settings.mcpServers);
+      let validServerCount = 0;
+
+      for (const serverName of serverNames) {
+        const entry = settings.mcpServers[serverName];
+        
+        if (entry.type && !['stdio', 'sse', 'http'].includes(entry.type)) {
+          errors.push(`Server "${serverName}": Invalid type "${entry.type}"`);
+          continue;
+        }
+
+        // 必須フィールドの確認
+        if (!entry.command && !entry.url) {
+          errors.push(`Server "${serverName}": Either 'command' or 'url' must be specified`);
+          continue;
+        }
+
+        validServerCount++;
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors,
+        serverCount: validServerCount
+      };
+
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [`Failed to parse .agents/settings.json: ${error instanceof Error ? error.message : String(error)}`],
+        serverCount: 0
+      };
+    }
+  }
+
+  /**
+   * .mcp.jsonの内容を検証（後方互換性のため残す）
    * @param projectRoot プロジェクトルートディレクトリ
    * @returns 検証結果
    */
@@ -211,15 +255,14 @@ export class MCPLoader {
         const entry = mcpConfig.mcpServers[serverName];
         
         if (entry.type && !['stdio', 'sse', 'http'].includes(entry.type)) {
-          errors.push(`Server ${serverName}: invalid type '${entry.type}'`);
+          errors.push(`Server "${serverName}": Invalid type "${entry.type}"`);
           continue;
         }
 
-        if (!entry.type || entry.type === 'stdio') {
-          if (!entry.command) {
-            errors.push(`Server ${serverName}: command is required for stdio type`);
-            continue;
-          }
+        // 必須フィールドの確認
+        if (!entry.command && !entry.url) {
+          errors.push(`Server "${serverName}": Either 'command' or 'url' must be specified`);
+          continue;
         }
 
         validServerCount++;
@@ -234,7 +277,7 @@ export class MCPLoader {
     } catch (error) {
       return {
         valid: false,
-        errors: [`JSON parsing error: ${error instanceof Error ? error.message : String(error)}`],
+        errors: [`Failed to parse .mcp.json: ${error instanceof Error ? error.message : String(error)}`],
         serverCount: 0
       };
     }

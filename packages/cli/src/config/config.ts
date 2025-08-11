@@ -28,7 +28,6 @@ import { Settings } from './settings.js';
 
 import { Extension, filterActiveExtensions } from './extension.js';
 import { getCliVersion } from '../utils/version.js';
-import { loadSandboxConfig } from './sandboxConfig.js';
 
 // Simple console logger for now - replace with actual logger if available
 const logger = {
@@ -287,6 +286,7 @@ export async function loadCliConfig(
   let authType: AuthType | undefined;
   let localEndpoint: string | undefined;
   let localModel: string | undefined;
+  let agentsMcpServers: Record<string, MCPServerConfig> | undefined;
   const agentsSettingsPath = path.join(process.cwd(), '.agents', 'settings.json');
   if (fs.existsSync(agentsSettingsPath)) {
     try {
@@ -304,6 +304,15 @@ export async function loadCliConfig(
         if (localModel && !process.env.LOCAL_LLM_MODEL) {
           process.env.LOCAL_LLM_MODEL = localModel;
         }
+      }
+      
+      // .agents/settings.jsonからmcpServers設定を読み込む
+      if (agentsSettings.mcpServers && typeof agentsSettings.mcpServers === 'object') {
+        agentsMcpServers = {};
+        Object.entries(agentsSettings.mcpServers).forEach(([key, server]: [string, any]) => {
+          agentsMcpServers![key] = server as MCPServerConfig;
+        });
+        logger.info(`Loaded ${Object.keys(agentsMcpServers).length} MCP servers from .agents/settings.json`);
       }
     } catch (error) {
       logger.debug(`Failed to load .agents/settings.json: ${error}`);
@@ -323,7 +332,8 @@ export async function loadCliConfig(
   
   console.debug(`[Config] Final modelName: ${modelName}`);
 
-  let mcpServers = mergeMcpServers(settings, activeExtensions);
+  // .agents/settings.jsonのmcpServersを優先的に使用
+  let mcpServers = agentsMcpServers || mergeMcpServers(settings, activeExtensions);
   const excludeTools = mergeExcludeTools(settings, activeExtensions);
 
   if (!argv.allowedMcpServerNames) {
@@ -387,7 +397,8 @@ export async function loadCliConfig(
     );
   }
 
-  const sandboxConfig = await loadSandboxConfig(settings, argv);
+  // Sandbox機能は削除されました
+  const sandboxConfig = undefined;
 
   return new Config({
     sessionId,
@@ -455,29 +466,8 @@ export async function loadCliConfig(
 function mergeMcpServers(settings: Settings, extensions: Extension[]) {
   const mcpServers = { ...(settings.mcpServers || {}) };
   
-  // .mcp.jsonファイルを読み込む
-  const mcpJsonPath = path.join(process.cwd(), '.mcp.json');
-  if (fs.existsSync(mcpJsonPath)) {
-    try {
-      const mcpJsonContent = fs.readFileSync(mcpJsonPath, 'utf-8');
-      const mcpJson = JSON.parse(mcpJsonContent);
-      if (mcpJson.mcpServers) {
-        logger.info(`Loading MCP servers from .mcp.json`);
-        // .mcp.jsonのサーバー設定をマージ（既存設定を優先）
-        Object.entries(mcpJson.mcpServers).forEach(([key, server]) => {
-          if (!mcpServers[key]) {
-            mcpServers[key] = server as MCPServerConfig;
-          } else {
-            logger.debug(
-              `MCP server "${key}" already defined in settings, skipping .mcp.json entry`,
-            );
-          }
-        });
-      }
-    } catch (error) {
-      logger.warn(`Failed to load .mcp.json: ${error}`);
-    }
-  }
+  // .mcp.jsonは読み込まない（.agents/settings.jsonのmcpServersのみを使用）
+  // .agents/settings.jsonのmcpServers設定がsettingsパラメータ経由で既に渡されている
   
   for (const extension of extensions) {
     Object.entries(extension.config.mcpServers || {}).forEach(

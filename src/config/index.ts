@@ -105,15 +105,15 @@ export class ConfigManager {
       const envConfig = this.loadFromEnv();
       config = this.deepMerge(config, envConfig);
 
-      // 5. .mcp.jsonからMCPサーバー設定をLoad
+      // 5. .agents/settings.jsonからMCPサーバー設定をLoad（.mcp.jsonは参照しない）
       const mcpServers = await MCPLoader.loadMCPConfig();
       if (mcpServers.length > 0) {
-        logger.info(`Loaded ${mcpServers.length} MCP servers from .mcp.json`);
+        logger.info(`Loaded ${mcpServers.length} MCP servers from .agents/settings.json`);
         config.mcp.servers = [...config.mcp.servers, ...mcpServers];
-        // .mcp.jsonが存在する場合はMCPを自動的に有効化
+        // MCPサーバーが設定されている場合はMCPを自動的に有効化
         if (config.mcp.enabled === false) {
           config.mcp.enabled = true;
-          logger.info('MCP enabled automatically due to .mcp.json presence');
+          logger.info('MCP enabled automatically due to MCP servers configuration');
         }
       }
 
