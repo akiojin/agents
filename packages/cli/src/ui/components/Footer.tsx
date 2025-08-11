@@ -127,7 +127,7 @@ export const Footer: React.FC<FooterProps> = ({
           {' '}
           {model}{' '}
           <Text color={Colors.Gray}>
-            ({((1 - percentage) * 100).toFixed(0)}% context left)
+            ({Math.max(0, ((1 - percentage) * 100)).toFixed(0)}% context left)
           </Text>
         </Text>
         {corgiMode && (
