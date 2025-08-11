@@ -21,14 +21,14 @@ export class ConsoleLogger {
 
   constructor() {
     this.sessionStartTime = new Date().toISOString().replace(/[:.]/g, '-');
-    this.logFilePath = this.getLogFilePath();
+    this.logFilePath = this.generateLogFilePath();
     this.initializeLogFile();
   }
 
   /**
    * ログファイルのパスを生成
    */
-  private getLogFilePath(rotation = 0): string {
+  private generateLogFilePath(rotation = 0): string {
     const timestamp = this.sessionStartTime;
     const suffix = rotation > 0 ? `-${rotation}` : '';
     const fileName = `agents-console-log-${timestamp}${suffix}.jsonl`;
@@ -75,7 +75,7 @@ export class ConsoleLogger {
       const stats = fs.statSync(this.logFilePath);
       if (stats.size > this.maxFileSize) {
         this.rotationCounter++;
-        this.logFilePath = this.getLogFilePath(this.rotationCounter);
+        this.logFilePath = this.generateLogFilePath(this.rotationCounter);
         this.initializeLogFile();
       }
     } catch (error) {

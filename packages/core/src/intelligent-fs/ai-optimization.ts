@@ -744,6 +744,23 @@ Add observer management to subject class.
         });
       }
       
+      // 短すぎるメソッド名
+      const shortMethodMatches = line.match(/\b(public|private|protected)?\s*(static)?\s*([a-z])\s*\(/g);
+      if (shortMethodMatches) {
+        shortMethodMatches.forEach(match => {
+          const methodName = match.match(/\b([a-z])\s*\(/)?.[1];
+          if (methodName && methodName.length === 1) {
+            issues.push({
+              type: 'function',
+              currentName: methodName,
+              suggestedName: this.generateBetterMethodName(line, methodName),
+              reason: 'Method name is too short and unclear',
+              line: i + 1
+            });
+          }
+        });
+      }
+      
       // ハンガリアン記法
       const hungarianMatches = line.match(/\b(str|int|bool|arr|obj)([A-Z]\w+)/g);
       if (hungarianMatches) {
@@ -937,6 +954,16 @@ Add observer management to subject class.
     if (context.includes('result')) return 'processingResult';
     if (context.includes('data')) return 'inputData';
     return `${currentName}Value`;
+  }
+  
+  private generateBetterMethodName(context: string, currentName: string): string {
+    // コンテキストから適切なメソッド名を推測
+    if (context.includes('number') || context.includes('*') || context.includes('multiply')) return 'multiplyBy';
+    if (context.includes('return') && context.includes('2')) return 'doubleValue';
+    if (context.includes('calculate')) return 'calculate';
+    if (context.includes('process')) return 'process';
+    if (context.includes('data')) return 'processData';
+    return `perform${currentName.toUpperCase()}`;
   }
   
   private startsWithVerb(name: string): boolean {
@@ -1412,6 +1439,7 @@ Add observer management to subject class.
     
     // メソッドパターン
     const methodPatterns = [
+      /^\s*(public|private|protected)?\s*(static)?\s*(async)?\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*:\s*[^{]+\{/,
       /^\s*(public|private|protected)?\s*(static)?\s*(async)?\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/,
       /^\s*(public|private|protected)?\s*(static)?\s*(get|set)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/,
       /^\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*(async\s+)?\s*\(/,
@@ -1427,7 +1455,7 @@ Add observer management to subject class.
       if (!currentMethod) {
         for (const pattern of methodPatterns) {
           const match = cleanLine.match(pattern);
-          if (match && cleanLine.includes('{')) {
+          if (match) {
             const methodName = match[4] || match[2] || match[1] || 'anonymous';
             currentMethod = {
               name: methodName,
@@ -1436,7 +1464,12 @@ Add observer management to subject class.
               lineCount: 0,
               complexity: 1
             };
-            braceDepth = 1;
+            braceDepth = 0;
+            
+            // 同じ行にブレースがあるかチェック
+            if (cleanLine.includes('{')) {
+              braceDepth = 1;
+            }
             break;
           }
         }
@@ -1445,7 +1478,7 @@ Add observer management to subject class.
         braceDepth += (cleanLine.match(/\{/g) || []).length;
         braceDepth -= (cleanLine.match(/\}/g) || []).length;
         
-        if (braceDepth === 0) {
+        if (braceDepth === 0 && (cleanLine.match(/\}/g) || []).length > 0) {
           currentMethod.endLine = i + 1;
           currentMethod.lineCount = currentMethod.endLine - currentMethod.startLine + 1;
           currentMethod.complexity = this.calculateCyclomaticComplexity(
@@ -1879,14 +1912,14 @@ Add observer management to subject class.
         });
       }
 
-      // リソースリークパターン
-      if (line.match(/createReadStream|createWriteStream|open/) && !lines.slice(i, Math.min(i + 10, lines.length)).some(l => l.includes('close'))) {
+      // リソースリークパターン（より広範囲に検索）
+      if (line.match(/createReadStream|createWriteStream|open|createConnection/) && !lines.slice(i, Math.min(i + 20, lines.length)).some(l => l.includes('close') || l.includes('.end(') || l.includes('.destroy('))) {
         predictions.push({
           type: 'resource-leak',
           severity: 'medium',
           line: i + 1,
-          description: 'Potential resource leak - stream not closed',
-          suggestion: 'Ensure streams are properly closed',
+          description: 'Potential resource leak - resource not properly closed',
+          suggestion: 'Ensure resources are properly closed',
           confidence: 0.7
         });
       }

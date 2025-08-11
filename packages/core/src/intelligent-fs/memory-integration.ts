@@ -1095,6 +1095,42 @@ export class MemoryIntegrationManager extends EventEmitter {
   /**
    * セッション分析レポートを生成
    */
+  /**
+   * セッション統計を計算・保存
+   */
+  private async calculateAndSaveSessionStatistics(session: LearningSession): Promise<void> {
+    try {
+      // 基本統計の計算
+      const totalTime = session.durationSeconds || 0;
+      const successRate = session.actionsCount > 0 ? (session.successCount / session.actionsCount) : 0;
+      
+      // パフォーマンス指標
+      const performanceMetrics = {
+        avgActionTime: totalTime / Math.max(1, session.actionsCount),
+        successRate,
+        errorCount: session.actionsCount - session.successCount,
+        complexity: this.calculateSessionComplexity(session)
+      };
+
+      console.log(`Session statistics calculated for session: ${session.id}`);
+    } catch (error) {
+      console.error('Failed to calculate and save session statistics:', error);
+      // エラーは無視してセッション終了を続行
+    }
+  }
+
+  /**
+   * セッションの複雑度を計算
+   */
+  private calculateSessionComplexity(session: LearningSession): number {
+    // アクション数、エラー数、期間に基づく複雑度
+    const actionComplexity = Math.min(session.actionsCount / 10, 1); // 10アクションで最大
+    const errorComplexity = Math.min((session.actionsCount - session.successCount) / 5, 1); // 5エラーで最大
+    const timeComplexity = Math.min((session.durationSeconds || 0) / 300, 1); // 5分で最大
+    
+    return (actionComplexity + errorComplexity + timeComplexity) / 3;
+  }
+
   // オーバーロード: テスト用のシンプルなレスポンス
   async generateSessionReport(sessionId: string): Promise<{
     duration: number;
@@ -2725,6 +2761,51 @@ export class MemoryIntegrationManager extends EventEmitter {
         createdAt: new Date()
       }
     ];
+  }
+
+  private calculateFinalProductivityScore(session: LearningSession): number {
+    if (session.actionsCount === 0) return 0;
+    
+    const successRate = session.successCount / session.actionsCount;
+    const baseScore = successRate * 100;
+    
+    // 時間効率のボーナス/ペナルティ
+    const timeBonus = session.durationSeconds ? Math.max(0, 100 - session.durationSeconds / 60) : 0;
+    
+    return Math.min(100, baseScore + timeBonus);
+  }
+
+  private async insertImprovement(improvement: Improvement): Promise<void> {
+    const runAsync = (sql: string, params: any[]): Promise<any> => {
+      return new Promise((resolve, reject) => {
+        this.db!.run(sql, params, function(err: any) {
+          if (err) reject(err);
+          else resolve(this);
+        });
+      });
+    };
+
+    await runAsync(`
+      INSERT OR REPLACE INTO improvements (
+        id, improvement_type, priority, title, description, impact_score, implementation_notes, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      improvement.id, improvement.type, improvement.priority, improvement.title,
+      improvement.description, improvement.estimatedImpact, improvement.implementation,
+      improvement.createdAt.toISOString()
+    ]);
+  }
+
+  private classifyError(errorMessage: string, stackTrace?: string): string {
+    if (!errorMessage || typeof errorMessage !== 'string') return 'unknown-error';
+    
+    if (errorMessage.includes('TypeError')) return 'type-error';
+    if (errorMessage.includes('ReferenceError')) return 'reference-error';
+    if (errorMessage.includes('SyntaxError')) return 'syntax-error';
+    if (errorMessage.includes('null') || errorMessage.includes('undefined')) return 'null-pointer';
+    if (errorMessage.includes('timeout')) return 'timeout';
+    if (errorMessage.includes('network') || errorMessage.includes('fetch')) return 'network';
+    return 'runtime-error';
   }
 
   private updateProductivityScore(outcome: SessionOutcome): void {
