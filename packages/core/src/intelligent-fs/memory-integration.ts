@@ -1,591 +1,456 @@
 /**
- * IntelligentFileSystemと記憶システムの統合
- * コードパターンの学習と自動提案
+ * メモリ統合管理システム
+ * コードパターン、エラーパターン、学習データを管理
  */
 
-import { IntelligentFileSystem } from './intelligent-filesystem.js';
-import sqlite3, { Database } from 'sqlite3';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-
-// ロガー（簡易実装）
-const logger = {
-  debug: (message: string, data?: any) => console.debug(message, data),
-  info: (message: string, data?: any) => console.info(message, data),
-  warn: (message: string, data?: any) => console.warn(message, data),
-  error: (message: string, data?: any) => console.error(message, data)
-};
-
-// MemoryAPI（簡易実装）
-interface MemoryAPI {
-  search(params: { query: string; type: string; limit: number }): Promise<any[]>;
-  saveMemory(memory: any): Promise<void>;
-}
-
-function getMemoryAPI(): MemoryAPI {
-  return {
-    async search(params) {
-      // 簡易実装：空の配列を返す
-      return [];
-    },
-    async saveMemory(memory) {
-      // 簡易実装：何もしない
-      console.log('Memory saved:', memory);
-    }
-  };
-}
+import { existsSync } from 'fs';
+import sqlite3, { Database } from 'sqlite3';
+import { EventEmitter } from 'events';
 
 /**
  * コードパターン情報
  */
 export interface CodePattern {
-  patternId: string;
-  patternType: 'error_fix' | 'refactor' | 'optimization' | 'style';
-  beforeCode: string;
-  afterCode: string;
-  context: {
-    language: string;
-    framework?: string;
-    errorMessage?: string;
-    description?: string;
-  };
-  successRate: number;
+  id: string;
+  name: string;
+  type: 'function' | 'class' | 'interface' | 'component' | 'test' | 'config';
+  language: string;
+  pattern: string;
+  description: string;
+  examples: string[];
   usageCount: number;
+  successRate: number;
+  tags: string[];
   createdAt: Date;
-  lastUsed: Date;
+  updatedAt: Date;
 }
 
 /**
- * 学習イベント
+ * エラーパターン情報
  */
-export interface LearningEvent {
-  eventId: string;
-  eventType: 'edit' | 'error_fix' | 'refactor';
-  filePath: string;
-  beforeState: string;
-  afterState: string;
-  success: boolean;
-  errorMessage?: string;
+export interface ErrorPattern {
+  id: string;
+  errorType: string;
+  errorMessage: string;
+  language: string;
+  context: string;
+  solution: string;
+  preventionTips: string[];
+  occurrenceCount: number;
+  solvedCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * 学習セッション情報
+ */
+export interface LearningSession {
+  id: string;
+  sessionType: 'coding' | 'debugging' | 'refactoring' | 'optimization';
+  startTime: Date;
+  endTime?: Date;
+  actions: SessionAction[];
+  outcomes: SessionOutcome[];
+  lessons: string[];
+  metadata?: Record<string, any>;
+}
+
+export interface SessionAction {
   timestamp: Date;
+  action: string;
+  target: string;
+  parameters?: Record<string, any>;
+  result?: 'success' | 'failure' | 'partial';
+}
+
+export interface SessionOutcome {
+  type: 'bug_fixed' | 'feature_added' | 'performance_improved' | 'code_quality_improved';
+  description: string;
+  metrics?: Record<string, number>;
 }
 
 /**
- * メモリ統合マネージャー
+ * 記憶システムの統計
  */
-export class MemoryIntegrationManager {
-  private memoryAPI: MemoryAPI;
-  private db?: Database;
-  private dbPath: string;
-  private patterns: Map<string, CodePattern> = new Map();
-  
-  // 学習統計
-  private stats = {
-    patternsLearned: 0,
-    suggestionsProvided: 0,
-    suggestionsAccepted: 0,
-    errorsFix: 0
-  };
+export interface MemoryStats {
+  totalPatterns: number;
+  totalErrors: number;
+  totalSessions: number;
+  languageBreakdown: Record<string, number>;
+  patternUsage: Record<string, number>;
+  errorFrequency: Record<string, number>;
+  averageSuccessRate: number;
+  memoryUsage: number;
+  lastUpdated: Date;
+}
 
-  constructor(
-    private intelligentFS: IntelligentFileSystem,
-    workspacePath: string
-  ) {
-    this.memoryAPI = getMemoryAPI();
-    this.dbPath = path.join(workspacePath, '.agents', 'code-patterns.db');
+/**
+ * メモリ統合管理システム
+ */
+export class MemoryIntegrationManager extends EventEmitter {
+  private db?: Database;
+  private memoryPath: string;
+  private isInitialized = false;
+  private currentSession?: LearningSession;
+
+  constructor(memoryPath: string = '.agents/memory') {
+    super();
+    this.memoryPath = path.isAbsolute(memoryPath) 
+      ? memoryPath 
+      : path.join(process.cwd(), memoryPath);
   }
 
   /**
    * 初期化
    */
   async initialize(): Promise<void> {
-    // データベースディレクトリを作成
-    const dbDir = path.dirname(this.dbPath);
-    await fs.mkdir(dbDir, { recursive: true });
+    if (this.isInitialized) return;
 
-    // SQLiteデータベース初期化
-    this.db = new sqlite3.Database(this.dbPath);
+    // メモリディレクトリを作成
+    await fs.mkdir(this.memoryPath, { recursive: true });
+
+    // SQLiteデータベースを初期化
+    const dbPath = path.join(this.memoryPath, 'memory.db');
+    this.db = new sqlite3.Database(dbPath);
+    
     await this.setupDatabase();
+    this.isInitialized = true;
     
-    // 既存パターンをロード
-    await this.loadPatterns();
+    this.emit('initialized');
+    console.log(`Memory integration manager initialized: ${dbPath}`);
+  }
+
+  /**
+   * データベーススキーマの設定
+   */
+  private async setupDatabase(): Promise<void> {
+    const runAsync = (sql: string, params?: any[]): Promise<any> => {
+      return new Promise((resolve, reject) => {
+        this.db!.run(sql, params || [], function(err: any) {
+          if (err) reject(err);
+          else resolve(this);
+        });
+      });
+    };
+
+    // コードパターンテーブル
+    await runAsync(`
+      CREATE TABLE IF NOT EXISTS code_patterns (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        language TEXT NOT NULL,
+        pattern TEXT NOT NULL,
+        description TEXT,
+        examples TEXT,
+        usage_count INTEGER DEFAULT 0,
+        success_rate REAL DEFAULT 0.0,
+        tags TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // エラーパターンテーブル
+    await runAsync(`
+      CREATE TABLE IF NOT EXISTS error_patterns (
+        id TEXT PRIMARY KEY,
+        error_type TEXT NOT NULL,
+        error_message TEXT NOT NULL,
+        language TEXT NOT NULL,
+        context TEXT,
+        solution TEXT,
+        prevention_tips TEXT,
+        occurrence_count INTEGER DEFAULT 0,
+        solved_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // 学習セッションテーブル
+    await runAsync(`
+      CREATE TABLE IF NOT EXISTS learning_sessions (
+        id TEXT PRIMARY KEY,
+        session_type TEXT NOT NULL,
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP,
+        actions TEXT,
+        outcomes TEXT,
+        lessons TEXT,
+        metadata TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // インデックスの作成
+    await runAsync('CREATE INDEX IF NOT EXISTS idx_patterns_type ON code_patterns(type)');
+    await runAsync('CREATE INDEX IF NOT EXISTS idx_patterns_language ON code_patterns(language)');
+    await runAsync('CREATE INDEX IF NOT EXISTS idx_patterns_usage ON code_patterns(usage_count DESC)');
+    await runAsync('CREATE INDEX IF NOT EXISTS idx_errors_type ON error_patterns(error_type)');
+    await runAsync('CREATE INDEX IF NOT EXISTS idx_errors_language ON error_patterns(language)');
+    await runAsync('CREATE INDEX IF NOT EXISTS idx_sessions_type ON learning_sessions(session_type)');
+  }
+
+  /**
+   * コードパターンを保存
+   */
+  async saveCodePattern(
+    filePath: string,
+    patternType: string,
+    patternData: any,
+    metadata?: Record<string, any>
+  ): Promise<string> {
+    await this.ensureInitialized();
+
+    const pattern: CodePattern = {
+      id: this.generateId(),
+      name: metadata?.name || path.basename(filePath),
+      type: patternType as any,
+      language: this.detectLanguage(filePath),
+      pattern: JSON.stringify(patternData),
+      description: metadata?.description || '',
+      examples: metadata?.examples || [],
+      usageCount: 0,
+      successRate: 1.0,
+      tags: metadata?.tags || [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await this.insertCodePattern(pattern);
+    this.emit('patternSaved', { pattern, filePath });
     
-    logger.info('MemoryIntegrationManager initialized', {
-      patternsLoaded: this.patterns.size
+    return pattern.id;
+  }
+
+  /**
+   * 類似エラーを検索
+   */
+  async recallSimilarErrors(query: string, limit = 5): Promise<ErrorPattern[]> {
+    await this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT * FROM error_patterns 
+        WHERE error_message LIKE ? OR error_type LIKE ? OR context LIKE ?
+        ORDER BY occurrence_count DESC, solved_count DESC
+        LIMIT ?
+      `;
+      const searchPattern = `%${query}%`;
+      
+      this.db!.all(sql, [searchPattern, searchPattern, searchPattern, limit], 
+        (err: any, rows: any[]) => {
+          if (err) {
+            reject(err);
+          } else {
+            const patterns = rows.map(this.rowToErrorPattern);
+            resolve(patterns);
+          }
+        }
+      );
     });
   }
 
   /**
-   * データベーススキーマ作成
+   * コードパターンを検索
    */
-  private async setupDatabase(): Promise<void> {
+  async recallCodePatterns(
+    patternType: string,
+    limit = 10,
+    language?: string
+  ): Promise<CodePattern[]> {
+    await this.ensureInitialized();
+
     return new Promise((resolve, reject) => {
-      this.db!.serialize(() => {
-        // コードパターンテーブル
-        this.db!.run(`
-          CREATE TABLE IF NOT EXISTS code_patterns (
-            pattern_id TEXT PRIMARY KEY,
-            pattern_type TEXT NOT NULL,
-            before_code TEXT NOT NULL,
-            after_code TEXT NOT NULL,
-            context TEXT,
-            success_rate REAL DEFAULT 1.0,
-            usage_count INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
+      let sql = `
+        SELECT * FROM code_patterns 
+        WHERE type = ?
+      `;
+      const params: any[] = [patternType];
 
-        // 編集履歴テーブル
-        this.db!.run(`
-          CREATE TABLE IF NOT EXISTS edit_history (
-            edit_id TEXT PRIMARY KEY,
-            symbol_id TEXT,
-            file_uri TEXT NOT NULL,
-            operation TEXT NOT NULL,
-            before_state TEXT,
-            after_state TEXT,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            success BOOLEAN DEFAULT true,
-            error_message TEXT
-          )
-        `);
+      if (language) {
+        sql += ` AND language = ?`;
+        params.push(language);
+      }
 
-        // 学習イベントテーブル
-        this.db!.run(`
-          CREATE TABLE IF NOT EXISTS learning_events (
-            event_id TEXT PRIMARY KEY,
-            event_type TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            before_state TEXT,
-            after_state TEXT,
-            success BOOLEAN,
-            error_message TEXT,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
+      sql += ` ORDER BY success_rate DESC, usage_count DESC LIMIT ?`;
+      params.push(limit);
 
-        // インデックス作成
-        this.db!.run('CREATE INDEX IF NOT EXISTS idx_patterns_type ON code_patterns(pattern_type)');
-        this.db!.run('CREATE INDEX IF NOT EXISTS idx_patterns_usage ON code_patterns(usage_count DESC)');
-        this.db!.run('CREATE INDEX IF NOT EXISTS idx_history_timestamp ON edit_history(timestamp DESC)');
+      this.db!.all(sql, params, (err: any, rows: any[]) => {
+        if (err) {
+          reject(err);
+        } else {
+          const patterns = rows.map(this.rowToCodePattern);
+          resolve(patterns);
+        }
       });
     });
   }
 
   /**
-   * 既存パターンをロード
+   * メモリ統計を取得
    */
-  private async loadPatterns(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db!.all(
-        'SELECT * FROM code_patterns ORDER BY usage_count DESC LIMIT 1000',
-        (err, rows: any[]) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          
-          rows.forEach(row => {
-            const pattern: CodePattern = {
-              patternId: row.pattern_id,
-              patternType: row.pattern_type,
-              beforeCode: row.before_code,
-              afterCode: row.after_code,
-              context: JSON.parse(row.context || '{}'),
-              successRate: row.success_rate,
-              usageCount: row.usage_count,
-              createdAt: new Date(row.created_at),
-              lastUsed: new Date(row.last_used)
-            };
-            this.patterns.set(pattern.patternId, pattern);
-          });
-          
-          resolve();
-        }
-      );
-    });
-  }
+  async getMemoryStats(): Promise<MemoryStats> {
+    await this.ensureInitialized();
 
-  /**
-   * 編集から学習
-   */
-  async learnFromEdit(
-    filePath: string,
-    beforeContent: string,
-    afterContent: string,
-    success: boolean,
-    errorMessage?: string
-  ): Promise<void> {
-    // 学習イベントを記録
-    const event: LearningEvent = {
-      eventId: this.generateEventId(),
-      eventType: errorMessage ? 'error_fix' : 'edit',
-      filePath,
-      beforeState: beforeContent,
-      afterState: afterContent,
-      success,
-      errorMessage,
-      timestamp: new Date()
+    const stats: MemoryStats = {
+      totalPatterns: 0,
+      totalErrors: 0,
+      totalSessions: 0,
+      languageBreakdown: {},
+      patternUsage: {},
+      errorFrequency: {},
+      averageSuccessRate: 0,
+      memoryUsage: process.memoryUsage().heapUsed,
+      lastUpdated: new Date()
     };
+
+    const queries = [
+      'SELECT COUNT(*) as count FROM code_patterns',
+      'SELECT COUNT(*) as count FROM error_patterns',
+      'SELECT COUNT(*) as count FROM learning_sessions'
+    ];
+
+    const results = await Promise.all(queries.map(query => this.executeQuery(query)));
     
-    await this.saveLearnedEvent(event);
-    
-    // 成功した編集からパターンを抽出
-    if (success) {
-      const patterns = this.extractPatterns(beforeContent, afterContent, errorMessage);
-      
-      for (const pattern of patterns) {
-        await this.savePattern(pattern);
-        
-        // 記憶システムにも保存
-        if (errorMessage) {
-          await this.saveToMemory({
-            type: 'error_solution',
-            content: {
-              title: `Error fix for ${path.basename(filePath)}`,
-              description: `Fixed error: ${errorMessage}`,
-              error: errorMessage,
-              solution: pattern.afterCode,
-              context: pattern.context
-            },
-            tags: ['error_fix', 'auto_learned', path.extname(filePath).slice(1)]
-          });
-          this.stats.errorsFix++;
-        }
-      }
-      
-      this.stats.patternsLearned += patterns.length;
-    }
+    stats.totalPatterns = results[0][0]?.count || 0;
+    stats.totalErrors = results[1][0]?.count || 0;
+    stats.totalSessions = results[2][0]?.count || 0;
+
+    return stats;
   }
 
   /**
-   * パターンを抽出
+   * クローズ
    */
-  private extractPatterns(
-    beforeContent: string,
-    afterContent: string,
-    errorMessage?: string
-  ): CodePattern[] {
-    const patterns: CodePattern[] = [];
-    
-    // 差分を解析してパターンを抽出
-    const diffs = this.computeDiff(beforeContent, afterContent);
-    
-    for (const diff of diffs) {
-      if (diff.added && diff.removed) {
-        // 置換パターン
-        const pattern: CodePattern = {
-          patternId: this.generatePatternId(),
-          patternType: errorMessage ? 'error_fix' : 'refactor',
-          beforeCode: diff.removed,
-          afterCode: diff.added,
-          context: {
-            language: 'typescript', // TODO: 言語を動的に判定
-            errorMessage
-          },
-          successRate: 1.0,
-          usageCount: 0,
-          createdAt: new Date(),
-          lastUsed: new Date()
-        };
-        
-        patterns.push(pattern);
-      }
+  async close(): Promise<void> {
+    if (this.currentSession) {
+      await this.endLearningSession();
     }
-    
-    return patterns;
-  }
 
-  /**
-   * 類似のエラーに対する提案を取得
-   */
-  async getSuggestions(
-    errorMessage: string,
-    fileContent: string,
-    filePath: string
-  ): Promise<{
-    pattern: CodePattern;
-    confidence: number;
-    explanation: string;
-  }[]> {
-    const suggestions: any[] = [];
-    
-    // 記憶システムから検索
-    const memories = await this.memoryAPI.search({
-      query: errorMessage,
-      type: 'error',
-      limit: 5
-    });
-    
-    // ローカルパターンから検索
-    const relevantPatterns = Array.from(this.patterns.values())
-      .filter(p => {
-        if (p.patternType !== 'error_fix') return false;
-        if (!p.context.errorMessage) return false;
-        
-        // エラーメッセージの類似度を計算
-        const similarity = this.calculateSimilarity(
-          errorMessage.toLowerCase(),
-          p.context.errorMessage.toLowerCase()
-        );
-        
-        return similarity > 0.5;
-      })
-      .sort((a, b) => b.successRate * b.usageCount - a.successRate * a.usageCount)
-      .slice(0, 5);
-    
-    // パターンを提案に変換
-    for (const pattern of relevantPatterns) {
-      // パターンがファイル内容に適用可能かチェック
-      if (fileContent.includes(pattern.beforeCode)) {
-        suggestions.push({
-          pattern,
-          confidence: pattern.successRate,
-          explanation: `This pattern has been successfully used ${pattern.usageCount} times to fix similar errors`
+    if (this.db) {
+      await new Promise<void>((resolve, reject) => {
+        this.db!.close((err: any) => {
+          if (err) reject(err);
+          else resolve();
         });
-      }
+      });
     }
-    
-    // 記憶システムの結果も追加
-    for (const memory of memories) {
-      if (memory.content?.solution) {
-        suggestions.push({
-          pattern: {
-            patternId: memory.id,
-            patternType: 'error_fix',
-            beforeCode: '',
-            afterCode: memory.content.solution,
-            context: memory.content.context || {},
-            successRate: 0.8,
-            usageCount: 1,
-            createdAt: new Date(memory.createdAt),
-            lastUsed: new Date()
-          },
-          confidence: 0.7,
-          explanation: memory.content.description || 'Solution from memory'
+
+    this.isInitialized = false;
+    this.emit('closed');
+  }
+
+  // プライベートメソッド
+
+  private async ensureInitialized(): Promise<void> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+  }
+
+  private detectLanguage(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    const languageMap: Record<string, string> = {
+      '.ts': 'typescript',
+      '.tsx': 'typescript',
+      '.js': 'javascript',
+      '.jsx': 'javascript',
+      '.py': 'python',
+      '.java': 'java',
+      '.go': 'go',
+      '.rs': 'rust',
+      '.cs': 'csharp',
+      '.php': 'php',
+      '.rb': 'ruby',
+      '.swift': 'swift'
+    };
+    return languageMap[ext] || 'unknown';
+  }
+
+  private generateId(): string {
+    return `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private async insertCodePattern(pattern: CodePattern): Promise<void> {
+    const runAsync = (sql: string, params: any[]): Promise<any> => {
+      return new Promise((resolve, reject) => {
+        this.db!.run(sql, params, function(err: any) {
+          if (err) reject(err);
+          else resolve(this);
         });
-      }
-    }
-    
-    this.stats.suggestionsProvided += suggestions.length;
-    
-    return suggestions;
+      });
+    };
+
+    await runAsync(`
+      INSERT OR REPLACE INTO code_patterns (
+        id, name, type, language, pattern, description, examples,
+        usage_count, success_rate, tags, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      pattern.id, pattern.name, pattern.type, pattern.language,
+      pattern.pattern, pattern.description, JSON.stringify(pattern.examples),
+      pattern.usageCount, pattern.successRate, JSON.stringify(pattern.tags),
+      pattern.createdAt.toISOString(), pattern.updatedAt.toISOString()
+    ]);
   }
 
-  /**
-   * 提案を適用
-   */
-  async applySuggestion(
-    filePath: string,
-    pattern: CodePattern
-  ): Promise<boolean> {
-    try {
-      const readResult = await this.intelligentFS.readFile(filePath);
-      if (!readResult.success || !readResult.content) {
-        return false;
-      }
-      
-      // パターンを適用
-      const updatedContent = readResult.content.replace(
-        pattern.beforeCode,
-        pattern.afterCode
-      );
-      
-      // ファイルを更新
-      const writeResult = await this.intelligentFS.writeFile(
-        filePath,
-        updatedContent,
-        { updateIndex: true, trackHistory: true }
-      );
-      
-      if (writeResult.success) {
-        // パターンの使用回数を更新
-        pattern.usageCount++;
-        pattern.lastUsed = new Date();
-        await this.updatePattern(pattern);
-        
-        this.stats.suggestionsAccepted++;
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      logger.error('Failed to apply suggestion', { error, filePath });
-      return false;
-    }
-  }
-
-  /**
-   * プロジェクト固有のスタイルを学習
-   */
-  async learnProjectStyle(projectPath: string): Promise<void> {
-    // プロジェクト内のファイルを分析
-    const stats = await this.intelligentFS.indexProject();
-    
-    // TODO: スタイルパターンを抽出
-    // - インデントスタイル
-    // - 命名規則
-    // - import順序
-    // - コメントスタイル
-    
-    logger.info('Project style learned', { 
-      filesAnalyzed: stats.totalFiles,
-      symbolsAnalyzed: stats.totalSymbols
+  private async executeQuery(sql: string): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      this.db!.all(sql, (err: any, rows: any[]) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
     });
   }
 
-  /**
-   * 統計情報を取得
-   */
-  getStats() {
+  private rowToCodePattern(row: any): CodePattern {
     return {
-      ...this.stats,
-      patternsInMemory: this.patterns.size,
-      acceptanceRate: this.stats.suggestionsProvided > 0 
-        ? this.stats.suggestionsAccepted / this.stats.suggestionsProvided 
-        : 0
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      language: row.language,
+      pattern: row.pattern,
+      description: row.description,
+      examples: JSON.parse(row.examples || '[]'),
+      usageCount: row.usage_count,
+      successRate: row.success_rate,
+      tags: JSON.parse(row.tags || '[]'),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
     };
   }
 
-  // ヘルパーメソッド
-
-  private async savePattern(pattern: CodePattern): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db!.run(
-        `INSERT OR REPLACE INTO code_patterns 
-         (pattern_id, pattern_type, before_code, after_code, context, 
-          success_rate, usage_count, created_at, last_used)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          pattern.patternId,
-          pattern.patternType,
-          pattern.beforeCode,
-          pattern.afterCode,
-          JSON.stringify(pattern.context),
-          pattern.successRate,
-          pattern.usageCount,
-          pattern.createdAt.toISOString(),
-          pattern.lastUsed.toISOString()
-        ],
-        (err) => {
-          if (err) reject(err);
-          else {
-            this.patterns.set(pattern.patternId, pattern);
-            resolve();
-          }
-        }
-      );
-    });
+  private rowToErrorPattern(row: any): ErrorPattern {
+    return {
+      id: row.id,
+      errorType: row.error_type,
+      errorMessage: row.error_message,
+      language: row.language,
+      context: row.context,
+      solution: row.solution,
+      preventionTips: JSON.parse(row.prevention_tips || '[]'),
+      occurrenceCount: row.occurrence_count,
+      solvedCount: row.solved_count,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    };
   }
 
-  private async updatePattern(pattern: CodePattern): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db!.run(
-        `UPDATE code_patterns 
-         SET usage_count = ?, last_used = ?, success_rate = ?
-         WHERE pattern_id = ?`,
-        [
-          pattern.usageCount,
-          pattern.lastUsed.toISOString(),
-          pattern.successRate,
-          pattern.patternId
-        ],
-        (err) => {
-          if (err) reject(err);
-          else resolve();
-        }
-      );
-    });
-  }
-
-  private async saveLearnedEvent(event: LearningEvent): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db!.run(
-        `INSERT INTO learning_events 
-         (event_id, event_type, file_path, before_state, after_state, 
-          success, error_message, timestamp)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          event.eventId,
-          event.eventType,
-          event.filePath,
-          event.beforeState,
-          event.afterState,
-          event.success,
-          event.errorMessage,
-          event.timestamp.toISOString()
-        ],
-        (err) => {
-          if (err) reject(err);
-          else resolve();
-        }
-      );
-    });
-  }
-
-  private async saveToMemory(memory: any): Promise<void> {
-    try {
-      await this.memoryAPI.saveMemory(memory);
-    } catch (error) {
-      logger.warn('Failed to save to memory system', { error });
-    }
-  }
-
-  private computeDiff(before: string, after: string): any[] {
-    // 簡単な行ベースの差分計算
-    const beforeLines = before.split('\n');
-    const afterLines = after.split('\n');
-    const diffs: any[] = [];
-    
-    // TODO: より高度な差分アルゴリズムを実装
-    
-    return diffs;
-  }
-
-  private calculateSimilarity(str1: string, str2: string): number {
-    // 簡単な類似度計算（Jaccard係数）
-    const words1 = new Set(str1.split(/\s+/));
-    const words2 = new Set(str2.split(/\s+/));
-    
-    const intersection = new Set([...words1].filter(x => words2.has(x)));
-    const union = new Set([...words1, ...words2]);
-    
-    return intersection.size / union.size;
-  }
-
-  private generatePatternId(): string {
-    return `pattern_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  private generateEventId(): string {
-    return `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * クリーンアップ
-   */
-  async cleanup(): Promise<void> {
-    return new Promise((resolve) => {
-      if (this.db) {
-        this.db.close(() => {
-          resolve();
-        });
-      } else {
-        resolve();
-      }
-    });
+  // 学習セッション関連（簡易実装）
+  private async endLearningSession(): Promise<void> {
+    // セッション終了処理
+    this.currentSession = undefined;
   }
 }
 
 /**
- * メモリ統合マネージャーのインスタンスを作成
+ * メモリ統合マネージャーのファクトリー関数
  */
-export function createMemoryIntegrationManager(
-  intelligentFS: IntelligentFileSystem,
-  workspacePath: string
-): MemoryIntegrationManager {
-  return new MemoryIntegrationManager(intelligentFS, workspacePath);
+export function createMemoryIntegrationManager(memoryPath?: string): MemoryIntegrationManager {
+  return new MemoryIntegrationManager(memoryPath);
 }

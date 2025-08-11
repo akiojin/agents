@@ -4,7 +4,7 @@
  */
 
 import { BaseTool, ToolResult } from './tools.js';
-import { Type } from '@sinclair/typebox';
+import { Type } from '@google/genai';
 
 export interface TodoItem {
   id: string;
@@ -40,8 +40,7 @@ export class TodoWriteTool extends BaseTool<TodoWriteParams, ToolResult> {
 - pending: まだ開始していないタスク
 - in_progress: 現在作業中（同時に1つまで）
 - completed: 正常に完了したタスク`,
-      {
-        type: Type.OBJECT,
+{
         properties: {
           todos: {
             type: Type.ARRAY,
@@ -67,7 +66,8 @@ export class TodoWriteTool extends BaseTool<TodoWriteParams, ToolResult> {
             }
           }
         },
-        required: ['todos']
+        required: ['todos'],
+        type: Type.OBJECT
       },
       false, // isOutputMarkdown
       false  // canUpdateOutput

@@ -150,12 +150,12 @@ export class AIOptimizationEngine {
       return this.metricsCache.get(filePath)!;
     }
 
-    const readResult = await this.intelligentFS.readFile(filePath);
-    if (!readResult.success || !readResult.data) {
+    const readResult = await this.intelligentFS.readFileIntelligent(filePath);
+    if (!readResult.success) {
       throw new Error(`Failed to read file: ${filePath}`);
     }
 
-    const metrics = await this.calculateMetrics(readResult.data);
+    const metrics = await this.calculateMetrics(readResult);
     
     // 記憶システムに保存
     await this.memoryManager.saveCodePattern(
@@ -177,12 +177,12 @@ export class AIOptimizationEngine {
       return this.predictionsCache.get(filePath)!;
     }
 
-    const readResult = await this.intelligentFS.readFile(filePath);
-    if (!readResult.success || !readResult.data) {
+    const readResult = await this.intelligentFS.readFileIntelligent(filePath);
+    if (!readResult.success) {
       throw new Error(`Failed to read file: ${filePath}`);
     }
 
-    const predictions = await this.analyzeBugPatterns(readResult.data);
+    const predictions = await this.analyzeBugPatterns(readResult);
     
     // 過去のエラーパターンと照合
     const historicalErrors = await this.memoryManager.recallSimilarErrors(
@@ -212,8 +212,8 @@ export class AIOptimizationEngine {
     for (const file of files) {
       if (file.endsWith('.ts') || file.endsWith('.js')) {
         const readResult = await this.intelligentFS.readFileIntelligent(file);
-        if (readResult.success && readResult.data) {
-          const fileAnalysis = await this.analyzeFileArchitecture(readResult.data);
+        if (readResult.success) {
+          const fileAnalysis = await this.analyzeFileArchitecture(readResult);
           analysis.patterns.push(...fileAnalysis.patterns);
           analysis.antiPatterns.push(...fileAnalysis.antiPatterns);
         }
@@ -793,7 +793,7 @@ describe('Generated Code Tests', () => {
   private async suggestPerformanceOptimizations(filePath: string): Promise<OptimizationSuggestion[]> {
     const suggestions: OptimizationSuggestion[] = [];
     
-    const content = await this.intelligentFS.readFile(filePath);
+    const content = await this.intelligentFS.readFileSimple(filePath);
     if (!content.success || !content.data) return suggestions;
     
     // Check for common performance issues
@@ -814,7 +814,7 @@ describe('Generated Code Tests', () => {
   private async suggestSecurityImprovements(filePath: string): Promise<OptimizationSuggestion[]> {
     const suggestions: OptimizationSuggestion[] = [];
     
-    const content = await this.intelligentFS.readFile(filePath);
+    const content = await this.intelligentFS.readFileSimple(filePath);
     if (!content.success || !content.data) return suggestions;
     
     // Check for security issues

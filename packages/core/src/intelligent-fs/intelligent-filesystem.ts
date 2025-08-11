@@ -538,11 +538,18 @@ export class IntelligentFileSystem {
     this.editHistory = [];
   }
 
+  /**
+   * システムをクリーンアップ（closeのエイリアス）
+   */
+  async close(): Promise<void> {
+    await this.cleanup();
+  }
+
   // ユーティリティメソッド
 
   private isCodeFile(filePath: string): boolean {
     const ext = path.extname(filePath).toLowerCase();
-    return ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'].includes(ext);
+    return ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.java', '.go', '.rs', '.cs', '.php', '.rb', '.swift', '.kt', '.cpp', '.c', '.cc', '.h', '.hpp'].includes(ext);
   }
 
   private getLanguageFromExtension(ext: string): string {
@@ -553,6 +560,20 @@ export class IntelligentFileSystem {
       jsx: 'javascriptreact',
       mjs: 'javascript',
       cjs: 'javascript',
+      py: 'python',
+      java: 'java',
+      go: 'go',
+      rs: 'rust',
+      cs: 'csharp',
+      php: 'php',
+      rb: 'ruby',
+      swift: 'swift',
+      kt: 'kotlin',
+      cpp: 'cpp',
+      c: 'c',
+      cc: 'cpp',
+      h: 'c',
+      hpp: 'cpp',
       json: 'json',
       md: 'markdown',
       yml: 'yaml',
@@ -694,24 +715,30 @@ export class IntelligentFileSystem {
   }
 
   /**
-   * 通常のファイル読み取り（AI最適化エンジン用）
+   * 簡易ファイル読み取り（AI最適化エンジン用）
+   * インテリジェント機能なしの高速読み取り
    */
-  async readFile(filePath: string): Promise<FileSystemResult<string>> {
+  async readFileSimple(filePath: string): Promise<FileSystemResult<string>> {
     return this.fileSystem.readFile(filePath);
   }
 
   /**
-   * 通常のファイル書き込み（AI最適化エンジン用）
+   * インテリジェントファイル読み取り（AI最適化エンジン用）
+   * シンボル情報付きの読み取り（readFileのエイリアス）
    */
-  async writeFile(filePath: string, content: string): Promise<FileSystemResult<void>> {
-    return this.fileSystem.writeFile(filePath, content);
+  async readFileIntelligent(filePath: string): Promise<IntelligentReadResult> {
+    return this.readFile(filePath, {
+      includeSymbols: true,
+      includeDependencies: true,
+      useCache: true
+    });
   }
 
   /**
    * プロジェクト内のファイルをリスト
    */
   async listProjectFiles(projectPath?: string): Promise<string[]> {
-    const targetPath = projectPath || this.projectPath || process.cwd();
+    const targetPath = projectPath || this.currentProjectPath || process.cwd();
     const files: string[] = [];
     
     async function walk(dir: string): Promise<void> {
