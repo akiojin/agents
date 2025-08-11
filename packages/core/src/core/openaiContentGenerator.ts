@@ -202,7 +202,9 @@ export class OpenAIContentGenerator implements ContentGenerator {
                     // 如果需要JSON响应，将JSON格式要求追加到系统指令
                     if (request.config?.responseMimeType === 'application/json') {
                         systemContent += '\n\nYou must respond with valid JSON only. Do not wrap your response in markdown code blocks.';
-                        openaiRequest.response_format = { type: 'json_object' };
+                        // LM Studio requires 'text' instead of 'json_object'
+                        const isLMStudio = this.openai.baseURL?.includes('1234') || this.openai.baseURL?.includes('lmstudio');
+                        openaiRequest.response_format = { type: isLMStudio ? 'text' : 'json_object' };
                     }
                     
                     openaiRequest.messages.unshift({
@@ -212,7 +214,9 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 }
             } else if (request.config?.responseMimeType === 'application/json') {
                 // JSON响应但没有系统指令的情况
-                openaiRequest.response_format = { type: 'json_object' };
+                // LM Studio requires 'text' instead of 'json_object'
+                        const isLMStudio = this.openai.baseURL?.includes('1234') || this.openai.baseURL?.includes('lmstudio');
+                        openaiRequest.response_format = { type: isLMStudio ? 'text' : 'json_object' };
                 openaiRequest.messages.unshift({
                     role: 'system',
                     content: 'You must respond with valid JSON only. Do not wrap your response in markdown code blocks.'
@@ -295,7 +299,9 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 // 如果需要JSON响应，将JSON格式要求追加到系统指令
                 if (request.config?.responseMimeType === 'application/json') {
                     systemContent += '\n\nYou must respond with valid JSON only. Do not wrap your response in markdown code blocks.';
-                    openaiRequest.response_format = { type: 'json_object' };
+                    // LM Studio requires 'text' instead of 'json_object'
+                        const isLMStudio = this.openai.baseURL?.includes('1234') || this.openai.baseURL?.includes('lmstudio');
+                        openaiRequest.response_format = { type: isLMStudio ? 'text' : 'json_object' };
                 }
                 
                 openaiRequest.messages.unshift({
@@ -305,7 +311,9 @@ export class OpenAIContentGenerator implements ContentGenerator {
             }
         } else if (request.config?.responseMimeType === 'application/json') {
             // JSON响应但没有系统指令的情况
-            openaiRequest.response_format = { type: 'json_object' };
+            // LM Studio requires 'text' instead of 'json_object'
+                        const isLMStudio = this.openai.baseURL?.includes('1234') || this.openai.baseURL?.includes('lmstudio');
+                        openaiRequest.response_format = { type: isLMStudio ? 'text' : 'json_object' };
             openaiRequest.messages.unshift({
                 role: 'system',
                 content: 'You must respond with valid JSON only. Do not wrap your response in markdown code blocks.'
