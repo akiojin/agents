@@ -10,9 +10,14 @@ import { URI } from 'vscode-uri';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { glob } from 'glob';
+import { fileURLToPath } from 'url';
 
 // VSCodeと同様のWebAssemblyベースTree-sitter実装
 import { Parser, Language } from 'web-tree-sitter';
+
+// ES module環境での__dirname代替
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // WASMパーサーのパス
 const WASM_PATH = path.resolve(__dirname, '../../node_modules/@vscode/tree-sitter-wasm');
