@@ -139,23 +139,37 @@ export async function main() {
 
   setMaxSizedBoxDebugging(config.getDebugMode());
 
-  await config.initialize();
-
-  if (settings.merged.theme) {
-    if (!themeManager.setActiveTheme(settings.merged.theme)) {
-      // If the theme is not found during initial load, log a warning and continue.
-      // The useThemeCommand hook in App.tsx will handle opening the dialog.
-      console.warn(`Warning: Theme "${settings.merged.theme}" not found.`);
-    }
-  }
-
   // Sandbox機能は削除されました
   if (!process.env.SANDBOX) {
     const memoryArgs = settings.merged.autoConfigureMaxOldSpaceSize
       ? getNodeMemoryArgs(config)
       : [];
-    // Sandboxは使用しません - 認証のみ処理
+    
     // 根本的解決: 認証タイプが未設定の場合、設定に基づいてデフォルトを選択
+    const defaultAuth = getDefaultAuthMethod(settings.merged);
+    const authType = settings.merged.selectedAuthType || defaultAuth as AuthType;
+    
+    // ローカルLLMの場合、事前にダミーAPIキーを設定（OpenAIContentGeneratorの要求を満たすため）
+    if (authType === AuthType.OPENAI_COMPATIBLE && !process.env.OPENAI_API_KEY) {
+      const baseUrl = process.env.LOCAL_LLM_BASE_URL || process.env.OPENAI_BASE_URL || (settings.merged as any).localEndpoint;
+      if (baseUrl && (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || 
+          baseUrl.includes('0.0.0.0') || baseUrl.includes('host.docker.internal'))) {
+        process.env.OPENAI_API_KEY = 'dummy-key-for-local-llm';
+      }
+    }
+    
+    // メモリ設定のみ処理
+    if (memoryArgs.length > 0) {
+      await relaunchWithAdditionalArgs(memoryArgs);
+      process.exit(0);
+    }
+  }
+
+  // config初期化を先に実行（ツールレジストリの初期化に必要）
+  await config.initialize();
+
+  // 初期化後に認証処理を実行
+  if (!process.env.SANDBOX) {
     const defaultAuth = getDefaultAuthMethod(settings.merged);
     const authType = settings.merged.selectedAuthType || defaultAuth as AuthType;
     if (authType) {
@@ -170,10 +184,13 @@ export async function main() {
         process.exit(1);
       }
     }
-    // メモリ設定のみ処理
-    if (memoryArgs.length > 0) {
-      await relaunchWithAdditionalArgs(memoryArgs);
-      process.exit(0);
+  }
+
+  if (settings.merged.theme) {
+    if (!themeManager.setActiveTheme(settings.merged.theme)) {
+      // If the theme is not found during initial load, log a warning and continue.
+      // The useThemeCommand hook in App.tsx will handle opening the dialog.
+      console.warn(`Warning: Theme "${settings.merged.theme}" not found.`);
     }
   }
 
