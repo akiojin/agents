@@ -5,8 +5,9 @@
  */
 
 import { Schema } from '@google/genai';
-import Ajv from 'ajv';
+import AjvDefault from 'ajv';
 
+const Ajv = AjvDefault.default || AjvDefault;
 const ajValidator = new Ajv();
 
 /**
