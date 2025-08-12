@@ -159,20 +159,39 @@ export class TreeSitterSymbolIndex {
         { lang: TreeSitterLanguage.Ruby, file: 'tree-sitter-ruby.wasm' }
       ];
       
-      // 各言語のWASMファイルを読み込み
+      // 各言語のWASMファイルを読み込み（必須）
+      const loadedLanguages: string[] = [];
+      const failedLanguages: string[] = [];
+      
       for (const { lang, file } of wasmLanguages) {
         try {
           const wasmPath = path.join(WASM_PATH, file);
           const language = await Language.load(wasmPath);
           this.languages.set(lang, language);
+          loadedLanguages.push(lang);
           console.log(`✓ ${lang} WASM language loaded`);
         } catch (error) {
-          console.warn(`⚠ Failed to load ${lang} WASM:`, (error as Error).message);
+          failedLanguages.push(lang);
+          console.error(`✗ Failed to load ${lang} WASM:`, (error as Error).message);
         }
       }
       
+      // 最低限の言語（JavaScript/TypeScript）が読み込めない場合はエラー
+      const criticalLanguages = ['javascript', 'typescript'];
+      const missingCritical = criticalLanguages.filter(lang => 
+        failedLanguages.includes(lang as TreeSitterLanguage)
+      );
+      
+      if (missingCritical.length > 0) {
+        throw new Error(`Critical Tree-sitter WASM languages failed to load: ${missingCritical.join(', ')}. This is mandatory for proper code analysis.`);
+      }
+      
+      if (loadedLanguages.length === 0) {
+        throw new Error('No Tree-sitter WASM languages could be loaded. This system requires WebAssembly language parsers.');
+      }
+      
       this.wasmInitialized = true;
-      console.log(`WebAssembly Tree-sitter initialized for ${this.languages.size} languages`);
+      console.log(`WebAssembly Tree-sitter initialized: ${loadedLanguages.length} languages loaded, ${failedLanguages.length} failed`);
       
     } catch (error) {
       console.error('Failed to initialize WebAssembly Tree-sitter:', error);
@@ -319,8 +338,7 @@ export class TreeSitterSymbolIndex {
 
     const wasmLanguage = this.languages.get(language);
     if (!wasmLanguage || !this.parser) {
-      console.warn(`No WASM language available for ${language}`);
-      return { symbolCount: 0 };
+      throw new Error(`Tree-sitter WASM language for ${language} is mandatory but not available. File: ${filePath}`);
     }
 
     try {
