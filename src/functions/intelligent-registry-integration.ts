@@ -255,55 +255,119 @@ async function registerAIOptimizationFunctions(registry: InternalFunctionRegistr
 }
 
 /**
- * 既存ツールを拡張
+ * 既存ツールを完全に置き換え
+ * IntelligentFileSystemは必須コンポーネントなので、フォールバックは提供しない
  */
 async function enhanceExistingTools(registry: InternalFunctionRegistry): Promise<void> {
-  // 既存のReadツールを拡張
+  // 既存のread_text_fileツールを完全に置き換え
+  const originalReadTextFile = registry.get('read_text_file');
+  if (originalReadTextFile) {
+    const enhancedReadTextFile: InternalFunction = {
+      ...originalReadTextFile,
+      name: 'read_text_file',  // 同じ名前で置き換える
+      description: 'ファイルの内容をテキストとして読み取る（IntelligentFileSystemによるシンボル情報と依存関係の解析付き）',
+      handler: async (params: any) => {
+        const { intelligentFS } = await getOrCreateInstances();
+        
+        // IntelligentFileSystemは必須 - 失敗は許容しない
+        const result = await intelligentFS.readFileIntelligent(params.path);
+        if (!result.success) {
+          throw new Error(`IntelligentFileSystem read failed: ${result.error || 'Unknown error'}`);
+        }
+        
+        // 既存のインターフェースと互換性を保つために内容のみを返す
+        // ただし、内部的にはシンボル情報がインデックスされている
+        return result.data.content;
+      }
+    };
+    
+    // 既存のread_text_fileを削除して、新しいものに置き換え
+    registry.unregister('read_text_file');
+    registry.register(enhancedReadTextFile);
+    integrationState.registeredFunctions.add(enhancedReadTextFile.name);
+    logger.info('Replaced standard read_text_file with IntelligentFileSystem-based version');
+  }
+
+  // 既存のwrite_fileツールを完全に置き換え
+  const originalWriteFile = registry.get('write_file');
+  if (originalWriteFile) {
+    const enhancedWriteFile: InternalFunction = {
+      ...originalWriteFile,
+      name: 'write_file',  // 同じ名前で置き換える
+      description: 'ファイルに内容を書き込む（IntelligentFileSystemによるインデックス更新と編集履歴の追跡付き）',
+      handler: async (params: any) => {
+        const { intelligentFS } = await getOrCreateInstances();
+        
+        // IntelligentFileSystemは必須 - 失敗は許容しない
+        const writeResult = await intelligentFS.writeFileIntelligent(
+          params.path,
+          params.content,
+          { 
+            updateIndex: true, 
+            trackHistory: true,
+            encoding: params.encoding || 'utf-8'
+          }
+        );
+        
+        if (!writeResult.success) {
+          throw new Error(`IntelligentFileSystem write failed: ${writeResult.error || 'Unknown error'}`);
+        }
+        
+        return { success: true };
+      }
+    };
+    
+    // 既存のwrite_fileを削除して、新しいものに置き換え
+    registry.unregister('write_file');
+    registry.register(enhancedWriteFile);
+    integrationState.registeredFunctions.add(enhancedWriteFile.name);
+    logger.info('Replaced standard write_file with IntelligentFileSystem-based version');
+  }
+
+  // Claudeツール向けのRead/Editも存在する場合は置き換え
   const originalRead = registry.get('Read');
   if (originalRead) {
     const enhancedRead: InternalFunction = {
       ...originalRead,
-      name: 'ReadIntelligent',
-      description: 'Read file with intelligent code analysis and symbol information',
+      name: 'Read',  // 同じ名前で置き換える
+      description: 'Read file with intelligent code analysis, symbol information, and memory integration',
       handler: async (params: any) => {
         const { intelligentFS } = await getOrCreateInstances();
         
-        // インテリジェント読み取りを試行
-        try {
-          const result = await intelligentFS.readFileIntelligent(params.file_path);
-          if (result.success && result.data) {
-            // シンボル情報を含む拡張結果を返す
-            return formatIntelligentReadResult(result.data);
-          }
-        } catch (error) {
-          logger.warn('Intelligent read failed, falling back to standard read:', error);
+        // IntelligentFileSystemは必須 - 失敗は許容しない
+        const result = await intelligentFS.readFileIntelligent(params.file_path || params.path);
+        if (!result.success) {
+          throw new Error(`IntelligentFileSystem read failed: ${result.error || 'Unknown error'}`);
         }
         
-        // フォールバック: 通常の読み取り
-        return originalRead.handler(params);
+        // シンボル情報を含む拡張結果を返す
+        return formatIntelligentReadResult(result.data);
       }
     };
     
+    // 既存のReadを削除して、新しいものに置き換え
+    registry.unregister('Read');
     registry.register(enhancedRead);
     integrationState.registeredFunctions.add(enhancedRead.name);
+    logger.info('Replaced Claude Read with IntelligentFileSystem-based Read');
   }
 
-  // 既存のEditツールを拡張
+  // Claudeツール向けのEditも存在する場合は置き換え
   const originalEdit = registry.get('Edit');
   if (originalEdit) {
     const enhancedEdit: InternalFunction = {
       ...originalEdit,
-      name: 'EditIntelligent',
-      description: 'Edit file with semantic understanding and automatic reference updates',
+      name: 'Edit',  // 同じ名前で置き換える
+      description: 'Edit file with intelligent semantic understanding, symbol tracking, and automatic reference updates',
       handler: async (params: any) => {
         const { intelligentFS } = await getOrCreateInstances();
         
-        // セマンティック編集を試行
+        // IntelligentFileSystemは必須 - 失敗は許容しない
         try {
+          // シンボルベースの編集を試行（可能な場合）
           if (params.symbol_name) {
-            // シンボルベースの編集
             const result = await intelligentFS.refactorSymbol(
-              params.file_path,
+              params.file_path || params.path,
               params.symbol_name,
               params.new_name || params.new_string,
               { updateReferences: true }
@@ -311,19 +375,59 @@ async function enhanceExistingTools(registry: InternalFunctionRegistry): Promise
             
             if (result.success) {
               return `Successfully refactored ${params.symbol_name} and updated ${result.data?.updatedFiles?.length || 0} files`;
+            } else {
+              throw new Error(`IntelligentFileSystem refactor failed: ${result.error || 'Unknown error'}`);
             }
           }
+          
+          const filePath = params.file_path || params.path;
+          
+          // 通常の編集だが、IntelligentFileSystemの編集履歴とインデックス更新を含む
+          const content = await intelligentFS.readFileIntelligent(filePath);
+          if (!content.success) {
+            throw new Error(`Failed to read file: ${content.error}`);
+          }
+          
+          // old_stringとnew_stringによる置換処理
+          let updatedContent = content.data.content;
+          if (params.old_string && params.new_string) {
+            if (params.replace_all) {
+              updatedContent = updatedContent.split(params.old_string).join(params.new_string);
+            } else {
+              const index = updatedContent.indexOf(params.old_string);
+              if (index === -1) {
+                throw new Error(`String not found: ${params.old_string}`);
+              }
+              updatedContent = updatedContent.substring(0, index) + 
+                             params.new_string + 
+                             updatedContent.substring(index + params.old_string.length);
+            }
+          }
+          
+          // IntelligentFileSystemで書き込み（インデックス更新を含む）
+          const writeResult = await intelligentFS.writeFileIntelligent(
+            filePath,
+            updatedContent,
+            { updateIndex: true, trackHistory: true }
+          );
+          
+          if (!writeResult.success) {
+            throw new Error(`IntelligentFileSystem write failed: ${writeResult.error || 'Unknown error'}`);
+          }
+          
+          return `File edited successfully with intelligent tracking`;
         } catch (error) {
-          logger.warn('Intelligent edit failed, falling back to standard edit:', error);
+          // IntelligentFileSystemのエラーは許容しない
+          throw new Error(`IntelligentFileSystem edit failed: ${error instanceof Error ? error.message : String(error)}`);
         }
-        
-        // フォールバック: 通常の編集
-        return originalEdit.handler(params);
       }
     };
     
+    // 既存のEditを削除して、新しいものに置き換え
+    registry.unregister('Edit');
     registry.register(enhancedEdit);
     integrationState.registeredFunctions.add(enhancedEdit.name);
+    logger.info('Replaced Claude Edit with IntelligentFileSystem-based Edit');
   }
 }
 

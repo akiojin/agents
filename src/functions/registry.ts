@@ -563,7 +563,8 @@ export class InternalFunctionRegistry {
       logger.info('IntelligentFileSystem integration initialized successfully');
     } catch (error) {
       logger.error('Failed to load IntelligentFileSystem integration:', error);
-      // 統合が失敗しても基本機能は動作を続ける
+      // IntelligentFileSystemは必須コンポーネントなので、失敗時は起動を中止
+      throw new Error(`Critical: IntelligentFileSystem initialization failed. This is a required component for deep analysis and memory integration. ${error}`);
     }
   }
 
@@ -598,6 +599,13 @@ export class InternalFunctionRegistry {
       logger.debug(`Internal function unregistered: ${name}`);
     }
     return deleted;
+  }
+
+  /**
+   * 関数の登録を解除（統合用エイリアス）
+   */
+  unregister(name: string): boolean {
+    return this.unregisterFunction(name);
   }
 
   /**
