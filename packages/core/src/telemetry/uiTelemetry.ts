@@ -109,13 +109,30 @@ export class UiTelemetryService extends EventEmitter {
    * @param modelName 対象のモデル名
    */
   resetTokenCountAfterCompression(newTokenCount: number, modelName: string) {
-    const modelMetrics = this.getOrCreateModelMetrics(modelName);
-    
     // 現在の累積トークン数をログ出力（デバッグ用）
-    console.log(`[UiTelemetry] Resetting token count for ${modelName}: ${modelMetrics.tokens.prompt} -> ${newTokenCount}`);
+    const totalBefore = Object.values(this.#metrics.models).reduce(
+      (total, modelMetrics) => total + modelMetrics.tokens.prompt,
+      0
+    );
     
-    // プロンプトトークンを新しい値に設定
-    modelMetrics.tokens.prompt = newTokenCount;
+    // 全モデルのトークンカウントをリセット
+    // 圧縮後は現在のモデルのみが有効なトークンを持つ
+    for (const model in this.#metrics.models) {
+      if (model === modelName) {
+        // 現在のモデルには新しいトークン数を設定
+        this.#metrics.models[model].tokens.prompt = newTokenCount;
+      } else {
+        // 他のモデルはリセット（圧縮により履歴がクリアされたため）
+        this.#metrics.models[model].tokens.prompt = 0;
+      }
+    }
+    
+    const totalAfter = Object.values(this.#metrics.models).reduce(
+      (total, modelMetrics) => total + modelMetrics.tokens.prompt,
+      0
+    );
+    
+    console.log(`[UiTelemetry] Token count reset after compression: ${totalBefore} -> ${totalAfter}`);
     
     // 最後のプロンプトトークンカウントも更新
     this.#lastPromptTokenCount = newTokenCount;

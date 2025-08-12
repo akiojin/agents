@@ -26,6 +26,7 @@ export class WorkflowTool extends BaseTool<WorkflowToolParams> {
   
   private orchestrator: WorkflowOrchestrator;
   private currentPlan: ExecutionPlan | null = null;
+  private config: Config;
 
   constructor(config: Config) {
     super(
@@ -59,6 +60,7 @@ export class WorkflowTool extends BaseTool<WorkflowToolParams> {
       }
     );
     
+    this.config = config;
     this.orchestrator = WorkflowOrchestrator.getInstance();
   }
 
@@ -83,10 +85,10 @@ export class WorkflowTool extends BaseTool<WorkflowToolParams> {
     abortSignal: AbortSignal
   ): Promise<ToolCallConfirmationDetails | false> {
     // 承認モードがAUTO_EDITまたはYOLOの場合は承認不要
-    // if (this.config.getApprovalMode() === ApprovalMode.AUTO_EDIT ||
-    //     this.config.getApprovalMode() === ApprovalMode.YOLO) {
-    //   return false;
-    // }
+    if (this.config.getApprovalMode() === ApprovalMode.AUTO_EDIT ||
+        this.config.getApprovalMode() === ApprovalMode.YOLO) {
+      return false;
+    }
 
     // ユーザーリクエストを作成
     const request: UserRequest = {

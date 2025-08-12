@@ -100,9 +100,9 @@ export class GeminiClient {
   /**
    * Threshold for compression token count as a fraction of the model's token limit.
    * If the chat history exceeds this threshold, it will be compressed.
-   * コンテキストがほぼ満杯（90%）になった時のみ圧縮を実行するように設定
+   * コンテキストがほぼ満杯（95%）になった時のみ圧縮を実行するように設定
    */
-  private readonly COMPRESSION_TOKEN_THRESHOLD = 0.9;
+  private readonly COMPRESSION_TOKEN_THRESHOLD = 0.95;
   /**
    * The fraction of the latest chat history to keep. A value of 0.3
    * means that only the last 30% of the chat history will be kept after compression.
@@ -650,6 +650,12 @@ export class GeminiClient {
     console.log(`[Compression Debug] Remaining: ${remainingTokens} tokens`);
     console.log(`[Compression Debug] Compression Threshold: ${threshold} (${Math.round(this.COMPRESSION_TOKEN_THRESHOLD * 100)}%)`);
     console.log(`[Compression Debug] Force flag: ${force}`);
+    
+    // UIに表示される残量が0%の場合の警告
+    if (usagePercentage >= 100 && !force) {
+      console.warn(`[Compression Warning] Context is at ${usagePercentage}% but compression threshold is ${Math.round(this.COMPRESSION_TOKEN_THRESHOLD * 100)}%`);
+      console.warn(`[Compression Warning] UI may show 0% context remaining. Use /compress command to manually compress.`);
+    }
     
     // 圧縮条件を判定
     const shouldCompress = force || originalTokenCount >= threshold;

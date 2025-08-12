@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.021279083">
-    <testsuite name="src/code_assist/oauth2.test.ts" timestamp="2025-08-12T07:41:48.877Z" hostname="63accec1df8b" tests="7" failures="0" errors="0" skipped="0" time="0.021279083">
-        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; should perform a web login" time="0.007615041">
+<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.017081125">
+    <testsuite name="src/code_assist/oauth2.test.ts" timestamp="2025-08-12T08:06:36.182Z" hostname="63accec1df8b" tests="7" failures="0" errors="0" skipped="0" time="0.017081125">
+        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; should perform a web login" time="0.006651584">
             <system-out>
 
 
@@ -17,9 +17,9 @@ Waiting for authentication...
 
             </system-out>
         </testcase>
-        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; should perform login with user code" time="0.002451333">
+        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; should perform login with user code" time="0.001719375">
         </testcase>
-        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should attempt to load cached credentials first" time="0.006649375">
+        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should attempt to load cached credentials first" time="0.005381">
             <system-out>
 Loaded cached credentials.
 
@@ -34,7 +34,7 @@ Error retrieving user info: TypeError: Cannot read properties of undefined (read
 
             </system-err>
         </testcase>
-        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should use Compute to get a client if no cached credentials exist" time="0.000685084">
+        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should use Compute to get a client if no cached credentials exist" time="0.000554542">
             <system-out>
 Attempting to authenticate via Cloud Shell VM&apos;s ADC.
 
@@ -42,7 +42,7 @@ Authentication successful.
 
             </system-out>
         </testcase>
-        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should not cache the credentials after fetching them via ADC" time="0.000479541">
+        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should not cache the credentials after fetching them via ADC" time="0.000569833">
             <system-out>
 Attempting to authenticate via Cloud Shell VM&apos;s ADC.
 
@@ -50,7 +50,7 @@ Authentication successful.
 
             </system-out>
         </testcase>
-        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should return the Compute client on successful ADC authentication" time="0.001102333">
+        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should return the Compute client on successful ADC authentication" time="0.000420791">
             <system-out>
 Attempting to authenticate via Cloud Shell VM&apos;s ADC.
 
@@ -58,7 +58,7 @@ Authentication successful.
 
             </system-out>
         </testcase>
-        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should throw an error if ADC fails" time="0.001504625">
+        <testcase classname="src/code_assist/oauth2.test.ts" name="oauth2 &gt; in Cloud Shell &gt; should throw an error if ADC fails" time="0.001107416">
             <system-out>
 Attempting to authenticate via Cloud Shell VM&apos;s ADC.
 
