@@ -251,11 +251,16 @@ export class Turn {
         return;
       }
 
-      const contextForReport = [...this.chat.getHistory(/*curated*/ true), req];
+      // コンテキストを最小限に制限（巨大なログを防ぐ）
+      const minimalContext = {
+        requestType: typeof req === 'string' ? 'string' : 'object',
+        historyLength: this.chat.getHistory(/*curated*/ true).length,
+        errorType: error?.constructor?.name || 'Unknown',
+      };
       await reportError(
         error,
         'Error when talking to Gemini API',
-        contextForReport,
+        minimalContext,
         'Turn.run-sendMessageStream',
       );
       const status =

@@ -309,7 +309,7 @@ export class GeminiClient {
       await reportError(
         error,
         'Error initializing Gemini chat session.',
-        history,
+        { historyLength: history?.length || 0 },
         'startChat',
       );
       throw new Error(`Failed to initialize chat: ${getErrorMessage(error)}`);
@@ -479,7 +479,7 @@ export class GeminiClient {
         await reportError(
           error,
           'Error in generateJson: API returned an empty response.',
-          contents,
+          { contentsLength: contents?.length || 0 },
           'generateJson-empty-response',
         );
         throw error;
@@ -491,8 +491,9 @@ export class GeminiClient {
           parseError,
           'Failed to parse JSON response from generateJson.',
           {
-            responseTextFailedToParse: text,
-            originalRequestContents: contents,
+            responseTextLength: text?.length || 0,
+            responseTextPreview: text?.substring(0, 200),
+            contentsLength: contents?.length || 0,
           },
           'generateJson-parse',
         );
@@ -516,7 +517,7 @@ export class GeminiClient {
       await reportError(
         error,
         'Error generating JSON content via API.',
-        contents,
+        { contentsLength: contents?.length || 0 },
         'generateJson-api',
       );
       throw new Error(
@@ -569,8 +570,8 @@ export class GeminiClient {
         error,
         `Error generating content via API with model ${modelToUse}.`,
         {
-          requestContents: contents,
-          requestConfig: configToUse,
+          contentsLength: contents?.length || 0,
+          modelUsed: modelToUse,
         },
         'generateContent-api',
       );

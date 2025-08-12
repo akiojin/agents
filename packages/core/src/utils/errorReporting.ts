@@ -49,8 +49,26 @@ export async function reportError(
 
   const reportContent: ErrorReportData = { error: errorToReport };
 
+  // コンテキストのサイズを制限（巨大なログを防ぐ）
   if (context) {
-    reportContent.context = context;
+    try {
+      const contextStr = JSON.stringify(context);
+      // コンテキストが100KB以上の場合は切り詰める
+      if (contextStr.length > 100000) {
+        // 最初と最後の部分のみ保持
+        const truncatedContext = {
+          note: 'Context was truncated due to size',
+          originalSize: contextStr.length,
+          firstPart: contextStr.substring(0, 10000),
+          lastPart: contextStr.substring(contextStr.length - 10000),
+        };
+        reportContent.context = truncatedContext;
+      } else {
+        reportContent.context = context;
+      }
+    } catch {
+      reportContent.context = { note: 'Context could not be serialized' };
+    }
   }
 
   let stringifiedReportContent: string;
@@ -88,7 +106,8 @@ export async function reportError(
 
   try {
     await fs.writeFile(reportPath, stringifiedReportContent);
-    console.error(`${baseMessage} Full report available at: ${reportPath}`);
+    // コンソールには簡潔なメッセージのみ表示
+    console.error(`${baseMessage} Report saved: ${reportPath}`);
   } catch (writeError) {
     console.error(
       `${baseMessage} Additionally, failed to write detailed error report:`,
@@ -97,20 +116,19 @@ export async function reportError(
     // Log the original error as a fallback if report writing fails
     console.error('Original error that triggered report generation:', error);
     if (context) {
-      // Context was stringifiable, but writing the file failed.
-      // We already have stringifiedReportContent, but it might be too large for console.
-      // So, we try to log the original context object, and if that fails, its stringified version (truncated).
+      // コンソールへの出力も制限
       try {
-        console.error('Original context:', context);
-      } catch {
-        try {
+        const contextStr = JSON.stringify(context);
+        if (contextStr.length > 1000) {
           console.error(
-            'Original context (stringified, truncated):',
-            JSON.stringify(context).substring(0, 1000),
+            'Original context (truncated):',
+            contextStr.substring(0, 1000) + '...',
           );
-        } catch {
-          console.error('Original context could not be logged or stringified.');
+        } else {
+          console.error('Original context:', context);
         }
+      } catch {
+        console.error('Original context could not be logged or stringified.');
       }
     }
   }
