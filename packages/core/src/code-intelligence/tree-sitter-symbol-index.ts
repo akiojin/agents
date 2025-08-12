@@ -21,13 +21,13 @@ const __dirname = path.dirname(__filename);
 
 // WASMパーサーのパス（動的検索）
 function findWasmPath(): string {
-  // 複数の候補パスを試行（確認済みの正しいパスを最初に）
+  // 複数の候補パスを試行（process.cwdベースを最優先）
   const candidates = [
-    path.resolve('/agents/node_modules/@vscode/tree-sitter-wasm/wasm'),
     path.resolve(process.cwd(), 'node_modules/@vscode/tree-sitter-wasm/wasm'),
     path.resolve(__dirname, '../../../../../node_modules/@vscode/tree-sitter-wasm/wasm'),
     path.resolve(__dirname, '../../../../../../node_modules/@vscode/tree-sitter-wasm/wasm'),
     path.resolve(__dirname, '../../../node_modules/@vscode/tree-sitter-wasm/wasm'),
+    path.resolve(__dirname, '../../../../node_modules/@vscode/tree-sitter-wasm/wasm'),
   ];
   
   for (const candidate of candidates) {
