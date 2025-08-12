@@ -8,7 +8,7 @@ apiKey: ${OPENAI_API_KEY}
 useMCP: true
 maxParallel: 3
 logLevel: info
-historyPath: ~/.agents/history
+# historyPath: ~/.agents/history  # 廃止: sessionsディレクトリで管理
 
 # MCPサーバー設定
 mcpServers:

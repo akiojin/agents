@@ -53,7 +53,6 @@
   },
   "paths": {
     "cache": "./.agents/cache",
-    "history": "./.agents/history",
     "logs": "./.agents/logs"
   },
   "localEndpoint": "http://host.docker.internal:1234",
