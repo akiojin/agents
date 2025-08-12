@@ -20,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // WASMパーサーのパス（プロジェクトルートのnode_modules/wasm）
-const WASM_PATH = path.resolve(__dirname, '../../../../node_modules/@vscode/tree-sitter-wasm/wasm');
+const WASM_PATH = path.resolve(__dirname, '../../../../../../node_modules/@vscode/tree-sitter-wasm/wasm');
 
 /**
  * サポート言語（Tree-sitter版）
