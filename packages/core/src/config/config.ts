@@ -315,7 +315,9 @@ export class Config {
   getModel(): string {
     // If contentGeneratorConfig is available, use it
     if (this.contentGeneratorConfig?.model) {
-      console.debug(`[Config] getModel() returning from contentGeneratorConfig: ${this.contentGeneratorConfig.model}`);
+      if (this.debugMode) {
+        console.debug(`[Config] getModel() returning from contentGeneratorConfig: ${this.contentGeneratorConfig.model}`);
+      }
       return this.contentGeneratorConfig.model;
     }
     
@@ -323,13 +325,17 @@ export class Config {
     if (this.contentGeneratorConfig?.authType === AuthType.OPENAI_COMPATIBLE) {
       const envModel = process.env.OPENAI_MODEL || process.env.LOCAL_LLM_MODEL;
       if (envModel) {
-        console.debug(`[Config] getModel() returning from env vars: ${envModel}`);
+        if (this.debugMode) {
+          console.debug(`[Config] getModel() returning from env vars: ${envModel}`);
+        }
         return envModel;
       }
     }
     
     // Final fallback to initial model
-    console.debug(`[Config] getModel() returning initial model: ${this.model}`);
+    if (this.debugMode) {
+      console.debug(`[Config] getModel() returning initial model: ${this.model}`);
+    }
     return this.model;
   }
 

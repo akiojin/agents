@@ -36,7 +36,7 @@ export class SerenaMCPClient {
       });
     }
     
-    console.log(`Activated project: ${projectName}`);
+    // プロジェクトアクティベート: ${projectName}
   }
 
   /**

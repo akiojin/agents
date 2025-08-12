@@ -111,11 +111,11 @@ async function startChromaLocally() {
 }
 
 export async function ensureChromaDB() {
-  console.log('Checking ChromaDB status...');
+  // ChromaDBステータス確認中...
   
   // ChromaDBが既に動作中か確認
   if (await isChromaRunning()) {
-    console.log('✅ ChromaDB is already running');
+    // ChromaDBは既に動作中
     return;
   }
   

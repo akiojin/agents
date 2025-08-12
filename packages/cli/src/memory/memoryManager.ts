@@ -55,54 +55,47 @@ export class MemoryManager {
       return;
     }
     
-    try {
-      console.log(`Initializing memory system for project: ${this.projectId}`);
-      
-      // プロジェクト固有のコレクション名
-      const collectionName = `memories_${this.projectId}`;
-      
-      // Docker環境を判定してChromaDBのURLを決定
-      const hostname = process.env.HOSTNAME || '';
-      const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
-      const defaultChromaUrl = isInDocker ? 'http://chroma:8000' : 'http://localhost:8000';
-      
-      this.memorySystem = new IntegratedMemorySystem({
-        collectionName,
-        chromaUrl: this.config.chromaUrl || defaultChromaUrl,
-        autoDecay: this.config.autoDecay !== false,
-        decayInterval: this.config.decayInterval || 3600000 // 1時間
-      });
-      
-      await this.memorySystem.initialize();
-      
-      // DecisionLogの初期化
-      if (this.config.enableDecisionLog !== false) {
-        const decisionDbPath = path.join(this.config.projectRoot, '.agents', 'decisions.db');
-        this.decisionLog = new DecisionLog(decisionDbPath);
-        console.log('🧠 Decision logging enabled');
+    // メモリシステム初期化中...
+    
+    // プロジェクト固有のコレクション名
+    const collectionName = `memories_${this.projectId}`;
+    
+    // Docker環境を判定してChromaDBのURLを決定
+    const hostname = process.env.HOSTNAME || '';
+    const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
+    const defaultChromaUrl = isInDocker ? 'http://chroma:8000' : 'http://localhost:8000';
+    
+    this.memorySystem = new IntegratedMemorySystem({
+      collectionName,
+      chromaUrl: this.config.chromaUrl || defaultChromaUrl,
+      autoDecay: this.config.autoDecay !== false,
+      decayInterval: this.config.decayInterval || 3600000 // 1時間
+    });
+    
+    await this.memorySystem.initialize();
+    
+    // DecisionLogの初期化
+    if (this.config.enableDecisionLog !== false) {
+      const decisionDbPath = path.join(this.config.projectRoot, '.agents', 'decisions.db');
+      this.decisionLog = new DecisionLog(decisionDbPath);
+      console.log('🧠 Decision logging enabled');
+    }
+    
+    this.initialized = true;
+    
+    // 既存の記憶統計を表示
+    const stats = await this.memorySystem.getStatistics();
+    if (stats.totalMemories > 0) {
+      console.log(`📚 Loaded ${stats.totalMemories} memories from previous sessions`);
+      console.log(`   Average success rate: ${(stats.averageSuccessRate * 100).toFixed(1)}%`);
+    }
+    
+    // 決定ログの統計も表示
+    if (this.decisionLog) {
+      const decisionStats = await this.decisionLog.getStatistics();
+      if (decisionStats.totalDecisions > 0) {
+        console.log(`🎯 Loaded ${decisionStats.totalDecisions} decisions from previous sessions`);
       }
-      
-      this.initialized = true;
-      
-      // 既存の記憶統計を表示
-      const stats = await this.memorySystem.getStatistics();
-      if (stats.totalMemories > 0) {
-        console.log(`📚 Loaded ${stats.totalMemories} memories from previous sessions`);
-        console.log(`   Average success rate: ${(stats.averageSuccessRate * 100).toFixed(1)}%`);
-      }
-      
-      // 決定ログの統計も表示
-      if (this.decisionLog) {
-        const decisionStats = await this.decisionLog.getStatistics();
-        if (decisionStats.totalDecisions > 0) {
-          console.log(`🎯 Loaded ${decisionStats.totalDecisions} decisions from previous sessions`);
-        }
-      }
-    } catch (error) {
-      console.warn('⚠️ Memory system initialization failed:', error);
-      console.warn('   Continuing without memory features');
-      this.memorySystem = null;
-      this.decisionLog = null;
     }
   }
   

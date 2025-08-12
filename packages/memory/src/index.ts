@@ -36,7 +36,7 @@ export class IntegratedMemorySystem {
    * システムの初期化
    */
   async initialize(): Promise<void> {
-    console.log('Initializing memory system...');
+    // メモリシステム初期化中...
     
     // ChromaDB初期化
     await this.chromaClient.initialize();
@@ -49,7 +49,7 @@ export class IntegratedMemorySystem {
       this.startAutoDecay();
     }
     
-    console.log('Memory system initialized successfully');
+    // メモリシステム初期化成功のログは削除（必要時のみ表示）
   }
 
   /**

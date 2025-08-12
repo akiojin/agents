@@ -33,8 +33,7 @@ execSync('node ./scripts/check-build-status.js', {
   cwd: root,
 });
 
-// ChromaDBが必須なので起動を確認
-console.log('Ensuring ChromaDB is running...');
+// ChromaDBが必須なので起動を確認（ログ簡潔化）
 try {
   await ensureChromaDB();
 } catch (error) {

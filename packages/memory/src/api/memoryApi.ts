@@ -51,7 +51,7 @@ export class MemoryAPI {
       this.startEventProcessing();
     }
     
-    console.log('Memory API initialized');
+    // Memory API初期化済み
   }
 
   /**

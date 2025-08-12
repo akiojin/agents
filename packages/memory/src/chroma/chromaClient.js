@@ -48,7 +48,7 @@ export class ChromaMemoryClient {
                         description: 'Agent memory storage with synaptic connections'
                     }
                 });
-                console.log(`ChromaDB collection '${this.collectionName}' initialized`);
+                // ChromaDB collection初期化成功
                 return; // 成功したら終了
             }
             catch (error) {

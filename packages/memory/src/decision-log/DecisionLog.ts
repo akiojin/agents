@@ -6,6 +6,7 @@
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import {
   Action,
@@ -21,6 +22,10 @@ import {
   ResultType,
   ActionType
 } from './types.js';
+
+// ESモジュール用に__dirnameを定義
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class DecisionLog {
   private db: Database.Database;

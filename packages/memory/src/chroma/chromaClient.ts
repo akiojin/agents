@@ -127,7 +127,7 @@ export class ChromaMemoryClient {
           },
           embeddingFunction
         });
-        console.log(`ChromaDB collection '${this.collectionName}' initialized`);
+        // chromaDB初期化成功のログは削除（必要時のみ表示）
         return; // 成功したら終了
       } catch (error) {
         console.error(`ChromaDB connection attempt ${i + 1}/${maxRetries} failed:`, error);

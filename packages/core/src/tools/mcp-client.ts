@@ -213,7 +213,10 @@ export async function connectAndDiscover(
       updateMCPServerStatus(mcpServerName, MCPServerStatus.CONNECTED);
 
       mcpClient.onerror = (error) => {
-        console.error(`MCP ERROR (${mcpServerName}):`, error.toString());
+        // デバッグモードまたは重大なエラーの場合のみ表示
+        if (debugMode || error.toString().includes('Connection closed')) {
+          console.error(`MCP ERROR (${mcpServerName}):`, error.toString());
+        }
         updateMCPServerStatus(mcpServerName, MCPServerStatus.DISCONNECTED);
         if (mcpServerName === IDE_SERVER_NAME) {
           ideContext.clearActiveFileContext();
@@ -242,7 +245,12 @@ export async function connectAndDiscover(
       throw error;
     }
   } catch (error) {
-    console.error(`Error connecting to MCP server '${mcpServerName}':`, error);
+    // デバッグモードでない場合は簡潔なメッセージのみ
+    if (debugMode) {
+      console.error(`Error connecting to MCP server '${mcpServerName}':`, error);
+    } else {
+      console.warn(`⚠️ MCP server '${mcpServerName}' is unavailable`);
+    }
     updateMCPServerStatus(mcpServerName, MCPServerStatus.DISCONNECTED);
   }
 }

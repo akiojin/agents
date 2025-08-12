@@ -45,7 +45,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
         // LM Studioの場合、/v1が含まれていない場合は追加
         if ((baseURL.includes('localhost:1234') || baseURL.includes('127.0.0.1:1234') || baseURL.includes('host.docker.internal:1234')) && !baseURL.includes('/v1')) {
             baseURL = baseURL.replace(/\/$/, '') + '/v1';
-            console.log(`[OpenAI Compatible API] Added /v1 to base URL for LM Studio: ${baseURL}`);
+            // ログ削減: デバッグモードでのみ表示
         }
         const isLocalLLM = baseURL.includes('localhost') || 
                            baseURL.includes('127.0.0.1') || 
@@ -54,11 +54,13 @@ export class OpenAIContentGenerator implements ContentGenerator {
         
         const apiKey = config.apiKey || process.env.OPENAI_API_KEY || (isLocalLLM ? 'not-needed' : undefined);
         
-        // デバッグ情報を出力
-        console.log('[OpenAI Compatible API] Initializing with:');
-        console.log(`  Base URL: ${baseURL}`);
-        console.log(`  Is Local LLM: ${isLocalLLM}`);
-        console.log(`  API Key: ${apiKey ? '***' + apiKey.slice(-4) : 'not set'}`);
+        // デバッグ情報はデバッグモードでのみ出力
+        if (this.configForTelemetry?.getDebugMode()) {
+            console.log('[OpenAI Compatible API] Initializing with:');
+            console.log(`  Base URL: ${baseURL}`);
+            console.log(`  Is Local LLM: ${isLocalLLM}`);
+            console.log(`  API Key: ${apiKey ? '***' + apiKey.slice(-4) : 'not set'}`);
+        }
         
         this.openai = new OpenAI({
             apiKey: apiKey,

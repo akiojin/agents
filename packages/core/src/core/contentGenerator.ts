@@ -71,11 +71,15 @@ export function createContentGeneratorConfig(
   if (authType === AuthType.OPENAI_COMPATIBLE) {
     // For OpenAI Compatible API, check environment variables first
     effectiveModel = process.env.OPENAI_MODEL || process.env.LOCAL_LLM_MODEL || 'llama-3.2-3b-instruct';
-    console.debug(`[ContentGenerator] OPENAI_COMPATIBLE model resolved: ${effectiveModel} (OPENAI_MODEL: ${process.env.OPENAI_MODEL}, LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL})`);
+    if (config.getDebugMode()) {
+      console.debug(`[ContentGenerator] OPENAI_COMPATIBLE model resolved: ${effectiveModel} (OPENAI_MODEL: ${process.env.OPENAI_MODEL}, LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL})`);
+    }
   } else {
     // Use runtime model from config if available, otherwise fallback to default
     effectiveModel = config.getModel() || DEFAULT_GEMINI_MODEL;
-    console.debug(`[ContentGenerator] Non-OPENAI model resolved: ${effectiveModel}`);
+    if (config.getDebugMode()) {
+      console.debug(`[ContentGenerator] Non-OPENAI model resolved: ${effectiveModel}`);
+    }
   }
 
   const contentGeneratorConfig: ContentGeneratorConfig = {
@@ -137,12 +141,14 @@ export function createContentGeneratorConfig(
     
     // モデル設定は既に上部で設定済み
     
-    console.log('[ContentGeneratorConfig] OpenAI Compatible settings:', {
-      baseUrl,
-      isLocalLLM,
-      model: contentGeneratorConfig.model,
-      hasApiKey: !!contentGeneratorConfig.apiKey,
-    });
+    if (config.getDebugMode()) {
+      console.log('[ContentGeneratorConfig] OpenAI Compatible settings:', {
+        baseUrl,
+        isLocalLLM,
+        model: contentGeneratorConfig.model,
+        hasApiKey: !!contentGeneratorConfig.apiKey,
+      });
+    }
     
     return contentGeneratorConfig;
   }
@@ -181,12 +187,14 @@ export async function createContentGenerator(
   }
 
   if (config.authType === AuthType.OPENAI_COMPATIBLE) {
-    console.log('[ContentGenerator] Creating OpenAI Compatible API generator');
-    console.log('[ContentGenerator] Config:', {
-      authType: config.authType,
-      model: config.model,
-      hasApiKey: !!config.apiKey,
-    });
+    if (gcConfig.getDebugMode()) {
+      console.log('[ContentGenerator] Creating OpenAI Compatible API generator');
+      console.log('[ContentGenerator] Config:', {
+        authType: config.authType,
+        model: config.model,
+        hasApiKey: !!config.apiKey,
+      });
+    }
     return new OpenAIContentGenerator(config, gcConfig);
   }
 

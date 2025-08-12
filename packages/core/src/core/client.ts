@@ -142,7 +142,7 @@ export class GeminiClient {
       const memoryModule = await import('@agents/memory');
       const memoryAPI = memoryModule.getMemoryAPI();
       await memoryAPI.initialize();
-      console.log('Memory API initialized successfully');
+      // Memory API初期化成功
     } catch (error) {
       // Memory APIが利用できない場合は静かに無視
       console.debug('Memory API not available or failed to initialize:', error);

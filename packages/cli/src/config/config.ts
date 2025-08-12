@@ -312,7 +312,9 @@ export async function loadCliConfig(
         Object.entries(agentsSettings.mcpServers).forEach(([key, server]: [string, any]) => {
           agentsMcpServers![key] = server as MCPServerConfig;
         });
-        logger.info(`Loaded ${Object.keys(agentsMcpServers).length} MCP servers from .agents/settings.json`);
+        if (debugMode) {
+          logger.info(`Loaded ${Object.keys(agentsMcpServers).length} MCP servers from .agents/settings.json`);
+        }
       }
     } catch (error) {
       logger.debug(`Failed to load .agents/settings.json: ${error}`);
@@ -320,9 +322,11 @@ export async function loadCliConfig(
   }
 
   // モデル名を決定（OpenAI互換APIの場合は別のデフォルト値を使用）
-  console.debug(`[Config] authType: ${authType}, AuthType.OPENAI_COMPATIBLE: ${AuthType.OPENAI_COMPATIBLE}`);
-  console.debug(`[Config] LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL}, localModel: ${localModel}`);
-  console.debug(`[Config] GEMINI_MODEL: ${process.env.GEMINI_MODEL}, DEFAULT_GEMINI_MODEL: ${DEFAULT_GEMINI_MODEL}`);
+  if (debugMode) {
+    console.debug(`[Config] authType: ${authType}, AuthType.OPENAI_COMPATIBLE: ${AuthType.OPENAI_COMPATIBLE}`);
+    console.debug(`[Config] LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL}, localModel: ${localModel}`);
+    console.debug(`[Config] GEMINI_MODEL: ${process.env.GEMINI_MODEL}, DEFAULT_GEMINI_MODEL: ${DEFAULT_GEMINI_MODEL}`);
+  }
   
   const modelName = argv.model || (
     authType === AuthType.OPENAI_COMPATIBLE
@@ -330,7 +334,9 @@ export async function loadCliConfig(
       : (process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL)
   );
   
-  console.debug(`[Config] Final modelName: ${modelName}`);
+  if (debugMode) {
+    console.debug(`[Config] Final modelName: ${modelName}`);
+  }
 
   // .agents/settings.jsonのmcpServersを優先的に使用
   let mcpServers = agentsMcpServers || mergeMcpServers(settings, activeExtensions);
