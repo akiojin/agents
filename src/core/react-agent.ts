@@ -8,8 +8,6 @@
 import { Agent, AgentConfig } from './agent';
 import { ChatMessage } from '../providers/base';
 import { logger } from '../utils/logger';
-import { CoreToolScheduler, TrackedToolCall, ToolRequest } from '../../packages/core/src/core/coreToolScheduler';
-import { ApprovalMode, ToolConfirmationOutcome } from '../../packages/core/src/config/config';
 
 export interface ReActConfig extends AgentConfig {
   maxIterations?: number;  // 最大ループ回数
@@ -26,48 +24,11 @@ export class ReActAgent extends Agent {
   private maxIterations: number;
   private iterationTimeout: number;
   private currentTasks: ReActTask[] = [];
-  private toolScheduler?: CoreToolScheduler;
   
   constructor(config: ReActConfig) {
     super(config);
     this.maxIterations = config.maxIterations || 20;
     this.iterationTimeout = config.iterationTimeout || 60000; // 60秒
-    
-    // CoreToolSchedulerを初期化
-    this.initializeToolScheduler();
-  }
-
-  /**
-   * ツールスケジューラーの初期化
-   */
-  private initializeToolScheduler(): void {
-    if (!this.toolRegistry) {
-      logger.warn('ToolRegistry not available, approval UI will be limited');
-      return;
-    }
-
-    this.toolScheduler = new CoreToolScheduler({
-      toolRegistry: this.toolRegistry,
-      outputUpdateHandler: (output: any) => {
-        // 出力更新のハンドリング
-        logger.debug('Tool output update:', output);
-      },
-      onToolCallsUpdate: (calls: TrackedToolCall[]) => {
-        // ツール呼び出し状態の更新をハンドリング
-        logger.debug('Tool calls updated:', calls.map(c => ({
-          id: c.request.callId,
-          status: c.status,
-          tool: c.request.tool
-        })));
-      },
-      onAllToolCallsComplete: () => {
-        // すべてのツール呼び出しが完了
-        logger.debug('All tool calls completed');
-      },
-      approvalMode: this.config.approvalMode || ApprovalMode.DEFAULT,
-      getPreferredEditor: () => this.config.preferredEditor || 'vscode',
-      config: this.config
-    });
   }
 
   /**
@@ -228,7 +189,7 @@ export class ReActAgent extends Agent {
   }
 
   /**
-   * アクション実行（承認フロー対応）
+   * アクション実行
    */
   private async executeAction(action: any): Promise<string> {
     try {
@@ -236,40 +197,7 @@ export class ReActAgent extends Agent {
         return 'Thinking...';
       }
       
-      // ツールスケジューラーが利用可能な場合は承認フローを使用
-      if (this.toolScheduler && this.toolRegistry) {
-        // ツールが登録されているか確認
-        const tool = this.toolRegistry.getTool(action.type);
-        if (tool) {
-          // ツール呼び出しをスケジュール
-          const toolCall: ToolRequest = {
-            callId: `react-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            tool: action.type,
-            args: action.parameters || {}
-          };
-          
-          // ツールをスケジュール（承認が必要な場合は待機）
-          await this.toolScheduler.schedule([toolCall]);
-          
-          // 承認待ち状態の処理
-          await this.handleApprovalProcess();
-          
-          // 実行結果を取得
-          const completedCall = this.toolScheduler.toolCalls.find(
-            c => c.request.callId === toolCall.callId
-          );
-          
-          if (completedCall?.status === 'success' && completedCall.result) {
-            return JSON.stringify(completedCall.result);
-          } else if (completedCall?.status === 'error') {
-            return `Action failed: ${completedCall.error}`;
-          } else if (completedCall?.status === 'canceled') {
-            return 'Action was canceled by user';
-          }
-        }
-      }
-      
-      // フォールバック: 直接実行（後方互換性のため）
+      // MCPツールヘルパーを使用して実行（承認UIはCLI側で処理される）
       const result = await this.mcpToolsHelper?.executeTool(
         action.type,
         action.parameters || {}
@@ -279,70 +207,6 @@ export class ReActAgent extends Agent {
     } catch (error) {
       return `Action failed: ${error instanceof Error ? error.message : String(error)}`;
     }
-  }
-
-  /**
-   * 承認プロセスの処理
-   */
-  private async handleApprovalProcess(): Promise<void> {
-    if (!this.toolScheduler) return;
-    
-    // 承認待ちのツール呼び出しがあるか確認
-    const awaitingApproval = this.toolScheduler.toolCalls.find(
-      c => c.status === 'awaiting_approval'
-    );
-    
-    if (awaitingApproval) {
-      logger.info('⏳ ツール実行の承認待ち...');
-      console.log('\n📋 実行承認が必要です:');
-      console.log(`  ツール: ${awaitingApproval.request.tool}`);
-      console.log(`  パラメータ: ${JSON.stringify(awaitingApproval.request.args, null, 2)}`);
-      console.log('\n  [A] 承認 - 実行を承認');
-      console.log('  [R] 拒否 - 実行をキャンセル');
-      console.log('  [E] 編集 - パラメータを編集（実装予定）\n');
-      
-      // YOLOモードの場合のみ自動承認
-      if (this.config.approvalMode === ApprovalMode.YOLO) {
-        // YOLOモードでは自動承認
-        logger.info('🚀 YOLOモード: 自動承認');
-        await this.toolScheduler.handleConfirmationResponse(
-          awaitingApproval.request.callId,
-          ToolConfirmationOutcome.ProceedOnce
-        );
-      }
-      // 通常モードでは承認UIが表示され、ユーザーの入力を待つ
-      // CLIのインタラクティブUIがユーザーの選択を処理する
-    }
-    
-    // ツール実行の完了を待つ
-    await this.waitForToolCompletion();
-  }
-
-  /**
-   * ツール実行の完了を待つ
-   */
-  private async waitForToolCompletion(): Promise<void> {
-    if (!this.toolScheduler) return;
-    
-    // 実行中のツールがなくなるまで待つ
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        const hasRunning = this.toolScheduler!.toolCalls.some(
-          c => c.status === 'executing' || c.status === 'awaiting_approval'
-        );
-        
-        if (!hasRunning) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 100);
-      
-      // タイムアウト設定
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve();
-      }, 30000); // 30秒でタイムアウト
-    });
   }
 
   /**
