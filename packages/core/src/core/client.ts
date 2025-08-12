@@ -830,9 +830,13 @@ export class GeminiClient {
     sessionManager.updateTokenCount(newTokenCount ?? 0);
     await sessionManager.saveSession();
     
+    // テレメトリサービスのトークンカウントをリセット（UIの表示を更新）
+    uiTelemetryService.resetTokenCountAfterCompression(newTokenCount ?? 0, model);
+    
     console.log(`[Compression Debug] Compression complete: ${originalTokenCount} -> ${newTokenCount} tokens`);
     console.log(`[Compression Debug] Reduction: ${Math.round((1 - (newTokenCount ?? 0) / originalTokenCount) * 100)}%`);
-    console.log(`\n✅ 圧縮処理が完了しました！`);
+    console.log(`
+✅ 圧縮処理が完了しました！`);
     console.log(`📉 トークン数: ${originalTokenCount} → ${newTokenCount} (${Math.round((1 - (newTokenCount ?? 0) / originalTokenCount) * 100)}%削減)`);
 
     return {

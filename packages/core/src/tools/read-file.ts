@@ -130,50 +130,37 @@ export class ReadFileTool extends BaseTool<ReadFileToolParams, ToolResult> {
       };
     }
 
-    // IntelligentFileSystemを必須として使用
-    try {
-      const { getOrCreateInstances } = await import('../../../../src/functions/intelligent-registry-integration.js');
-      const { intelligentFS } = await getOrCreateInstances();
-      
-      const result = await intelligentFS.readFileIntelligent(params.absolute_path);
-      
-      if (!result.success) {
-        throw new Error(`IntelligentFileSystem read failed: ${result.error || 'Unknown error'}`);
-      }
-      
-      if (result.data) {
-        const lines = result.data.content.split('\n').length;
-        const mimetype = getSpecificMimeType(params.absolute_path);
-        recordFileOperationMetric(
-          this.config,
-          FileOperation.READ,
-          lines,
-          mimetype,
-          path.extname(params.absolute_path),
-        );
-        
-        // シンボル情報を含む拡張された結果を返す
-        let llmContent = result.data.content;
-        if (result.data.symbols && result.data.symbols.length > 0) {
-          llmContent += '\n\n// IntelligentFileSystem Analysis:\n';
-          llmContent += `// Found ${result.data.symbols.length} symbols\n`;
-          llmContent += `// Dependencies: ${result.data.dependencies?.join(', ') || 'none'}\n`;
-        }
-        
-        return {
-          llmContent: llmContent,
-          returnDisplay: `Read ${params.absolute_path} with IntelligentFileSystem analysis`,
-        };
-      }
-      
-      throw new Error('IntelligentFileSystem returned no data');
-    } catch (intelligentError) {
-      // IntelligentFileSystemが利用できない場合はエラーとする
-      const errorMsg = `IntelligentFileSystem is required but failed: ${intelligentError instanceof Error ? intelligentError.message : String(intelligentError)}`;
+    const result = await processSingleFileContent(
+      params.absolute_path,
+      this.config.getTargetDir(),
+      params.offset,
+      params.limit,
+      this.config.getFileParserService(),
+    );
+
+    if (result.error) {
       return {
-        llmContent: errorMsg,
-        returnDisplay: errorMsg,
+        llmContent: result.error, // The detailed error for LLM
+        returnDisplay: result.returnDisplay, // User-friendly error
       };
     }
+
+    const lines =
+      typeof result.llmContent === 'string'
+        ? result.llmContent.split('\n').length
+        : undefined;
+    const mimetype = getSpecificMimeType(params.absolute_path);
+    recordFileOperationMetric(
+      this.config,
+      FileOperation.READ,
+      lines,
+      mimetype,
+      path.extname(params.absolute_path),
+    );
+
+    return {
+      llmContent: result.llmContent,
+      returnDisplay: result.returnDisplay,
+    };
   }
 }
