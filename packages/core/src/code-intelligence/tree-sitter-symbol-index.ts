@@ -229,8 +229,13 @@ export class TreeSitterSymbolIndex {
     // WebAssembly Tree-sitter初期化
     await this.initializeWasm();
 
-    // データベース接続
+    // データベース接続（WALモード + タイムアウト設定で競合回避）
     this.db = new Database(this.dbPath);
+    this.db.exec('PRAGMA journal_mode = WAL;');
+    this.db.exec('PRAGMA synchronous = NORMAL;');
+    this.db.exec('PRAGMA cache_size = 1000000;');
+    this.db.exec('PRAGMA temp_store = MEMORY;');
+    this.db.exec('PRAGMA busy_timeout = 30000;'); // 30秒タイムアウト
     await this.createTables();
     this.isInitialized = true;
 
@@ -665,19 +670,32 @@ export class TreeSitterSymbolIndex {
   }
 
   /**
-   * シンボルデータベース挿入
+   * シンボルデータベース挿入（SQLite競合対応版）
    */
   private async insertSymbol(symbol: TreeSitterSymbolInfo): Promise<void> {
-    const runAsync = (sql: string, params?: any[]): Promise<any> => {
+    const runAsyncWithRetry = (sql: string, params?: any[], retries = 3): Promise<any> => {
       return new Promise((resolve, reject) => {
-        this.db!.run(sql, params || [], function(err: any) {
-          if (err) reject(err);
-          else resolve({} as any);
-        });
+        const attempt = () => {
+          this.db!.run(sql, params || [], function(err: any) {
+            if (err) {
+              if ((err.code === 'SQLITE_BUSY' || err.code === 'SQLITE_LOCKED') && retries > 0) {
+                // BUSY/LOCKEDエラーの場合は短時間待ってリトライ
+                setTimeout(() => {
+                  runAsyncWithRetry(sql, params, retries - 1).then(resolve).catch(reject);
+                }, 100 + Math.random() * 200); // 100-300msランダム待機
+                return;
+              }
+              reject(err);
+            } else {
+              resolve({} as any);
+            }
+          });
+        };
+        attempt();
       });
     };
     
-    await runAsync(`
+    await runAsyncWithRetry(`
       INSERT OR REPLACE INTO symbols (
         id, name, kind, language, file_uri, start_line, start_character, 
         end_line, end_character, container_name, signature, documentation,
@@ -692,18 +710,30 @@ export class TreeSitterSymbolIndex {
   }
 
   /**
-   * ファイルシンボル削除
+   * ファイルシンボル削除（SQLite競合対応版）
    */
   private async removeFileSymbols(fileUri: string): Promise<void> {
-    const runAsync = (sql: string, params?: any[]): Promise<any> => {
+    const runAsyncWithRetry = (sql: string, params?: any[], retries = 3): Promise<any> => {
       return new Promise((resolve, reject) => {
-        this.db!.run(sql, params || [], function(err: any) {
-          if (err) reject(err);
-          else resolve({} as any);
-        });
+        const attempt = () => {
+          this.db!.run(sql, params || [], function(err: any) {
+            if (err) {
+              if ((err.code === 'SQLITE_BUSY' || err.code === 'SQLITE_LOCKED') && retries > 0) {
+                setTimeout(() => {
+                  runAsyncWithRetry(sql, params, retries - 1).then(resolve).catch(reject);
+                }, 100 + Math.random() * 200);
+                return;
+              }
+              reject(err);
+            } else {
+              resolve({} as any);
+            }
+          });
+        };
+        attempt();
       });
     };
-    await runAsync('DELETE FROM symbols WHERE file_uri = ?', [fileUri]);
+    await runAsyncWithRetry('DELETE FROM symbols WHERE file_uri = ?', [fileUri]);
   }
 
   /**
