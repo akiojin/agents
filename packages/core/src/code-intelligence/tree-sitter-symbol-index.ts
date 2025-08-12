@@ -9,6 +9,7 @@ import { promisify } from 'util';
 import { URI } from 'vscode-uri';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import { glob } from 'glob';
 import { fileURLToPath } from 'url';
 
@@ -31,7 +32,7 @@ function findWasmPath(): string {
   ];
   
   for (const candidate of candidates) {
-    if (require('fs').existsSync(path.join(candidate, 'tree-sitter-javascript.wasm'))) {
+    if (fsSync.existsSync(path.join(candidate, 'tree-sitter-javascript.wasm'))) {
       console.log(`✓ Found WASM path: ${candidate}`);
       return candidate;
     }
