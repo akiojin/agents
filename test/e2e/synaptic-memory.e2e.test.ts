@@ -17,7 +17,7 @@ class CLITestInterface {
         env: {
           ...process.env,
           NODE_ENV: 'test',
-          CHROMA_URL: 'http://localhost:8000'
+          SQLITE_PATH: ':memory:'
         }
       });
 
@@ -116,14 +116,12 @@ describe('Synaptic Memory E2E Tests', () => {
   beforeEach(async () => {
     cli = new CLITestInterface();
     
-    // テスト用のChromaDBが起動していることを確認
+    // テスト用のSqliteデータベースの準備
     try {
-      const response = await fetch('http://localhost:8000/api/v1/heartbeat');
-      if (!response.ok) {
-        throw new Error('ChromaDBが応答していません');
-      }
+      // In-memory SQLiteを使用するため、特別な設定は不要
+      console.log('SQLiteメモリデータベースを使用します');
     } catch (error) {
-      console.warn('ChromaDB接続テストをスキップします:', error);
+      console.warn('SQLite設定エラー:', error);
     }
 
     await cli.start();

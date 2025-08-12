@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SynapticMemoryNetwork } from '../../packages/memory/src/synaptic/synapticNetwork';
-import { ChromaMemoryClient } from '../../packages/memory/src/chroma/chromaClient';
+import { SqliteMemoryClient } from '../../packages/memory/src/sqlite/sqliteClient';
 import { MemoryAPI } from '../../packages/memory/src/api/memoryApi';
 
 // エラーハンドリング用のモッククライアント
-class FlakyChromaClient extends ChromaMemoryClient {
+class FlakySqliteClient extends SqliteMemoryClient {
   private failureCount = 0;
   private maxFailures = 0;
 
@@ -99,9 +99,9 @@ describe('Synaptic Memory Error Handling Tests', () => {
   });
 
   describe('データベース接続エラー', () => {
-    it('ChromaDB接続エラーが適切にハンドリングされること', async () => {
-      const invalidClient = new ChromaMemoryClient({
-        chromaUrl: 'http://invalid-url:9999'
+    it('SqliteDB接続エラーが適切にハンドリングされること', async () => {
+      const invalidClient = new SqliteMemoryClient({
+        sqlitePath: '/invalid/path/database.db'
       });
 
       synapticNetwork = new SynapticMemoryNetwork(invalidClient);
@@ -117,8 +117,8 @@ describe('Synaptic Memory Error Handling Tests', () => {
     });
 
     it('部分的な接続障害からの回復テスト', async () => {
-      const flakyClient = new FlakyChromaClient({
-        chromaUrl: 'http://localhost:8000',
+      const flakyClient = new FlakySqliteClient({
+        sqlitePath: ':memory:',
         collectionName: 'error-test-collection'
       }, 2); // 最初の2回は失敗
 
@@ -200,8 +200,8 @@ describe('Synaptic Memory Error Handling Tests', () => {
 
   describe('検索エラー', () => {
     beforeEach(() => {
-      const mockClient = new FlakyChromaClient({
-        chromaUrl: 'http://localhost:8000'
+      const mockClient = new FlakySqliteClient({
+        sqlitePath: ':memory:'
       });
       synapticNetwork = new SynapticMemoryNetwork(mockClient);
     });
@@ -278,7 +278,7 @@ describe('Synaptic Memory Error Handling Tests', () => {
   describe('API層エラーハンドリング', () => {
     beforeEach(() => {
       memoryApi = new MemoryAPI({
-        chromaUrl: 'http://localhost:8000',
+        sqlitePath: ':memory:',
         enableEventProcessing: false,
         maxEventQueueSize: 100,
         eventProcessingInterval: 1000
@@ -287,7 +287,7 @@ describe('Synaptic Memory Error Handling Tests', () => {
 
     it('初期化エラーが適切にハンドリングされること', async () => {
       const faultyApi = new MemoryAPI({
-        chromaUrl: 'http://invalid-url:9999',
+        sqlitePath: '/invalid/path/database.db',
         enableEventProcessing: false,
         maxEventQueueSize: 100,
         eventProcessingInterval: 1000
@@ -422,8 +422,8 @@ describe('Synaptic Memory Error Handling Tests', () => {
       networkSimulator = new NetworkErrorSimulator(0.7); // 70%の確率でエラー
       networkSimulator.enable();
 
-      const mockClient = new ChromaMemoryClient({
-        chromaUrl: 'http://localhost:8000'
+      const mockClient = new SqliteMemoryClient({
+        sqlitePath: ':memory:'
       });
       synapticNetwork = new SynapticMemoryNetwork(mockClient);
 
@@ -447,8 +447,8 @@ describe('Synaptic Memory Error Handling Tests', () => {
 
   describe('回復処理テスト', () => {
     it('エラー後の自動回復機能', async () => {
-      const flakyClient = new FlakyChromaClient({
-        chromaUrl: 'http://localhost:8000'
+      const flakyClient = new FlakySqliteClient({
+        sqlitePath: ':memory:'
       }, 3); // 3回失敗後に成功
 
       synapticNetwork = new SynapticMemoryNetwork(flakyClient);

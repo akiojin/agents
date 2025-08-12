@@ -10,7 +10,7 @@ export interface MemoryEvent {
 }
 export interface MemoryAPIConfig {
     enableAutoMemory?: boolean;
-    chromaUrl?: string;
+    sqlitePath?: string;
     projectName?: string;
 }
 export declare class MemoryAPI {

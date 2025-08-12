@@ -200,7 +200,7 @@ export async function main() {
     // Initialize memory system
     const memoryManager = getMemoryManager({
       projectRoot: workspaceRoot
-      // chromaUrlは省略 - MemoryManager内で環境に応じて自動判定される
+      // sqlitePathは省略 - MemoryManager内で自動設定される
     });
     await memoryManager.initialize();
     

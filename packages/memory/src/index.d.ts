@@ -1,16 +1,16 @@
 /**
  * 記憶システムのメインエントリーポイント
- * シナプスモデルとChromaDBを統合した知的記憶システム
+ * シナプスモデルとSQLiteを統合した知的記憶システム
  */
-import { Memory } from './chroma/chromaClient.js';
+import { Memory } from './sqlite/SqliteMemoryClient.js';
 export interface MemorySystemConfig {
     collectionName?: string;
-    chromaUrl?: string;
+    sqlitePath?: string;
     autoDecay?: boolean;
     decayInterval?: number;
 }
 export declare class IntegratedMemorySystem {
-    private chromaClient;
+    private sqliteClient;
     private synapticNetwork;
     private config;
     private decayTimer?;
@@ -86,6 +86,6 @@ export declare class IntegratedMemorySystem {
      */
     private calculateSimilarity;
 }
-export { Memory, ChromaMemoryClient } from './chroma/chromaClient.js';
+export { Memory, SqliteMemoryClient } from './sqlite/SqliteMemoryClient.js';
 export { SynapticMemoryNetwork, SynapticConnection, MemoryNode } from './synaptic/synapticNetwork.js';
 export { MemoryAPI, getMemoryAPI, MemoryEvent, MemoryAPIConfig } from './api/memoryApi.js';

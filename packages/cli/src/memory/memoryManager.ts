@@ -10,13 +10,14 @@
  */
 
 import { IntegratedMemorySystem } from '@agents/memory';
-import { DecisionLog, WhyChain, ResultType } from '@agents/memory/decision-log';
+// TODO: DecisionLogは後で再有効化
+// import { DecisionLog, WhyChain, ResultType } from '@agents/memory/decision-log';
 import { Config } from '@indenscale/open-gemini-cli-core';
 import path from 'path';
 import crypto from 'crypto';
 
 export interface MemoryManagerConfig {
-  chromaUrl?: string;
+  sqlitePath?: string;
   autoDecay?: boolean;
   decayInterval?: number;
   projectRoot: string;
@@ -26,7 +27,7 @@ export interface MemoryManagerConfig {
 
 export class MemoryManager {
   private memorySystem: IntegratedMemorySystem | null = null;
-  private decisionLog: DecisionLog | null = null;
+  // private decisionLog: DecisionLog | null = null;
   private projectId: string;
   private config: MemoryManagerConfig;
   private initialized: boolean = false;
@@ -60,35 +61,33 @@ export class MemoryManager {
     // プロジェクト固有のコレクション名
     const collectionName = `memories_${this.projectId}`;
     
-    // Docker環境を判定してChromaDBのURLを決定
-    const hostname = process.env.HOSTNAME || '';
-    const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
-    const defaultChromaUrl = isInDocker ? 'http://chroma:8000' : 'http://localhost:8000';
+    // SQLiteデータベースパスを設定
+    const defaultSqlitePath = path.join(this.config.projectRoot, '.agents', `memories_${this.projectId}.db`);
     
     this.memorySystem = new IntegratedMemorySystem({
       collectionName,
-      chromaUrl: this.config.chromaUrl || defaultChromaUrl,
+      sqlitePath: this.config.sqlitePath || defaultSqlitePath,
       autoDecay: this.config.autoDecay !== false,
       decayInterval: this.config.decayInterval || 3600000 // 1時間
     });
     
     await this.memorySystem.initialize();
     
-    // DecisionLogの初期化
-    if (this.config.enableDecisionLog !== false) {
-      const decisionDbPath = path.join(this.config.projectRoot, '.agents', 'decisions.db');
-      this.decisionLog = new DecisionLog(decisionDbPath);
-    }
+    // TODO: DecisionLogの初期化は後で再有効化
+    // if (this.config.enableDecisionLog !== false) {
+    //   const decisionDbPath = path.join(this.config.projectRoot, '.agents', 'decisions.db');
+    //   this.decisionLog = new DecisionLog(decisionDbPath);
+    // }
     
     this.initialized = true;
     
     // 既存の記憶統計を取得（ログは出力しない）
     const stats = await this.memorySystem.getStatistics();
     
-    // 決定ログの統計を取得（ログは出力しない）
-    if (this.decisionLog) {
-      const decisionStats = await this.decisionLog.getStatistics();
-    }
+    // TODO: 決定ログの統計を取得（後で再有効化）
+    // if (this.decisionLog) {
+    //   const decisionStats = await this.decisionLog.getStatistics();
+    // }
   }
   
   /**
@@ -221,9 +220,10 @@ export class MemoryManager {
     if (this.memorySystem) {
       await this.memorySystem.cleanup();
     }
-    if (this.decisionLog) {
-      await this.decisionLog.close();
-    }
+    // TODO: DecisionLogクリーンアップは後で再有効化
+    // if (this.decisionLog) {
+    //   await this.decisionLog.close();
+    // }
   }
   
   /**
@@ -234,70 +234,77 @@ export class MemoryManager {
   }
   
   /**
-   * 決定を記録
+   * 決定を記録 (TODO: 後で再有効化)
    */
   async recordDecision(action: string, reason: string, context?: any): Promise<number | null> {
-    if (!this.decisionLog) return null;
-    
-    try {
-      const decisionId = await this.decisionLog.logDecision(
-        { type: 'action', target: action },
-        { direct: reason, context: context },
-        this.currentDecisionId || undefined
-      );
-      
-      this.currentDecisionId = decisionId;
-      return decisionId;
-    } catch (error) {
-      console.warn('Failed to record decision:', error);
-      return null;
-    }
+    // TODO: DecisionLog機能の再有効化
+    return null;
+    // if (!this.decisionLog) return null;
+    // 
+    // try {
+    //   const decisionId = await this.decisionLog.logDecision(
+    //     { type: 'action', target: action },
+    //     { direct: reason, context: context },
+    //     this.currentDecisionId || undefined
+    //   );
+    //   
+    //   this.currentDecisionId = decisionId;
+    //   return decisionId;
+    // } catch (error) {
+    //   console.warn('Failed to record decision:', error);
+    //   return null;
+    // }
   }
   
   /**
-   * 決定の結果を更新
+   * 決定の結果を更新 (TODO: 後で再有効化)
    */
-  async updateDecisionResult(decisionId: number, result: ResultType, output?: string): Promise<void> {
-    if (!this.decisionLog) return;
-    
-    try {
-      await this.decisionLog.updateResult(decisionId, result, output);
-    } catch (error) {
-      console.warn('Failed to update decision result:', error);
-    }
+  async updateDecisionResult(decisionId: number, result: any, output?: string): Promise<void> {
+    // TODO: DecisionLog機能の再有効化
+    // if (!this.decisionLog) return;
+    // 
+    // try {
+    //   await this.decisionLog.updateResult(decisionId, result, output);
+    // } catch (error) {
+    //   console.warn('Failed to update decision result:', error);
+    // }
   }
   
   /**
-   * WhyChainを構築
+   * WhyChainを構築 (TODO: 後で再有効化)
    */
-  async buildWhyChain(decisionId?: number): Promise<WhyChain | null> {
-    if (!this.decisionLog) return null;
-    
-    try {
-      const targetId = decisionId || this.currentDecisionId;
-      if (!targetId) return null;
-      
-      const whyChain = await this.decisionLog.explainWhy(targetId);
-      return whyChain;
-    } catch (error) {
-      console.warn('Failed to build why chain:', error);
-      return null;
-    }
+  async buildWhyChain(decisionId?: number): Promise<any | null> {
+    // TODO: DecisionLog機能の再有効化
+    return null;
+    // if (!this.decisionLog) return null;
+    // 
+    // try {
+    //   const targetId = decisionId || this.currentDecisionId;
+    //   if (!targetId) return null;
+    //   
+    //   const whyChain = await this.decisionLog.explainWhy(targetId);
+    //   return whyChain;
+    // } catch (error) {
+    //   console.warn('Failed to build why chain:', error);
+    //   return null;
+    // }
   }
   
   /**
-   * パターンを検出
+   * パターンを検出 (TODO: 後で再有効化)
    */
   async detectPatterns(options?: any): Promise<any[]> {
-    if (!this.decisionLog) return [];
-    
-    try {
-      const patterns = await this.decisionLog.detectPatterns(options);
-      return patterns;
-    } catch (error) {
-      console.warn('Failed to detect patterns:', error);
-      return [];
-    }
+    // TODO: DecisionLog機能の再有効化
+    return [];
+    // if (!this.decisionLog) return [];
+    // 
+    // try {
+    //   const patterns = await this.decisionLog.detectPatterns(options);
+    //   return patterns;
+    // } catch (error) {
+    //   console.warn('Failed to detect patterns:', error);
+    //   return [];
+    // }
   }
   
   /**
@@ -311,10 +318,12 @@ export class MemoryManager {
   }
   
   /**
-   * 決定ログへの直接アクセス
+   * 決定ログへの直接アクセス (TODO: 後で再有効化)
    */
   getDecisionLog() {
-    return this.decisionLog;
+    // TODO: DecisionLog機能の再有効化
+    return null;
+    // return this.decisionLog;
   }
 }
 

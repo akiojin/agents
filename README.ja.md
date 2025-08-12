@@ -154,7 +154,7 @@ GOOGLE_API_KEY=your_google_ai_api_key_here
 GITHUB_TOKEN=your_github_token_here
 
 # SQLite Memory（ローカルファイル、設定不要）
-CHROMA_URL=http://chroma:8000
+# CHROMA_URL設定は不要（SQLiteベースのため）
 ```
 
 ## 🏆 競合比較：なぜAgentsが優れているのか

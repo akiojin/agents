@@ -77,7 +77,6 @@
   },
   "dependencies": {
     "2": "^3.0.0",
-    "@chroma-core/default-embed": "^0.1.8",
     "@huggingface/transformers": "^3.7.1",
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^12.2.0",

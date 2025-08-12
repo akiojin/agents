@@ -1,6 +1,6 @@
 /**
  * Pure SQLite ベクトルメモリクライアント
- * ChromaDBの代替として、SQLite + 手動コサイン類似度で実装
+ * SQLite + 手動コサイン類似度で実装
  * シンプルさを最優先とし、依存関係を最小化
  */
 
@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import { createHash } from 'crypto';
 
 /**
- * ChromaMemoryClientと互換性のあるメモリ形式
+ * メモリクライアントのメモリ形式
  */
 export interface Memory {
   id: string;
@@ -33,7 +33,7 @@ export interface Memory {
 }
 
 /**
- * シナプス記憶ノード（ChromaMemoryClient互換）
+ * シナプス記憶ノード
  */
 export interface SynapticMemoryNode {
   id: string;
@@ -52,13 +52,13 @@ export interface SynapticMemoryNode {
 
 /**
  * SQLite + 手動ベクトル計算によるメモリクライアント
- * ChromaMemoryClientの機能をサーバーレスで実現
+ * ベクトルメモリの機能をサーバーレスで実現
  */
 export class SqliteMemoryClient {
   private db: Database.Database;
   private dbPath: string;
   
-  // シナプス記憶システム（ChromaMemoryClient互換）
+  // シナプス記憶システム
   private synapticNodes: Map<string, SynapticMemoryNode> = new Map();
   private hebbianConfig = {
     learningRate: 0.1,
@@ -68,15 +68,36 @@ export class SqliteMemoryClient {
     synapticStrengthThreshold: 0.1
   };
 
-  constructor(collectionName: string = 'agent_memories') {
-    const baseDir = process.cwd();
-    const cacheDir = path.join(baseDir, '.agents', 'cache');
+  constructor(configOrCollectionName: string | { sqlitePath?: string; collectionName?: string } = 'agent_memories') {
+    let collectionName: string;
+    let sqlitePath: string | undefined;
     
-    if (!fs.existsSync(cacheDir)) {
-      fs.mkdirSync(cacheDir, { recursive: true });
+    if (typeof configOrCollectionName === 'string') {
+      collectionName = configOrCollectionName;
+    } else {
+      collectionName = configOrCollectionName.collectionName || 'agent_memories';
+      sqlitePath = configOrCollectionName.sqlitePath;
     }
     
-    this.dbPath = path.join(cacheDir, `sqlite-memory-${collectionName}.db`);
+    if (sqlitePath === ':memory:') {
+      this.dbPath = ':memory:';
+    } else if (sqlitePath) {
+      this.dbPath = sqlitePath;
+      const dir = path.dirname(sqlitePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    } else {
+      const baseDir = process.cwd();
+      const cacheDir = path.join(baseDir, '.agents', 'cache');
+      
+      if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+      }
+      
+      this.dbPath = path.join(cacheDir, `sqlite-memory-${collectionName}.db`);
+    }
+    
     this.db = new Database(this.dbPath);
     this.initializeDatabase();
   }
@@ -128,7 +149,7 @@ export class SqliteMemoryClient {
   }
 
   /**
-   * 初期化（ChromaMemoryClient互換）
+   * 初期化
    * SQLite版では即座に完了
    */
   async initialize(): Promise<void> {
@@ -223,7 +244,7 @@ export class SqliteMemoryClient {
   }
 
   /**
-   * 記憶の保存（ChromaMemoryClient互換）
+   * 記憶の保存
    */
   async store(memory: Memory): Promise<void> {
     const embedding = await this.generateEmbedding(JSON.stringify(memory.content));
@@ -253,7 +274,7 @@ export class SqliteMemoryClient {
   }
 
   /**
-   * ベクトル検索（ChromaMemoryClient互換）
+   * ベクトル検索
    */
   async search(
     query: string, 
@@ -312,7 +333,7 @@ export class SqliteMemoryClient {
   }
 
   /**
-   * 記憶の更新（ChromaMemoryClient互換）
+   * 記憶の更新
    */
   async update(memory: Memory): Promise<void> {
     // 新しい埋め込みを生成
@@ -342,7 +363,7 @@ export class SqliteMemoryClient {
   }
 
   /**
-   * IDによる記憶の取得（ChromaMemoryClient互換）
+   * IDによる記憶の取得
    */
   async get(id: string): Promise<Memory | null> {
     const stmt = this.db.prepare('SELECT * FROM memories WHERE id = ?');
@@ -366,7 +387,7 @@ export class SqliteMemoryClient {
   }
 
   /**
-   * 全記憶の取得（ChromaMemoryClient互換）
+   * 全記憶の取得
    */
   async getAll(): Promise<Memory[]> {
     const stmt = this.db.prepare('SELECT * FROM memories ORDER BY created_at DESC');
@@ -388,7 +409,7 @@ export class SqliteMemoryClient {
   }
 
   /**
-   * シナプス記憶活性化（ChromaMemoryClient互換）
+   * シナプス記憶活性化
    * ※ 簡略化版、基本的なベクトル検索のみ実装
    */
   async activateSynapticMemories(

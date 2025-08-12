@@ -1,6 +1,6 @@
 /**
  * 記憶システムのメインエントリーポイント
- * シナプスモデルとChromaDBを統合した知的記憶システム
+ * シナプスモデルとSQLiteを統合した知的記憶システム
  */
 
 import { SqliteMemoryClient, Memory } from './sqlite/SqliteMemoryClient.js';
@@ -8,6 +8,7 @@ import { SynapticMemoryNetwork } from './synaptic/synapticNetwork.js';
 
 export interface MemorySystemConfig {
   collectionName?: string;
+  sqlitePath?: string;
   autoDecay?: boolean;
   decayInterval?: number;  // ミリ秒
 }
@@ -22,11 +23,15 @@ export class IntegratedMemorySystem {
   constructor(config: MemorySystemConfig = {}) {
     this.config = {
       collectionName: config.collectionName || 'agent_memories',
+      sqlitePath: config.sqlitePath || ':memory:',
       autoDecay: config.autoDecay !== false,
       decayInterval: config.decayInterval || 3600000  // 1時間ごと
     };
 
-    this.sqliteClient = new SqliteMemoryClient(this.config.collectionName);
+    this.sqliteClient = new SqliteMemoryClient({
+      sqlitePath: this.config.sqlitePath,
+      collectionName: this.config.collectionName
+    });
     this.synapticNetwork = new SynapticMemoryNetwork(this.sqliteClient);
   }
 
@@ -36,7 +41,7 @@ export class IntegratedMemorySystem {
   async initialize(): Promise<void> {
     // メモリシステム初期化中...
     
-    // ChromaDB初期化
+    // SQLite初期化
     await this.sqliteClient.initialize();
     
     // シナプスネットワーク初期化

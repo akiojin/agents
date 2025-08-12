@@ -4,7 +4,7 @@ import { SqliteMemoryClient } from '../sqlite/SqliteMemoryClient';
 import { MemoryAPI } from '../api/memoryApi';
 
 // 統合テスト用のテストデータベース設定
-const TEST_CHROMA_URL = 'http://localhost:8000';
+const TEST_SQLITE_PATH = './test.db';
 const TEST_COLLECTION_NAME = 'test-synaptic-memories';
 
 describe('SynapticMemoryNetwork Integration Tests', () => {
@@ -13,9 +13,9 @@ describe('SynapticMemoryNetwork Integration Tests', () => {
   let memoryApi: MemoryAPI;
 
   beforeAll(async () => {
-    // テスト用Chromaクライアントの初期化
+    // テスト用SQLiteクライアントの初期化
     sqliteClient = new SqliteMemoryClient({
-      chromaUrl: TEST_CHROMA_URL,
+      sqlitePath: TEST_SQLITE_PATH,
       collectionName: TEST_COLLECTION_NAME
     });
 
@@ -42,7 +42,7 @@ describe('SynapticMemoryNetwork Integration Tests', () => {
   beforeEach(async () => {
     synapticNetwork = new SynapticMemoryNetwork(sqliteClient);
     memoryApi = new MemoryAPI({
-      chromaUrl: TEST_CHROMA_URL,
+      sqlitePath: TEST_SQLITE_PATH,
       enableEventProcessing: false,
       maxEventQueueSize: 100,
       eventProcessingInterval: 1000

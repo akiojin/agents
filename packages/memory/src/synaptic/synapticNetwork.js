@@ -5,7 +5,7 @@
 export class SynapticMemoryNetwork {
     nodes = new Map();
     synapses = new Map();
-    chromaClient;
+    memoryClient;
     recentlyActivated = new Set();
     // アクセスパターン学習
     accessHistory = []; // 最近のアクセス履歴
@@ -24,15 +24,15 @@ export class SynapticMemoryNetwork {
     COMPETITIVE_STRENGTH = 0.3; // 競合学習の強度
     MAX_PROPAGATION_DEPTH = 3; // 最大伝播深度
     PROPAGATION_DECAY = 0.7; // 伝播減衰率
-    constructor(chromaClient) {
-        this.chromaClient = chromaClient;
+    constructor(memoryClient) {
+        this.memoryClient = memoryClient;
     }
     /**
      * ネットワークの初期化
      */
     async initialize() {
         // SQLiteからすべての記憶を読み込み
-        const memories = await this.chromaClient.getAll();
+        const memories = await this.memoryClient.getAll();
         for (const memory of memories) {
             const node = {
                 memory,
@@ -77,7 +77,7 @@ export class SynapticMemoryNetwork {
         if (depth === 0) {
             node.memory.metadata.access_count++;
             node.memory.metadata.last_accessed = new Date();
-            await this.chromaClient.update(node.memory);
+            await this.memoryClient.update(node.memory);
         }
         if (propagate && node.activationLevel > this.ACTIVATION_THRESHOLD) {
             // 段階的活性化伝播
@@ -323,7 +323,7 @@ export class SynapticMemoryNetwork {
             return;
         // 主記憶の内容でベクトル検索
         const searchQuery = this.extractSearchQuery(primaryNode.memory);
-        const semanticResults = await this.chromaClient.search(searchQuery, 15);
+        const semanticResults = await this.memoryClient.search(searchQuery, 15);
         for (const memory of semanticResults) {
             if (!results.has(memory.id) && memory.id !== memoryId) {
                 // セマンティック類似性スコアを計算
@@ -374,11 +374,11 @@ export class SynapticMemoryNetwork {
      */
     async contextualSearch(query, context = []) {
         // 基本検索結果
-        const searchResults = await this.chromaClient.search(query);
+        const searchResults = await this.memoryClient.search(query);
         // 文脈記憶を活性化
         const contextMemoryIds = [];
         for (const contextItem of context) {
-            const contextMemories = await this.chromaClient.search(contextItem, 5);
+            const contextMemories = await this.memoryClient.search(contextItem, 5);
             for (const memory of contextMemories) {
                 await this.activate(memory.id, true);
                 contextMemoryIds.push(memory.id);
@@ -421,7 +421,7 @@ export class SynapticMemoryNetwork {
      */
     async addMemory(memory) {
         // SQLiteに保存
-        await this.chromaClient.store(memory);
+        await this.memoryClient.store(memory);
         // ノードとして追加
         const node = {
             memory,
@@ -456,7 +456,7 @@ export class SynapticMemoryNetwork {
                 }
             }
         }
-        await this.chromaClient.update(memory);
+        await this.memoryClient.update(memory);
     }
     /**
      * 動的シナプス調整システム（LTP/LTD）

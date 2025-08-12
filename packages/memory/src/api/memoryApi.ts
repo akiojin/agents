@@ -15,7 +15,7 @@ export interface MemoryEvent {
 
 export interface MemoryAPIConfig {
   enableAutoMemory?: boolean;
-  chromaUrl?: string;
+  sqlitePath?: string;
   projectName?: string;
 }
 
@@ -29,12 +29,12 @@ export class MemoryAPI {
   constructor(config: MemoryAPIConfig = {}) {
     this.config = {
       enableAutoMemory: config.enableAutoMemory !== false,
-      chromaUrl: config.chromaUrl || 'http://localhost:8000',
+      sqlitePath: config.sqlitePath || '.agents/cache/memory.db',
       projectName: config.projectName || 'default'
     };
 
     this.memorySystem = new IntegratedMemorySystem({
-      chromaUrl: this.config.chromaUrl
+      collectionName: 'agent_memories'
     });
     
     this.serenaClient = new SerenaMCPClient();
@@ -129,7 +129,7 @@ export class MemoryAPI {
   ): Promise<any[]> {
     const results: any[] = [];
     
-    // ChromaDBから検索
+    // SQLiteから検索
     const memories = await this.memorySystem.recall(query);
     results.push(...memories);
     

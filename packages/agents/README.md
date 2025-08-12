@@ -96,7 +96,7 @@ const agent = new Agent({
 
 ### Memory Integration
 Agents can integrate with various memory systems:
-- ChromaDB for vector-based storage
+- SQLite for vector-based storage
 - Synaptic networks for associative recall
 - Serena integration for project-specific knowledge
 
@@ -124,7 +124,7 @@ Tools are managed with:
   "tools": ["fileSystem", "command"],
   "memory": {
     "enabled": true,
-    "type": "chroma"
+    "type": "sqlite"
   }
 }
 ```
@@ -139,7 +139,7 @@ Tools can be configured with:
 
 ### Memory System Integration
 Agents can seamlessly integrate with:
-- ChromaDB for vector-based memory storage
+- SQLite for vector-based memory storage
 - Synaptic networks for associative memory retrieval
 - Project-specific knowledge through Serena integration
 

@@ -1,10 +1,10 @@
 # Memory System
 
-The Memory system is an intelligent memory management component that combines ChromaDB with a synaptic network to provide human-like memory mechanisms. It enables agents to store, retrieve, and relate memories in a way that mimics human cognition.
+The Memory system is an intelligent memory management component that combines SQLite with a synaptic network to provide human-like memory mechanisms. It enables agents to store, retrieve, and relate memories in a way that mimics human cognition.
 
 ## Components
 
-1. **ChromaDB Client** - Handles vector database operations using ChromaDB for storing and searching memories.
+1. **SQLite Client** - Handles vector database operations using SQLite for storing and searching memories.
 2. **Synaptic Network** - Implements human-like synaptic connections between memories, enabling associative recall and learning through Hebbian learning.
 3. **Integrated Memory System** - Combines the above components to provide a complete memory management solution.
 4. **API Interface** - Provides integration with the Agents tool system for seamless memory operations.
@@ -12,7 +12,7 @@ The Memory system is an intelligent memory management component that combines Ch
 ## Architecture
 
 ### Memory Storage Flow
-1. Memory is stored in ChromaDB with metadata
+1. Memory is stored in SQLite with metadata
 2. Synaptic connections are established between related memories
 3. Memory strength and activation levels are maintained through learning algorithms
 
@@ -46,9 +46,9 @@ The Memory system is an intelligent memory management component that combines Ch
 
 ## Implementation Details
 
-### ChromaDB Integration
-- Uses ChromaDB as the primary vector database for memory storage
-- Handles both server and local file system modes
+### SQLite Integration
+- Uses SQLite as the primary vector database for memory storage
+- Handles both in-memory and local file system modes
 - Implements connection retry logic for robust operation
 
 ### Synaptic Network Architecture
@@ -124,8 +124,8 @@ await memorySystem.feedback(taskId, true);
 ## Configuration Options
 
 ### Memory System Configuration
-- `collectionName`: ChromaDB collection name (default: 'agent_memories')
-- `chromaUrl`: ChromaDB server URL (default: 'http://localhost:8000')
+- `collectionName`: SQLite collection name (default: 'agent_memories')
+- `sqlitePath`: SQLite database file path (default: ':memory:')
 - `autoDecay`: Enable automatic memory decay (default: true)
 - `decayInterval`: How often to apply decay (default: 1 hour)
 
@@ -143,7 +143,7 @@ await memorySystem.feedback(taskId, true);
 - Memory strength is maintained through usage feedback
 
 ### Search Efficiency
-- ChromaDB vector search for semantic similarity
+- SQLite vector search for semantic similarity
 - Synaptic network provides associative recall
 - Context-aware filtering improves relevance
 

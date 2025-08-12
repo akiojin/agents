@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { performance } from 'perf_hooks';
 import { SynapticMemoryNetwork } from '../../packages/memory/src/synaptic/synapticNetwork';
-import { ChromaMemoryClient } from '../../packages/memory/src/chroma/chromaClient';
+import { SqliteMemoryClient } from '../../packages/memory/src/sqlite/sqliteClient';
 import { MemoryAPI } from '../../packages/memory/src/api/memoryApi';
 
 // パフォーマンステスト用の設定
 const PERFORMANCE_TEST_CONFIG = {
-  chromaUrl: 'http://localhost:8000',
+  sqlitePath: ':memory:',
   collectionName: 'performance-test-memories',
   
   // テストサイズの設定
@@ -120,26 +120,26 @@ class TestDataGenerator {
 
 describe('Synaptic Memory Performance Tests', () => {
   let synapticNetwork: SynapticMemoryNetwork;
-  let chromaClient: ChromaMemoryClient;
+  let sqliteClient: SqliteMemoryClient;
   let memoryApi: MemoryAPI;
   let profiler: PerformanceProfiler;
 
   beforeAll(async () => {
-    chromaClient = new ChromaMemoryClient({
-      chromaUrl: PERFORMANCE_TEST_CONFIG.chromaUrl,
+    sqliteClient = new SqliteMemoryClient({
+      sqlitePath: PERFORMANCE_TEST_CONFIG.sqlitePath,
       collectionName: PERFORMANCE_TEST_CONFIG.collectionName
     });
 
     // テスト用コレクションの準備
     try {
-      await chromaClient.deleteCollection();
+      await sqliteClient.deleteCollection();
     } catch (error) {
       // コレクションが存在しない場合は無視
     }
-    await chromaClient.ensureCollection();
+    await sqliteClient.ensureCollection();
 
     memoryApi = new MemoryAPI({
-      chromaUrl: PERFORMANCE_TEST_CONFIG.chromaUrl,
+      sqlitePath: PERFORMANCE_TEST_CONFIG.sqlitePath,
       enableEventProcessing: false,
       maxEventQueueSize: 10000,
       eventProcessingInterval: 1000
@@ -150,7 +150,7 @@ describe('Synaptic Memory Performance Tests', () => {
 
   afterAll(async () => {
     try {
-      await chromaClient.deleteCollection();
+      await sqliteClient.deleteCollection();
       await synapticNetwork.cleanup();
       await memoryApi.cleanup();
     } catch (error) {
@@ -159,7 +159,7 @@ describe('Synaptic Memory Performance Tests', () => {
   });
 
   beforeEach(() => {
-    synapticNetwork = new SynapticMemoryNetwork(chromaClient);
+    synapticNetwork = new SynapticMemoryNetwork(sqliteClient);
     profiler = new PerformanceProfiler();
   });
 

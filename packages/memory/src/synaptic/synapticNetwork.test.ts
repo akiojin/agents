@@ -10,7 +10,7 @@ class MockSqliteClient extends SqliteMemoryClient {
   private mockMemories: Memory[] = [];
   
   constructor() {
-    super({ chromaUrl: 'http://localhost:8000' });
+    super({ sqlitePath: './test.db' });
   }
   
   async store(memory: Memory): Promise<void> {
@@ -35,10 +35,10 @@ class MockSqliteClient extends SqliteMemoryClient {
 
 describe('SynapticMemoryNetwork', () => {
   let network: SynapticMemoryNetwork;
-  let mockClient: MockChromaClient;
+  let mockClient: MockSqliteClient;
   
   beforeEach(() => {
-    mockClient = new MockChromaClient();
+    mockClient = new MockSqliteClient();
     network = new SynapticMemoryNetwork(mockClient);
   });
 

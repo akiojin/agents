@@ -70,7 +70,7 @@ describe('useSynapticMemory', () => {
   };
 
   const mockConfig = {
-    chromaUrl: 'http://localhost:8000',
+    sqlitePath: ':memory:',
     enableEventProcessing: true,
     maxEventQueueSize: 1000,
     eventProcessingInterval: 100

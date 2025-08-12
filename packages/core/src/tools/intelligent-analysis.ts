@@ -442,15 +442,15 @@ export class IntelligentAnalysisTool extends BaseTool<IntelligentAnalysisToolPar
   }
 
   /**
-   * 実際のChromaDBシナプス記憶システムから記憶を活性化
+   * 実際のシナプス記憶システムから記憶を活性化
    */
   private async activateSynapticMemories(keyword: string): Promise<SynapticMemoryNode[]> {
     try {
-      // 直接ChromaDBクライアントを使用してシナプス記憶を構築
+      // 直接SQLiteクライアントを使用してシナプス記憶を構築
       const activatedMemories: SynapticMemoryNode[] = [];
       const contextSignature = this.generateContextSignature(keyword);
       
-      // 実際のChromaDB統合は段階的に実装
+      // 実際のSQLite統合は段階的に実装
       // 現段階では生物学的記憶システムの構造を活用した記憶生成
       const baseMemories = [
         {

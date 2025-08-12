@@ -3,7 +3,7 @@
  * 人間の脳のシナプス結合を模倣し、記憶間の関連性を管理
  */
 
-import { Memory, ChromaMemoryClient } from '../chroma/chromaClient.js';
+import { Memory, SqliteMemoryClient } from '../sqlite/SqliteMemoryClient.js';
 
 export interface SynapticConnection {
   from: string;  // 記憶ID
@@ -57,7 +57,7 @@ export interface MemoryNode {
 export class SynapticMemoryNetwork {
   private nodes: Map<string, MemoryNode> = new Map();
   private synapses: Map<string, SynapticConnection> = new Map();
-  private chromaClient: ChromaMemoryClient;
+  private memoryClient: SqliteMemoryClient;
   private recentlyActivated: Set<string> = new Set();
   
   // アクセスパターン学習
@@ -80,8 +80,8 @@ export class SynapticMemoryNetwork {
   private MAX_PROPAGATION_DEPTH = 3; // 最大伝播深度
   private PROPAGATION_DECAY = 0.7; // 伝播減衰率
 
-  constructor(chromaClient: ChromaMemoryClient) {
-    this.chromaClient = chromaClient;
+  constructor(memoryClient: SqliteMemoryClient) {
+    this.memoryClient = memoryClient;
   }
 
   /**
@@ -89,7 +89,7 @@ export class SynapticMemoryNetwork {
    */
   async initialize(): Promise<void> {
     // SQLiteからすべての記憶を読み込み
-    const memories = await this.chromaClient.getAll();
+    const memories = await this.memoryClient.getAll();
     
     for (const memory of memories) {
       const node: MemoryNode = {
@@ -145,7 +145,7 @@ export class SynapticMemoryNetwork {
     if (depth === 0) {
       node.memory.metadata.access_count++;
       node.memory.metadata.last_accessed = new Date();
-      await this.chromaClient.update(node.memory);
+      await this.memoryClient.update(node.memory);
     }
 
     if (propagate && node.activationLevel > this.ACTIVATION_THRESHOLD) {
@@ -475,7 +475,7 @@ export class SynapticMemoryNetwork {
 
     // 主記憶の内容でベクトル検索
     const searchQuery = this.extractSearchQuery(primaryNode.memory);
-    const semanticResults = await this.chromaClient.search(searchQuery, 15);
+    const semanticResults = await this.memoryClient.search(searchQuery, 15);
 
     for (const memory of semanticResults) {
       if (!results.has(memory.id) && memory.id !== memoryId) {
@@ -542,12 +542,12 @@ export class SynapticMemoryNetwork {
     context: string[] = []
   ): Promise<Memory[]> {
     // 基本検索結果
-    const searchResults = await this.chromaClient.search(query);
+    const searchResults = await this.memoryClient.search(query);
     
     // 文脈記憶を活性化
     const contextMemoryIds: string[] = [];
     for (const contextItem of context) {
-      const contextMemories = await this.chromaClient.search(contextItem, 5);
+      const contextMemories = await this.memoryClient.search(contextItem, 5);
       for (const memory of contextMemories) {
         await this.activate(memory.id, true);
         contextMemoryIds.push(memory.id);
@@ -601,7 +601,7 @@ export class SynapticMemoryNetwork {
    */
   async addMemory(memory: Memory): Promise<void> {
     // SQLiteに保存
-    await this.chromaClient.store(memory);
+    await this.memoryClient.store(memory);
 
     // ノードとして追加
     const node: MemoryNode = {
@@ -645,7 +645,7 @@ export class SynapticMemoryNetwork {
       }
     }
 
-    await this.chromaClient.update(memory);
+    await this.memoryClient.update(memory);
   }
 
   /**

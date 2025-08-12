@@ -1,11 +1,11 @@
 /**
  * 記憶システムのメインエントリーポイント
- * シナプスモデルとChromaDBを統合した知的記憶システム
+ * シナプスモデルとSQLiteを統合した知的記憶システム
  */
-import { ChromaMemoryClient } from './chroma/chromaClient.js';
+import { SqliteMemoryClient } from './sqlite/SqliteMemoryClient.js';
 import { SynapticMemoryNetwork } from './synaptic/synapticNetwork.js';
 export class IntegratedMemorySystem {
-    chromaClient;
+    memoryClient;
     synapticNetwork;
     config;
     decayTimer;
@@ -13,20 +13,20 @@ export class IntegratedMemorySystem {
     constructor(config = {}) {
         this.config = {
             collectionName: config.collectionName || 'agent_memories',
-            chromaUrl: config.chromaUrl || 'http://localhost:8000',
+            databasePath: config.databasePath || './memory.sqlite',
             autoDecay: config.autoDecay !== false,
             decayInterval: config.decayInterval || 3600000 // 1時間ごと
         };
-        this.chromaClient = new ChromaMemoryClient(this.config.collectionName);
-        this.synapticNetwork = new SynapticMemoryNetwork(this.chromaClient);
+        this.memoryClient = new SqliteMemoryClient(this.config.collectionName);
+        this.synapticNetwork = new SynapticMemoryNetwork(this.memoryClient);
     }
     /**
      * システムの初期化
      */
     async initialize() {
         console.log('Initializing memory system...');
-        // ChromaDB初期化
-        await this.chromaClient.initialize();
+        // SQLite初期化
+        await this.memoryClient.initialize();
         // シナプスネットワーク初期化
         await this.synapticNetwork.initialize();
         // 自動減衰を開始
@@ -150,17 +150,17 @@ export class IntegratedMemorySystem {
      * 人間による評価
      */
     async humanRate(memoryId, rating) {
-        const memory = await this.chromaClient.get(memoryId);
+        const memory = await this.memoryClient.get(memoryId);
         if (memory) {
             memory.metadata.human_rating = rating;
-            await this.chromaClient.update(memory);
+            await this.memoryClient.update(memory);
         }
     }
     /**
      * 統計情報の取得
      */
     async getStatistics() {
-        const allMemories = await this.chromaClient.getAll();
+        const allMemories = await this.memoryClient.getAll();
         if (allMemories.length === 0) {
             return {
                 totalMemories: 0,
@@ -188,7 +188,7 @@ export class IntegratedMemorySystem {
      * 記憶の重要度ランキング
      */
     async getImportantMemories(limit = 10) {
-        const allMemories = await this.chromaClient.getAll();
+        const allMemories = await this.memoryClient.getAll();
         const rankedMemories = allMemories.map(memory => ({
             memory,
             importance: this.synapticNetwork.getImportance(memory.id)
@@ -238,7 +238,7 @@ export class IntegratedMemorySystem {
     }
 }
 // エクスポート
-export { ChromaMemoryClient } from './chroma/chromaClient.js';
+export { SqliteMemoryClient } from './sqlite/SqliteMemoryClient.js';
 export { SynapticMemoryNetwork } from './synaptic/synapticNetwork.js';
 export { MemoryAPI, getMemoryAPI } from './api/memoryApi.js';
 //# sourceMappingURL=index.js.map

@@ -79,7 +79,7 @@ describe('synapticCommand', () => {
     const mockMemoryApi = {
       getStatistics: vi.fn().mockReturnValue({
         config: {
-          chromaUrl: 'http://localhost:8000',
+          sqlitePath: ':memory:',
           enableEventProcessing: true,
           maxEventQueueSize: 1000,
           eventProcessingInterval: 100

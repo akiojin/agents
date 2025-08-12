@@ -2,7 +2,7 @@
  * シナプス結合ネットワーク
  * 人間の脳のシナプス結合を模倣し、記憶間の関連性を管理
  */
-import { Memory, ChromaMemoryClient } from '../chroma/chromaClient.js';
+import { Memory, SqliteMemoryClient } from '../sqlite/SqliteMemoryClient.js';
 export interface SynapticConnection {
     from: string;
     to: string;
@@ -43,7 +43,7 @@ export interface MemoryNode {
 export declare class SynapticMemoryNetwork {
     private nodes;
     private synapses;
-    private chromaClient;
+    private sqliteClient;
     private recentlyActivated;
     private accessHistory;
     private contextMappings;
@@ -59,7 +59,7 @@ export declare class SynapticMemoryNetwork {
     private COMPETITIVE_STRENGTH;
     private MAX_PROPAGATION_DEPTH;
     private PROPAGATION_DECAY;
-    constructor(chromaClient: ChromaMemoryClient);
+    constructor(sqliteClient: SqliteMemoryClient);
     /**
      * ネットワークの初期化
      */

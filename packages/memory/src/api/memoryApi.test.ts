@@ -7,7 +7,7 @@ import { SqliteMemoryClient } from '../sqlite/SqliteMemoryClient';
 vi.mock('../synaptic/synapticNetwork', () => ({
   SynapticMemoryNetwork: vi.fn()
 }));
-vi.mock('../chroma/chromaClient', () => ({
+vi.mock('../sqlite/SqliteMemoryClient', () => ({
   SqliteMemoryClient: vi.fn()
 }));
 
@@ -24,7 +24,7 @@ describe('MemoryAPI', () => {
     vi.clearAllMocks();
 
     mockConfig = {
-      chromaUrl: 'http://localhost:8000',
+      sqlitePath: './test.db',
       enableEventProcessing: true,
       maxEventQueueSize: 1000,
       eventProcessingInterval: 100
