@@ -4,8 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: agents
-    depends_on:
-      - chroma
+
     volumes:
       # プロジェクトディレクトリのマウント
       - .:/agents
@@ -35,25 +34,10 @@ services:
     networks:
       - agents-network
 
-  # ChromaDB（シナプス記憶システム用）
-  chroma:
-    image: chromadb/chroma:latest
-    container_name: chroma
-    ports:
-      - "8000:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-    environment:
-      - CHROMA_HOST=0.0.0.0
-      - CHROMA_PORT=8000
-    networks:
-      - agents-network
-
 volumes:
   claude_config:
     driver: local
-  chroma_data:
-    driver: local
+
 
 networks:
   agents-network:

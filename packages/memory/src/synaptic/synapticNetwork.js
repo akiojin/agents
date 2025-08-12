@@ -31,7 +31,7 @@ export class SynapticMemoryNetwork {
      * ネットワークの初期化
      */
     async initialize() {
-        // ChromaDBからすべての記憶を読み込み
+        // SQLiteからすべての記憶を読み込み
         const memories = await this.chromaClient.getAll();
         for (const memory of memories) {
             const node = {
@@ -420,7 +420,7 @@ export class SynapticMemoryNetwork {
      * 新しい記憶の追加
      */
     async addMemory(memory) {
-        // ChromaDBに保存
+        // SQLiteに保存
         await this.chromaClient.store(memory);
         // ノードとして追加
         const node = {

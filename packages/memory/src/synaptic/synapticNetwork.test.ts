@@ -3,10 +3,10 @@
  */
 
 import { SynapticMemoryNetwork, SynapticNetworkConfig } from './synapticNetwork.js';
-import { ChromaMemoryClient, Memory } from '../chroma/chromaClient.js';
+import { SqliteMemoryClient, Memory } from '../sqlite/SqliteMemoryClient.js';
 
 // モッククライアント
-class MockChromaClient extends ChromaMemoryClient {
+class MockSqliteClient extends SqliteMemoryClient {
   private mockMemories: Memory[] = [];
   
   constructor() {

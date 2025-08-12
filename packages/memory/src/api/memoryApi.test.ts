@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryAPI, MemoryAPIConfig } from './memoryApi';
 import { SynapticMemoryNetwork } from '../synaptic/synapticNetwork';
-import { ChromaMemoryClient } from '../chroma/chromaClient';
+import { SqliteMemoryClient } from '../sqlite/SqliteMemoryClient';
 
 // モック設定
 vi.mock('../synaptic/synapticNetwork', () => ({
   SynapticMemoryNetwork: vi.fn()
 }));
 vi.mock('../chroma/chromaClient', () => ({
-  ChromaMemoryClient: vi.fn()
+  SqliteMemoryClient: vi.fn()
 }));
 
 const MockSynapticMemoryNetwork = SynapticMemoryNetwork as unknown as vi.MockedClass<typeof SynapticMemoryNetwork>;
-const MockChromaMemoryClient = ChromaMemoryClient as unknown as vi.MockedClass<typeof ChromaMemoryClient>;
+const MockSqliteMemoryClient = SqliteMemoryClient as unknown as vi.MockedClass<typeof SqliteMemoryClient>;
 
 describe('MemoryAPI', () => {
   let memoryApi: MemoryAPI;
@@ -57,7 +57,7 @@ describe('MemoryAPI', () => {
   describe('初期化', () => {
     it('正常に初期化されること', async () => {
       await memoryApi.initialize();
-      expect(MockSynapticMemoryNetwork).toHaveBeenCalledWith(expect.any(MockChromaMemoryClient));
+      expect(MockSynapticMemoryNetwork).toHaveBeenCalledWith(expect.any(MockSqliteMemoryClient));
     });
 
     it('設定が正しく保存されること', () => {

@@ -21,25 +21,7 @@ import { spawn, execSync } from 'child_process';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
-import { ensureChromaDB } from './start-chromadb.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const root = join(__dirname, '..');
-const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
-
-// check build status, write warnings to file for app to display if needed
-execSync('node ./scripts/check-build-status.js', {
-  stdio: 'inherit',
-  cwd: root,
-});
-
-// ChromaDBが必須なので起動を確認（ログ簡潔化）
-try {
-  await ensureChromaDB();
-} catch (error) {
-  console.error('Failed to start ChromaDB:', error);
-  process.exit(1);
-}
+// SQLiteMemoryClientはローカルファイルベースのため、外部サーバー起動不要
 
 const nodeArgs = [];
 // デバッグモードの設定

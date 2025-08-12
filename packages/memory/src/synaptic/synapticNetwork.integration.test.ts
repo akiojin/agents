@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { SynapticMemoryNetwork } from './synapticNetwork';
-import { ChromaMemoryClient } from '../chroma/chromaClient';
+import { SqliteMemoryClient } from '../sqlite/SqliteMemoryClient';
 import { MemoryAPI } from '../api/memoryApi';
 
 // 統合テスト用のテストデータベース設定
@@ -9,38 +9,38 @@ const TEST_COLLECTION_NAME = 'test-synaptic-memories';
 
 describe('SynapticMemoryNetwork Integration Tests', () => {
   let synapticNetwork: SynapticMemoryNetwork;
-  let chromaClient: ChromaMemoryClient;
+  let sqliteClient: SqliteMemoryClient;
   let memoryApi: MemoryAPI;
 
   beforeAll(async () => {
     // テスト用Chromaクライアントの初期化
-    chromaClient = new ChromaMemoryClient({
+    sqliteClient = new SqliteMemoryClient({
       chromaUrl: TEST_CHROMA_URL,
       collectionName: TEST_COLLECTION_NAME
     });
 
     // テスト用コレクションが存在する場合は削除
     try {
-      await chromaClient.deleteCollection();
+      await sqliteClient.deleteCollection();
     } catch (error) {
       // コレクションが存在しない場合は無視
     }
 
     // 新しいコレクションを作成
-    await chromaClient.ensureCollection();
+    await sqliteClient.ensureCollection();
   });
 
   afterAll(async () => {
     // テスト後のクリーンアップ
     try {
-      await chromaClient.deleteCollection();
+      await sqliteClient.deleteCollection();
     } catch (error) {
       console.warn('テストクリーンアップ中にエラーが発生しました:', error);
     }
   });
 
   beforeEach(async () => {
-    synapticNetwork = new SynapticMemoryNetwork(chromaClient);
+    synapticNetwork = new SynapticMemoryNetwork(sqliteClient);
     memoryApi = new MemoryAPI({
       chromaUrl: TEST_CHROMA_URL,
       enableEventProcessing: false,

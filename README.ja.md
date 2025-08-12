@@ -39,7 +39,7 @@ Agentsは、生物学的な脳の記憶メカニズムを模倣した**シナプ
 ## 💡 革新的機能
 
 ### **記憶の永続化と進化**
-- **ChromaDB統合**: ベクトル類似性による意味的検索
+- **SQLiteベクトル統合**: ベクトル類似性による意味的検索（サーバー不要）
 - **SQLite統合**: 構造化データの高速アクセス
 - **シンボルインデックス**: `.agents/cache/`に統一されたデータ管理
 - **セッション学習**: 作業パターンの学習と最適化
@@ -153,7 +153,7 @@ GOOGLE_API_KEY=your_google_ai_api_key_here
 # GitHub統合（オプション）
 GITHUB_TOKEN=your_github_token_here
 
-# ChromaDB（デフォルト設定で動作）
+# SQLite Memory（ローカルファイル、設定不要）
 CHROMA_URL=http://chroma:8000
 ```
 

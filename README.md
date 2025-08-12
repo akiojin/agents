@@ -39,7 +39,7 @@ Goes beyond simple file operations with **code-understanding filesystem**:
 ## 💡 Revolutionary Features
 
 ### **Memory Persistence and Evolution**
-- **ChromaDB Integration**: Semantic search via vector similarity
+- **SQLite Vector Integration**: Semantic search via vector similarity (Server-free)
 - **SQLite Integration**: High-speed structured data access
 - **Symbol Indexing**: Unified data management in `.agents/cache/`
 - **Session Learning**: Learning and optimization of work patterns
@@ -183,27 +183,14 @@ GOOGLE_API_KEY=your_google_ai_api_key_here
 # GitHub Integration (Optional)
 GITHUB_TOKEN=your_github_token_here
 
-# ChromaDB (Works with default settings)
-CHROMA_URL=http://chroma:8000
+# SQLite Memory (ローカルファイル、設定不要)
+# SQLITE_MEMORY_PATH=.agents/cache/memory.db
 ```
 
 ## 📋 Requirements
 
-### ChromaDB Required
-Agents' memory system requires ChromaDB vector database. Start ChromaDB using one of these methods:
-
-1. **Via Docker**:
-   ```bash
-   docker run -d -p 8000:8000 chromadb/chroma:latest
-   ```
-
-2. **Via Python**:
-   ```bash
-   pip install chromadb
-   chroma run --path ./chroma-data
-   ```
-
-3. **Auto-start**: Automatically attempts to start ChromaDB when running `npm start`
+### SQLite Memory (Server-Free)
+Agents' memory system now uses local SQLite with vector similarity search. No external database required - everything runs locally with zero setup.
 
 ## 🔮 Development Roadmap
 

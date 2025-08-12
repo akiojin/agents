@@ -180,11 +180,7 @@ tsconfig.tsbuildinfo
 *.orig
 .history/
 .phpunit.result.cacheanalysis/
-chromadb_env/
 bundle/
-
-# ChromaDB data
-.chroma/
 
 # Dockerローカル設定
 docker-compose.prod.yml
