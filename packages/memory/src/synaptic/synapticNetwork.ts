@@ -664,10 +664,10 @@ export class SynapticMemoryNetwork {
       
       if (preActivation > this.LTP_THRESHOLD && postActivation > this.LTP_THRESHOLD) {
         // 長期増強：両方のノードが高度に活性化
-        await this.applyLTP(synapse);
+        await this.applyLTPInternal(synapse);
       } else if (preActivation > this.ACTIVATION_THRESHOLD && postActivation < this.LTD_THRESHOLD) {
         // 長期抑制：前は活性化、後は低活性化
-        await this.applyLTD(synapse);
+        await this.applyLTDInternal(synapse);
       }
     }
   }
@@ -675,7 +675,7 @@ export class SynapticMemoryNetwork {
   /**
    * 長期増強（LTP）の適用
    */
-  private async applyLTP(synapse: SynapticConnection): Promise<void> {
+  private async applyLTPInternal(synapse: SynapticConnection): Promise<void> {
     // 結合強度を段階的に増加
     const strengthIncrement = 0.05 * (1 - synapse.strength); // 飽和を考慮
     synapse.strength = Math.min(0.95, synapse.strength + strengthIncrement);
@@ -689,7 +689,7 @@ export class SynapticMemoryNetwork {
   /**
    * 長期抑制（LTD）の適用
    */
-  private async applyLTD(synapse: SynapticConnection): Promise<void> {
+  private async applyLTDInternal(synapse: SynapticConnection): Promise<void> {
     // 結合強度を段階的に減少
     synapse.strength *= 0.95;
     synapse.strength = Math.max(0.001, synapse.strength);
@@ -917,6 +917,134 @@ export class SynapticMemoryNetwork {
     const diffTime = Math.abs(now.getTime() - targetDate.getTime());
     
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+  
+  /**
+   * 特定の記憶の接続を取得
+   */
+  async getConnections(memoryId: string): Promise<SynapticConnection[]> {
+    const node = this.nodes.get(memoryId);
+    if (!node) return [];
+    
+    return [...node.incomingConnections, ...node.outgoingConnections];
+  }
+  
+  /**
+   * 活性化の伝播（公開メソッド）
+   */
+  async propagate(memoryIds: string[], decay: number = 0.7): Promise<Memory[]> {
+    const propagatedMemories: Memory[] = [];
+    
+    for (const memoryId of memoryIds) {
+      const node = this.nodes.get(memoryId);
+      if (!node) continue;
+      
+      // 接続された記憶を活性化
+      for (const conn of node.outgoingConnections) {
+        if (conn.strength > 0.2) {
+          const targetNode = this.nodes.get(conn.to);
+          if (targetNode) {
+            targetNode.activationLevel = Math.min(1.0, 
+              targetNode.activationLevel + conn.strength * decay
+            );
+            
+            if (targetNode.activationLevel > this.ACTIVATION_THRESHOLD) {
+              propagatedMemories.push(targetNode.memory);
+            }
+          }
+        }
+      }
+    }
+    
+    return propagatedMemories;
+  }
+  
+  /**
+   * ヘブ則学習（公開メソッド）
+   */
+  async hebbianLearning(memoryIds: string[]): Promise<void> {
+    if (memoryIds.length < 2) return;
+    
+    // 全てのペアで学習
+    for (let i = 0; i < memoryIds.length - 1; i++) {
+      for (let j = i + 1; j < memoryIds.length; j++) {
+        this.applyHebbianLearning(memoryIds[i], memoryIds[j], 0.5);
+      }
+    }
+  }
+  
+  /**
+   * 公開版LTP適用
+   */
+  async applyLTP(fromId: string, toId: string): Promise<void> {
+    const connectionId = this.getConnectionId(fromId, toId);
+    const synapse = this.synapses.get(connectionId);
+    
+    if (synapse) {
+      await this.applyLTPInternal(synapse);
+    }
+  }
+  
+  /**
+   * 公開版LTD適用
+   */
+  async applyLTD(fromId: string, toId: string): Promise<void> {
+    const connectionId = this.getConnectionId(fromId, toId);
+    const synapse = this.synapses.get(connectionId);
+    
+    if (synapse) {
+      await this.applyLTDInternal(synapse);
+    }
+  }
+  
+  /**
+   * ネットワーク統計の取得
+   */
+  async getNetworkStatistics(): Promise<{
+    totalNodes: number;
+    totalConnections: number;
+    averageStrength: number;
+    mostConnected: string[];
+  }> {
+    const connectionCounts = new Map<string, number>();
+    let totalStrength = 0;
+    
+    for (const synapse of this.synapses.values()) {
+      totalStrength += synapse.strength;
+      
+      connectionCounts.set(synapse.from, 
+        (connectionCounts.get(synapse.from) || 0) + 1
+      );
+      connectionCounts.set(synapse.to, 
+        (connectionCounts.get(synapse.to) || 0) + 1
+      );
+    }
+    
+    const sortedNodes = Array.from(connectionCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id);
+    
+    return {
+      totalNodes: this.nodes.size,
+      totalConnections: this.synapses.size,
+      averageStrength: this.synapses.size > 0 ? 
+        totalStrength / this.synapses.size : 0,
+      mostConnected: sortedNodes.slice(0, 5)
+    };
+  }
+  
+  /**
+   * トップパターンの取得
+   */
+  async getTopPatterns(limit: number = 10): Promise<AccessPattern[]> {
+    const patterns = Array.from(this.accessPatterns.values());
+    
+    // 頻度と成功率でソート
+    patterns.sort((a, b) => 
+      (b.frequency * b.successRate) - (a.frequency * a.successRate)
+    );
+    
+    return patterns.slice(0, limit);
   }
 
   private updateNodeConnections(): void {

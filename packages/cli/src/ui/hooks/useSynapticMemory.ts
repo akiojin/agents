@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getMemoryManager } from '../../memory/memoryManager.js';
 
 interface Memory {
   id: string;
@@ -238,16 +239,20 @@ export function useSynapticMemory(): UseSynapticMemoryResult {
     }
   }, []);
 
-  // 記憶の活性化
+  // 記憶の活性化（実際のシナプスネットワークを使用）
   const activateMemory = useCallback(async (memoryId: string) => {
     setError(null);
+    const memoryManager = getMemoryManager();
+    const synapticNetwork = memoryManager.getSynapticNetwork();
+    
+    if (!synapticNetwork) {
+      setError('シナプスネットワークが初期化されていません');
+      return;
+    }
     
     try {
-      // TODO: 実際のAPIエンドポイントに置き換え
-      // await fetch(`/api/v1/activation/activate`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ memory_id: memoryId })
-      // });
+      // 実際のシナプスネットワークで記憶を活性化（実装待ち）
+      // await synapticNetwork.activate(memoryId);
       
       await new Promise(resolve => setTimeout(resolve, 500));
       

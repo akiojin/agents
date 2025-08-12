@@ -10,6 +10,7 @@
  */
 
 import { IntegratedMemorySystem } from '@agents/memory';
+import { DecisionLog, WhyChain, ResultType } from '@agents/memory/decision-log';
 import { Config } from '@indenscale/open-gemini-cli-core';
 import path from 'path';
 import crypto from 'crypto';
@@ -19,13 +20,17 @@ export interface MemoryManagerConfig {
   autoDecay?: boolean;
   decayInterval?: number;
   projectRoot: string;
+  enableDecisionLog?: boolean;
+  enableWhyChain?: boolean;
 }
 
 export class MemoryManager {
   private memorySystem: IntegratedMemorySystem | null = null;
+  private decisionLog: DecisionLog | null = null;
   private projectId: string;
   private config: MemoryManagerConfig;
   private initialized: boolean = false;
+  private currentDecisionId: number | null = null;
   
   constructor(config: MemoryManagerConfig) {
     this.config = config;
@@ -69,6 +74,14 @@ export class MemoryManager {
       });
       
       await this.memorySystem.initialize();
+      
+      // DecisionLogの初期化
+      if (this.config.enableDecisionLog !== false) {
+        const decisionDbPath = path.join(this.config.projectRoot, '.agents', 'decisions.db');
+        this.decisionLog = new DecisionLog(decisionDbPath);
+        console.log('🧠 Decision logging enabled');
+      }
+      
       this.initialized = true;
       
       // 既存の記憶統計を表示
@@ -77,10 +90,19 @@ export class MemoryManager {
         console.log(`📚 Loaded ${stats.totalMemories} memories from previous sessions`);
         console.log(`   Average success rate: ${(stats.averageSuccessRate * 100).toFixed(1)}%`);
       }
+      
+      // 決定ログの統計も表示
+      if (this.decisionLog) {
+        const decisionStats = await this.decisionLog.getStatistics();
+        if (decisionStats.totalDecisions > 0) {
+          console.log(`🎯 Loaded ${decisionStats.totalDecisions} decisions from previous sessions`);
+        }
+      }
     } catch (error) {
       console.warn('⚠️ Memory system initialization failed:', error);
       console.warn('   Continuing without memory features');
       this.memorySystem = null;
+      this.decisionLog = null;
     }
   }
   
@@ -214,6 +236,9 @@ export class MemoryManager {
     if (this.memorySystem) {
       await this.memorySystem.cleanup();
     }
+    if (this.decisionLog) {
+      await this.decisionLog.close();
+    }
   }
   
   /**
@@ -221,6 +246,90 @@ export class MemoryManager {
    */
   isAvailable(): boolean {
     return this.memorySystem !== null && this.initialized;
+  }
+  
+  /**
+   * 決定を記録
+   */
+  async recordDecision(action: string, reason: string, context?: any): Promise<number | null> {
+    if (!this.decisionLog) return null;
+    
+    try {
+      const decisionId = await this.decisionLog.logDecision(
+        { type: 'action', target: action },
+        { direct: reason, context: context },
+        this.currentDecisionId || undefined
+      );
+      
+      this.currentDecisionId = decisionId;
+      return decisionId;
+    } catch (error) {
+      console.warn('Failed to record decision:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * 決定の結果を更新
+   */
+  async updateDecisionResult(decisionId: number, result: ResultType, output?: string): Promise<void> {
+    if (!this.decisionLog) return;
+    
+    try {
+      await this.decisionLog.updateResult(decisionId, result, output);
+    } catch (error) {
+      console.warn('Failed to update decision result:', error);
+    }
+  }
+  
+  /**
+   * WhyChainを構築
+   */
+  async buildWhyChain(decisionId?: number): Promise<WhyChain | null> {
+    if (!this.decisionLog) return null;
+    
+    try {
+      const targetId = decisionId || this.currentDecisionId;
+      if (!targetId) return null;
+      
+      const whyChain = await this.decisionLog.explainWhy(targetId);
+      return whyChain;
+    } catch (error) {
+      console.warn('Failed to build why chain:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * パターンを検出
+   */
+  async detectPatterns(options?: any): Promise<any[]> {
+    if (!this.decisionLog) return [];
+    
+    try {
+      const patterns = await this.decisionLog.detectPatterns(options);
+      return patterns;
+    } catch (error) {
+      console.warn('Failed to detect patterns:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * シナプス記憶ネットワークへの直接アクセス
+   */
+  getSynapticNetwork() {
+    if (this.memorySystem && 'getSynapticNetwork' in this.memorySystem) {
+      return (this.memorySystem as any).getSynapticNetwork();
+    }
+    return null;
+  }
+  
+  /**
+   * 決定ログへの直接アクセス
+   */
+  getDecisionLog() {
+    return this.decisionLog;
   }
 }
 

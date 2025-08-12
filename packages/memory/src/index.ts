@@ -298,6 +298,13 @@ export class IntegratedMemorySystem {
   /**
    * クリーンアップ
    */
+  /**
+   * シナプス記憶ネットワークへのアクセス
+   */
+  getSynapticNetwork(): SynapticMemoryNetwork {
+    return this.synapticNetwork;
+  }
+  
   async cleanup(): Promise<void> {
     if (this.decayTimer) {
       clearInterval(this.decayTimer);
