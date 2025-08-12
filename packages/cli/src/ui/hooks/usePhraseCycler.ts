@@ -140,17 +140,36 @@ export const WITTY_LOADING_PHRASES = [
   'Have you tried turning it off and on again? (The loading screen, not me.)',
 ];
 
+export const COMPRESSION_PHRASES = [
+  'トークン数を計算中...',
+  '履歴を分析中...',
+  'コンテキストを最適化中...',
+  'サマリーを生成中...',
+  '重要な情報を抽出中...',
+  'メモリを整理中...',
+  '会話の要点をまとめ中...',
+  '圧縮アルゴリズムを実行中...',
+  'セッションデータを処理中...',
+  '新しいコンテキストを構築中...',
+];
+
 export const PHRASE_CHANGE_INTERVAL_MS = 15000;
 
 /**
  * Custom hook to manage cycling through loading phrases.
  * @param isActive Whether the phrase cycling should be active.
  * @param isWaiting Whether to show a specific waiting phrase.
+ * @param isCompressing Whether compression is in progress.
  * @returns The current loading phrase.
  */
-export const usePhraseCycler = (isActive: boolean, isWaiting: boolean) => {
+export const usePhraseCycler = (
+  isActive: boolean, 
+  isWaiting: boolean,
+  isCompressing: boolean = false
+) => {
+  const phrases = isCompressing ? COMPRESSION_PHRASES : WITTY_LOADING_PHRASES;
   const [currentLoadingPhrase, setCurrentLoadingPhrase] = useState(
-    WITTY_LOADING_PHRASES[0],
+    phrases[0],
   );
   const phraseIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -161,22 +180,22 @@ export const usePhraseCycler = (isActive: boolean, isWaiting: boolean) => {
         clearInterval(phraseIntervalRef.current);
         phraseIntervalRef.current = null;
       }
-    } else if (isActive) {
+    } else if (isActive || isCompressing) {
       if (phraseIntervalRef.current) {
         clearInterval(phraseIntervalRef.current);
       }
       // Select an initial random phrase
       const initialRandomIndex = Math.floor(
-        Math.random() * WITTY_LOADING_PHRASES.length,
+        Math.random() * phrases.length,
       );
-      setCurrentLoadingPhrase(WITTY_LOADING_PHRASES[initialRandomIndex]);
+      setCurrentLoadingPhrase(phrases[initialRandomIndex]);
 
       phraseIntervalRef.current = setInterval(() => {
         // Select a new random phrase
         const randomIndex = Math.floor(
-          Math.random() * WITTY_LOADING_PHRASES.length,
+          Math.random() * phrases.length,
         );
-        setCurrentLoadingPhrase(WITTY_LOADING_PHRASES[randomIndex]);
+        setCurrentLoadingPhrase(phrases[randomIndex]);
       }, PHRASE_CHANGE_INTERVAL_MS);
     } else {
       // Idle or other states, clear the phrase interval
@@ -185,7 +204,7 @@ export const usePhraseCycler = (isActive: boolean, isWaiting: boolean) => {
         clearInterval(phraseIntervalRef.current);
         phraseIntervalRef.current = null;
       }
-      setCurrentLoadingPhrase(WITTY_LOADING_PHRASES[0]);
+      setCurrentLoadingPhrase(phrases[0]);
     }
 
     return () => {
@@ -194,7 +213,7 @@ export const usePhraseCycler = (isActive: boolean, isWaiting: boolean) => {
         phraseIntervalRef.current = null;
       }
     };
-  }, [isActive, isWaiting]);
+  }, [isActive, isWaiting, isCompressing, phrases]);
 
   return currentLoadingPhrase;
 };

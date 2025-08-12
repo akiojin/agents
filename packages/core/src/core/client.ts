@@ -660,6 +660,8 @@ export class GeminiClient {
     }
 
     console.log(`[Compression Debug] Starting compression...`);
+    console.log(`\n⏳ 圧縮処理を開始しています...`);
+    console.log(`📊 ステップ1/4: トークン数を計算中...`);
 
     let compressBeforeIndex = findIndexAfterFraction(
       curatedHistory,
@@ -676,6 +678,8 @@ export class GeminiClient {
 
     const historyToCompress = curatedHistory.slice(0, compressBeforeIndex);
     const historyToKeep = curatedHistory.slice(compressBeforeIndex);
+
+    console.log(`📝 ステップ2/4: 履歴を分析中... (圧縮対象: ${historyToCompress.length}件, 保持: ${historyToKeep.length}件)`);
 
     // セッションマネージャーを取得
     const sessionManager = getSessionManager();
@@ -715,6 +719,7 @@ export class GeminiClient {
 
     this.getChat().setHistory(historyToCompress);
 
+    console.log(`🤖 ステップ3/4: サマリーを生成中...`);
     const { text: summary } = await this.getChat().sendMessage(
       {
         message: {
@@ -739,6 +744,8 @@ export class GeminiClient {
       },
       ...historyToKeep,
     ];
+
+    console.log(`💾 ステップ4/4: 新しいセッションを作成中...`);
 
     // 圧縮後のセッションを作成
     const newSession = await sessionManager.compressAndStartNewSession(
@@ -786,6 +793,8 @@ export class GeminiClient {
     
     console.log(`[Compression Debug] Compression complete: ${originalTokenCount} -> ${newTokenCount} tokens`);
     console.log(`[Compression Debug] Reduction: ${Math.round((1 - (newTokenCount ?? 0) / originalTokenCount) * 100)}%`);
+    console.log(`\n✅ 圧縮処理が完了しました！`);
+    console.log(`📉 トークン数: ${originalTokenCount} → ${newTokenCount} (${Math.round((1 - (newTokenCount ?? 0) / originalTokenCount) * 100)}%削減)`);
 
     return {
       originalTokenCount,

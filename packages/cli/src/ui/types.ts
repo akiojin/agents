@@ -14,6 +14,7 @@ export enum StreamingState {
   Idle = 'idle',
   Responding = 'responding',
   WaitingForConfirmation = 'waiting_for_confirmation',
+  Compressing = 'compressing',
 }
 
 // Copied from server/src/core/turn.ts for CLI usage

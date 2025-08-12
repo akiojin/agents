@@ -11,15 +11,18 @@ import { useState, useEffect, useRef } from 'react'; // Added useRef
 
 export const useLoadingIndicator = (streamingState: StreamingState) => {
   const [timerResetKey, setTimerResetKey] = useState(0);
-  const isTimerActive = streamingState === StreamingState.Responding;
+  const isTimerActive = streamingState === StreamingState.Responding || 
+                        streamingState === StreamingState.Compressing;
 
   const elapsedTimeFromTimer = useTimer(isTimerActive, timerResetKey);
 
   const isPhraseCyclingActive = streamingState === StreamingState.Responding;
   const isWaiting = streamingState === StreamingState.WaitingForConfirmation;
+  const isCompressing = streamingState === StreamingState.Compressing;
   const currentLoadingPhrase = usePhraseCycler(
     isPhraseCyclingActive,
     isWaiting,
+    isCompressing,
   );
 
   const [retainedElapsedTime, setRetainedElapsedTime] = useState(0);
