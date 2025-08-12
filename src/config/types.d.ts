@@ -138,4 +138,3 @@ export declare const ENV_MAPPING: {
     readonly AGENTS_CACHE_PATH: "paths.cache";
     readonly AGENTS_HISTORY_PATH: "paths.history";
 };
-//# sourceMappingURL=types.d.ts.map

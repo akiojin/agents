@@ -1,13 +1,10 @@
-"use strict";
 /**
  * 統一されたConfigインターフェース
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ENV_MAPPING = exports.DEFAULT_CONFIG = void 0;
 /**
  * Configのデフォルト値
  */
-exports.DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG = {
     llm: {
         provider: 'openai',
         timeout: 60000, // 60seconds
@@ -59,7 +56,7 @@ exports.DEFAULT_CONFIG = {
 /**
  * 環境変数のマッピング
  */
-exports.ENV_MAPPING = {
+export const ENV_MAPPING = {
     // LLMConfig
     AGENTS_PROVIDER: 'llm.provider',
     AGENTS_API_KEY: 'llm.apiKey',

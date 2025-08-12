@@ -44,6 +44,7 @@ import { LoopDetectionService } from '../services/loopDetectionService.js';
 import { FileParserService, VLMService } from '../services/fileParserService.js';
 import { CompositeVLMService } from '../services/vlmService.js';
 import { getSessionManager } from '../utils/session-manager.js';
+import { uiTelemetryService } from '../telemetry/uiTelemetry.js';
 import * as path from 'path';
 
 function isThinkingSupported(model: string) {
@@ -647,17 +648,27 @@ export class GeminiClient {
 
     const model = this.config.getModel();
 
-    const { totalTokens: originalTokenCount } =
+    // UIと一致させるため、累積トークン数（全モデル合計）を取得
+    const metrics = uiTelemetryService.getMetrics();
+    const cumulativeTokenCount = Object.values(metrics.models).reduce(
+      (total, modelMetrics) => total + modelMetrics.tokens.prompt,
+      0
+    );
+
+    // 現在のモデルの単体トークン数も取得（参考用）
+    const { totalTokens: currentModelTokenCount } =
       await this.getContentGenerator().countTokens({
         model,
         contents: curatedHistory,
       });
-    if (originalTokenCount === undefined) {
+    if (currentModelTokenCount === undefined) {
       console.warn(`Could not determine token count for model ${model}.`);
       return null;
     }
 
     const modelTokenLimit = tokenLimit(model);
+    // 圧縮判定には累積トークン数を使用（UIの表示と一致）
+    const originalTokenCount = cumulativeTokenCount || currentModelTokenCount;
     // ツール実行後は閾値を下げて余裕を持たせる
     const thresholdRatio = useToolThreshold 
       ? this.COMPRESSION_TOKEN_THRESHOLD_AFTER_TOOLS 

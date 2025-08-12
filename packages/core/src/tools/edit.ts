@@ -377,41 +377,73 @@ Expectation for required parameters:
 
     try {
       this.ensureParentDirectoriesExist(params.file_path);
-      fs.writeFileSync(params.file_path, editData.newContent, 'utf8');
 
-      let displayResult: ToolResultDisplay;
-      if (editData.isNewFile) {
-        displayResult = `Created ${shortenPath(makeRelative(params.file_path, this.config.getTargetDir()))}`;
-      } else {
-        // Generate diff for display, even though core logic doesn't technically need it
-        // The CLI wrapper will use this part of the ToolResult
-        const fileName = path.basename(params.file_path);
-        const fileDiff = Diff.createPatch(
-          fileName,
-          editData.currentContent ?? '', // Should not be null here if not isNewFile
+      // IntelligentFileSystemを必須として使用
+      try {
+        const { getOrCreateInstances } = await import('../../../../src/functions/intelligent-registry-integration.js');
+        const { intelligentFS } = await getOrCreateInstances();
+        
+        const writeResult = await intelligentFS.writeFileIntelligent(
+          params.file_path,
           editData.newContent,
-          'Current',
-          'Proposed',
-          DEFAULT_DIFF_OPTIONS,
+          { 
+            updateIndex: true, 
+            trackHistory: true,
+            validateSemantics: !editData.isNewFile,
+            updateReferences: params.old_string && params.new_string && (!params.expected_replacements || params.expected_replacements === 1)
+          }
         );
-        displayResult = { fileDiff, fileName };
+        
+        if (!writeResult.success) {
+          throw new Error(`IntelligentFileSystem edit failed: ${writeResult.error || 'Unknown error'}`);
+        }
+        
+        // セマンティック分析の結果を含める
+        let intelligentInfo = '';
+        if (writeResult.data?.symbolsUpdated) {
+          intelligentInfo = ` (Updated ${writeResult.data.symbolsUpdated} symbols`;
+          if (writeResult.data.referencesUpdated) {
+            intelligentInfo += `, ${writeResult.data.referencesUpdated} references`;
+          }
+          intelligentInfo += ')';
+        }
+        
+        const llmSuccessMessageParts = [
+          editData.isNewFile
+            ? `Created new file: ${params.file_path} with IntelligentFileSystem tracking.`
+            : `Successfully modified file: ${params.file_path} (${editData.occurrences} replacements)${intelligentInfo}.`,
+        ];
+        
+        if (params.modified_by_user) {
+          llmSuccessMessageParts.push(
+            `User modified the \`new_string\` content to be: ${params.new_string}.`,
+          );
+        }
+        
+        let displayResult: ToolResultDisplay;
+        if (editData.isNewFile) {
+          displayResult = `Created ${shortenPath(makeRelative(params.file_path, this.config.getTargetDir()))} with IntelligentFileSystem`;
+        } else {
+          const fileName = path.basename(params.file_path);
+          const fileDiff = Diff.createPatch(
+            fileName,
+            editData.currentContent ?? '',
+            editData.newContent,
+            'Current',
+            'Proposed',
+            DEFAULT_DIFF_OPTIONS,
+          );
+          displayResult = { fileDiff, fileName };
+        }
+        
+        return {
+          llmContent: llmSuccessMessageParts.join(' '),
+          returnDisplay: displayResult,
+        };
+      } catch (intelligentError) {
+        // IntelligentFileSystemが利用できない場合はエラーとする
+        throw new Error(`IntelligentFileSystem is required but not available: ${intelligentError instanceof Error ? intelligentError.message : String(intelligentError)}`);
       }
-
-      const llmSuccessMessageParts = [
-        editData.isNewFile
-          ? `Created new file: ${params.file_path} with provided content.`
-          : `Successfully modified file: ${params.file_path} (${editData.occurrences} replacements).`,
-      ];
-      if (params.modified_by_user) {
-        llmSuccessMessageParts.push(
-          `User modified the \`new_string\` content to be: ${params.new_string}.`,
-        );
-      }
-
-      return {
-        llmContent: llmSuccessMessageParts.join(' '),
-        returnDisplay: displayResult,
-      };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       return {

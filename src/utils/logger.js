@@ -1,53 +1,17 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.PerformanceLogger = exports.logTask = exports.debug = exports.logger = exports.SimpleLogger = exports.LogLevel = void 0;
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
-const chalk_1 = __importDefault(require("chalk"));
-var LogLevel;
+import * as fs from 'fs';
+import * as path from 'path';
+import chalk from 'chalk';
+export var LogLevel;
 (function (LogLevel) {
     LogLevel[LogLevel["ERROR"] = 0] = "ERROR";
     LogLevel[LogLevel["WARN"] = 1] = "WARN";
     LogLevel[LogLevel["INFO"] = 2] = "INFO";
     LogLevel[LogLevel["DEBUG"] = 3] = "DEBUG";
-})(LogLevel || (exports.LogLevel = LogLevel = {}));
-class SimpleLogger {
+})(LogLevel || (LogLevel = {}));
+export class SimpleLogger {
+    level;
+    silent;
+    logDir;
     constructor(options) {
         // Configの優先順位: Options > 環境変数 > デフォルト値
         this.level = this.parseLogLevel(options?.logLevel || process.env.AGENTS_LOG_LEVEL || 'info');
@@ -105,13 +69,13 @@ class SimpleLogger {
     colorizeMessage(level, message) {
         switch (level) {
             case LogLevel.ERROR:
-                return chalk_1.default.red(message);
+                return chalk.red(message);
             case LogLevel.WARN:
-                return chalk_1.default.yellow(message);
+                return chalk.yellow(message);
             case LogLevel.INFO:
-                return chalk_1.default.blue(message);
+                return chalk.blue(message);
             case LogLevel.DEBUG:
-                return chalk_1.default.gray(message);
+                return chalk.gray(message);
             default:
                 return message;
         }
@@ -190,10 +154,9 @@ class SimpleLogger {
         };
     }
 }
-exports.SimpleLogger = SimpleLogger;
 // シングルトンインスタンス（遅延初期化）
 let _logger = null;
-exports.logger = new Proxy({}, {
+export const logger = new Proxy({}, {
     get(target, prop) {
         if (!_logger) {
             _logger = new SimpleLogger({
@@ -204,40 +167,39 @@ exports.logger = new Proxy({}, {
     }
 });
 // デバッグモード用のヘルパー関数（後方互換性）
-const debug = (message, ...args) => {
+export const debug = (message, ...args) => {
     if (process.env.DEBUG) {
-        exports.logger.debug(`${message}${args.length > 0 ? ` ${args.join(' ')}` : ''}`);
+        logger.debug(`${message}${args.length > 0 ? ` ${args.join(' ')}` : ''}`);
     }
 };
-exports.debug = debug;
 // TaskExecuteログ用のヘルパー関数
-const logTask = (taskName, status, message) => {
+export const logTask = (taskName, status, message) => {
     switch (status) {
         case 'start':
-            exports.logger.info(`Task started: ${taskName}`);
+            logger.info(`Task started: ${taskName}`);
             break;
         case 'success':
-            exports.logger.info(`Task completed: ${taskName}`, message ? { message } : undefined);
+            logger.info(`Task completed: ${taskName}`, message ? { message } : undefined);
             break;
         case 'error':
-            exports.logger.error(`Task failed: ${taskName}`, message ? new Error(message) : undefined);
+            logger.error(`Task failed: ${taskName}`, message ? new Error(message) : undefined);
             break;
     }
 };
-exports.logTask = logTask;
 // パフォーマンス計測用のヘルパー関数
-class PerformanceLogger {
+export class PerformanceLogger {
+    startTime;
+    taskName;
     constructor(taskName) {
         this.taskName = taskName;
         this.startTime = performance.now();
-        exports.logger.debug(`Performance measurement started: ${taskName}`);
+        logger.debug(`Performance measurement started: ${taskName}`);
     }
     end(message) {
         const duration = performance.now() - this.startTime;
-        exports.logger.info(`Performance: ${this.taskName} completed in ${duration.toFixed(2)}ms`, message
+        logger.info(`Performance: ${this.taskName} completed in ${duration.toFixed(2)}ms`, message
             ? { message, duration: `${duration.toFixed(2)}ms` }
             : { duration: `${duration.toFixed(2)}ms` });
     }
 }
-exports.PerformanceLogger = PerformanceLogger;
 //# sourceMappingURL=logger.js.map

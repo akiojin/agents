@@ -1,15 +1,10 @@
-"use strict";
 /**
  * TodoWrite Tool - Planning and task management tool
  * Inspired by Claude Code and DeepAgents
  */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.todoWriteToolDefinition = exports.TodoWriteTool = void 0;
-class TodoWriteTool {
-    constructor() {
-        this.todos = [];
-        this.idCounter = 1;
-    }
+export class TodoWriteTool {
+    todos = [];
+    idCounter = 1;
     /**
      * Update the todo list
      */
@@ -145,9 +140,8 @@ class TodoWriteTool {
         return output;
     }
 }
-exports.TodoWriteTool = TodoWriteTool;
 // Tool definition for integration with agent systems
-exports.todoWriteToolDefinition = {
+export const todoWriteToolDefinition = {
     name: 'write_todos',
     description: `Use this tool to create and manage a structured task list for your current work session. This helps you track progress, organize complex tasks, and demonstrate thoroughness.
 

@@ -1,0 +1,628 @@
+import { InternalFileSystem } from './filesystem.js';
+import { InternalBash } from './bash.js';
+import { FileSystemSecurity } from './security.js';
+import { logger } from '../utils/logger.js';
+import { TodoWriteTool } from '../../packages/tools/todo-write.js';
+import { createCodeIntelligenceFunctions } from './code-intelligence-tools.js';
+/**
+ * 内部関数登録システム
+ */
+export class InternalFunctionRegistry {
+    functions = new Map();
+    fileSystem;
+    bash;
+    constructor(securityConfig, bashConfig) {
+        this.fileSystem = new InternalFileSystem(securityConfig);
+        // Bash機能の初期化
+        if (bashConfig && bashConfig.enabled) {
+            this.bash = new InternalBash(new FileSystemSecurity(securityConfig), bashConfig);
+        }
+        this.registerDefaultFunctions();
+        logger.debug('InternalFunctionRegistry initialized');
+    }
+    /**
+     * デフォルト関数を登録
+     */
+    registerDefaultFunctions() {
+        // ファイル読み取り
+        this.registerFunction({
+            name: 'read_text_file',
+            description: 'ファイルの内容をテキストとして読み取る',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: '読み取るファイルのパス'
+                    },
+                    encoding: {
+                        type: 'string',
+                        description: '文字エンコーディング（デフォルト: utf-8）',
+                        enum: ['utf-8', 'ascii', 'latin1', 'base64', 'hex']
+                    }
+                },
+                required: ['path']
+            },
+            handler: async (params) => {
+                const result = await this.fileSystem.readFile(params.path, params.encoding || 'utf-8');
+                if (result.success) {
+                    return result.data;
+                }
+                else {
+                    throw new Error(result.error);
+                }
+            }
+        });
+        // ファイル書き込み
+        this.registerFunction({
+            name: 'write_file',
+            description: 'ファイルに内容を書き込む',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: '書き込み先ファイルのパス'
+                    },
+                    content: {
+                        type: 'string',
+                        description: '書き込む内容'
+                    },
+                    encoding: {
+                        type: 'string',
+                        description: '文字エンコーディング（デフォルト: utf-8）',
+                        enum: ['utf-8', 'ascii', 'latin1', 'base64', 'hex']
+                    }
+                },
+                required: ['path', 'content']
+            },
+            handler: async (params) => {
+                const result = await this.fileSystem.writeFile(params.path, params.content, params.encoding || 'utf-8');
+                if (result.success) {
+                    return { success: true };
+                }
+                else {
+                    throw new Error(result.error);
+                }
+            }
+        });
+        // ディレクトリ一覧取得
+        this.registerFunction({
+            name: 'list_directory',
+            description: 'ディレクトリの内容を一覧表示する',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: '一覧表示するディレクトリのパス'
+                    },
+                    include_details: {
+                        type: 'boolean',
+                        description: 'ファイルサイズなどの詳細情報を含めるか（デフォルト: false）'
+                    }
+                },
+                required: ['path']
+            },
+            handler: async (params) => {
+                const result = await this.fileSystem.listDirectory(params.path, params.include_details || false);
+                if (result.success) {
+                    return result.data;
+                }
+                else {
+                    throw new Error(result.error);
+                }
+            }
+        });
+        // ディレクトリ作成
+        this.registerFunction({
+            name: 'create_directory',
+            description: 'ディレクトリを作成する',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: '作成するディレクトリのパス'
+                    },
+                    recursive: {
+                        type: 'boolean',
+                        description: '親ディレクトリも含めて再帰的に作成するか（デフォルト: true）'
+                    }
+                },
+                required: ['path']
+            },
+            handler: async (params) => {
+                const result = await this.fileSystem.createDirectory(params.path, params.recursive !== false);
+                if (result.success) {
+                    return { success: true };
+                }
+                else {
+                    throw new Error(result.error);
+                }
+            }
+        });
+        // ファイル削除
+        this.registerFunction({
+            name: 'delete_file',
+            description: 'ファイルを削除する',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: '削除するファイルのパス'
+                    }
+                },
+                required: ['path']
+            },
+            handler: async (params) => {
+                const result = await this.fileSystem.deleteFile(params.path);
+                if (result.success) {
+                    return { success: true };
+                }
+                else {
+                    throw new Error(result.error);
+                }
+            }
+        });
+        // ディレクトリ削除
+        this.registerFunction({
+            name: 'delete_directory',
+            description: 'ディレクトリを削除する',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: '削除するディレクトリのパス'
+                    },
+                    recursive: {
+                        type: 'boolean',
+                        description: '中身も含めて再帰的に削除するか（デフォルト: false）'
+                    }
+                },
+                required: ['path']
+            },
+            handler: async (params) => {
+                const result = await this.fileSystem.deleteDirectory(params.path, params.recursive || false);
+                if (result.success) {
+                    return { success: true };
+                }
+                else {
+                    throw new Error(result.error);
+                }
+            }
+        });
+        // ファイル情報取得
+        this.registerFunction({
+            name: 'get_file_info',
+            description: 'ファイルまたはディレクトリの詳細情報を取得する',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: '情報を取得するファイル/ディレクトリのパス'
+                    }
+                },
+                required: ['path']
+            },
+            handler: async (params) => {
+                const result = await this.fileSystem.getFileInfo(params.path);
+                if (result.success) {
+                    return result.data;
+                }
+                else {
+                    throw new Error(result.error);
+                }
+            }
+        });
+        // カレントディレクトリ変更
+        this.registerFunction({
+            name: 'change_directory',
+            description: 'カレントディレクトリを変更する',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: '変更先ディレクトリのパス'
+                    }
+                },
+                required: ['path']
+            },
+            handler: async (params) => {
+                const result = await this.fileSystem.changeDirectory(params.path);
+                if (result.success) {
+                    return {
+                        success: true,
+                        current_directory: result.data
+                    };
+                }
+                else {
+                    throw new Error(result.error);
+                }
+            }
+        });
+        // カレントディレクトリ取得
+        this.registerFunction({
+            name: 'get_current_directory',
+            description: '現在のカレントディレクトリを取得する',
+            parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+            },
+            handler: async () => {
+                return {
+                    current_directory: this.fileSystem.getCurrentDirectory()
+                };
+            }
+        });
+        // セキュリティ情報取得
+        this.registerFunction({
+            name: 'get_security_info',
+            description: 'ファイルシステムのセキュリティ設定情報を取得する',
+            parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+            },
+            handler: async () => {
+                return this.fileSystem.getSecurityInfo();
+            }
+        });
+        // Bashコマンド実行
+        this.registerFunction({
+            name: 'execute_command',
+            description: 'Bashコマンドを実行する（セキュリティ制限あり）',
+            parameters: {
+                type: 'object',
+                properties: {
+                    command: {
+                        type: 'string',
+                        description: '実行するコマンド'
+                    },
+                    cwd: {
+                        type: 'string',
+                        description: '作業ディレクトリ（オプション）'
+                    },
+                    timeout: {
+                        type: 'number',
+                        description: 'タイムアウト時間（ミリ秒、オプション）'
+                    },
+                    shell: {
+                        type: 'string',
+                        description: '使用するシェル（オプション）'
+                    }
+                },
+                required: ['command']
+            },
+            handler: async (params) => {
+                if (!this.bash) {
+                    throw new Error('Bash execution is not available');
+                }
+                const result = await this.bash.executeCommand(params.command, {
+                    cwd: params.cwd,
+                    timeout: params.timeout,
+                    shell: params.shell
+                });
+                if (result.success) {
+                    return {
+                        success: true,
+                        stdout: result.stdout,
+                        stderr: result.stderr,
+                        exit_code: result.exitCode,
+                        duration: result.duration
+                    };
+                }
+                else {
+                    return {
+                        success: false,
+                        error: result.error,
+                        stderr: result.stderr,
+                        exit_code: result.exitCode,
+                        duration: result.duration
+                    };
+                }
+            }
+        });
+        // Bash対話式コマンド実行
+        this.registerFunction({
+            name: 'execute_command_interactive',
+            description: 'Bashコマンドを対話式で実行する（リアルタイム出力）',
+            parameters: {
+                type: 'object',
+                properties: {
+                    command: {
+                        type: 'string',
+                        description: '実行するコマンド'
+                    },
+                    cwd: {
+                        type: 'string',
+                        description: '作業ディレクトリ（オプション）'
+                    },
+                    timeout: {
+                        type: 'number',
+                        description: 'タイムアウト時間（ミリ秒、オプション）'
+                    }
+                },
+                required: ['command']
+            },
+            handler: async (params) => {
+                if (!this.bash) {
+                    throw new Error('Bash execution is not available');
+                }
+                const result = await this.bash.executeCommandInteractive(params.command, {
+                    cwd: params.cwd,
+                    timeout: params.timeout
+                });
+                return {
+                    success: result.success,
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    exit_code: result.exitCode,
+                    error: result.error,
+                    duration: result.duration
+                };
+            }
+        });
+        // Bashセキュリティ情報取得
+        this.registerFunction({
+            name: 'get_bash_security_info',
+            description: 'Bash実行のセキュリティ設定情報を取得する',
+            parameters: {
+                type: 'object',
+                properties: {},
+                required: []
+            },
+            handler: async () => {
+                if (!this.bash) {
+                    return { enabled: false, reason: 'Bash execution is not available' };
+                }
+                return this.bash.getSecurityInfo();
+            }
+        });
+        // TodoWriteツール
+        const todoWriteTool = new TodoWriteTool();
+        this.registerFunction({
+            name: 'write_todos',
+            description: `タスクリストを作成・管理して作業の進捗を追跡する
+
+使用するタイミング:
+- 3つ以上のステップが必要な複雑なタスク
+- 慎重な計画が必要な重要なタスク
+- 複数のタスクが提供された場合
+- 新しい指示を受けた後
+- タスク開始時（in_progressとしてマーク）
+- タスク完了後（completedとしてマーク）
+
+タスク状態:
+- pending: まだ開始していないタスク
+- in_progress: 現在作業中（同時に1つまで）
+- completed: 正常に完了したタスク`,
+            parameters: {
+                type: 'object',
+                properties: {
+                    todos: {
+                        type: 'array',
+                        description: '更新されたTODOリスト',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                id: {
+                                    type: 'string',
+                                    description: 'TODOの一意識別子'
+                                },
+                                content: {
+                                    type: 'string',
+                                    description: 'タスクの説明'
+                                },
+                                status: {
+                                    type: 'string',
+                                    enum: ['pending', 'in_progress', 'completed'],
+                                    description: 'タスクの現在の状態'
+                                }
+                            },
+                            required: ['content', 'status']
+                        }
+                    }
+                },
+                required: ['todos']
+            },
+            handler: async (params) => {
+                const todos = params.todos;
+                const result = await todoWriteTool.execute({ todos });
+                if (result.success) {
+                    return {
+                        success: true,
+                        message: result.message,
+                        todos: result.todos,
+                        summary: result.summary
+                    };
+                }
+                else {
+                    throw new Error(result.message);
+                }
+            }
+        });
+        // サブエージェント呼び出し
+        this.registerFunction({
+            name: 'task',
+            description: `複雑な複数ステップのタスクを自律的に処理するサブエージェントを起動する
+
+利用可能なサブエージェントタイプ:
+- general-purpose: すべてのツールにアクセスできる汎用エージェント
+
+使用するタイミング:
+- 特殊な処理が必要な複雑なタスク
+- 特定の操作のコンテキストを分離したい場合
+- サブタスクを委譲する場合`,
+            parameters: {
+                type: 'object',
+                properties: {
+                    description: {
+                        type: 'string',
+                        description: 'サブエージェントに実行させるタスクの詳細な説明'
+                    },
+                    subagent_type: {
+                        type: 'string',
+                        description: '使用するサブエージェントのタイプ',
+                        enum: ['general-purpose']
+                    }
+                },
+                required: ['description', 'subagent_type']
+            },
+            handler: async (params) => {
+                // このハンドラーは後でSubAgentManagerと連携するように実装
+                // 現時点ではプレースホルダー
+                return {
+                    success: true,
+                    message: `Sub-agent task registered: ${params.description}`,
+                    subagent_type: params.subagent_type
+                };
+            }
+        });
+        // コードインテリジェンス機能を登録
+        this.registerCodeIntelligenceFunctions();
+        // IntelligentFileSystem統合を初期化（環境変数で制御）
+        if (process.env.ENABLE_INTELLIGENT_FS !== 'false') {
+            this.initializeIntelligentIntegration().catch(error => {
+                logger.error('Failed to initialize IntelligentFileSystem integration:', error);
+            });
+        }
+        logger.debug(`Registered ${this.functions.size} default internal functions`);
+    }
+    /**
+     * Serenaと同等のコードインテリジェンス機能を登録
+     */
+    registerCodeIntelligenceFunctions() {
+        const codeIntelligenceFunctions = createCodeIntelligenceFunctions();
+        for (const func of codeIntelligenceFunctions) {
+            this.registerFunction(func);
+        }
+        logger.debug(`Registered ${codeIntelligenceFunctions.length} code intelligence functions`);
+    }
+    /**
+     * IntelligentFileSystem統合を初期化
+     */
+    async initializeIntelligentIntegration() {
+        try {
+            const { integrateIntelligentFunctions } = await import('./intelligent-registry-integration.js');
+            await integrateIntelligentFunctions(this);
+            logger.info('IntelligentFileSystem integration initialized successfully');
+        }
+        catch (error) {
+            logger.error('Failed to load IntelligentFileSystem integration:', error);
+            // IntelligentFileSystemは必須コンポーネントなので、失敗時は起動を中止
+            throw new Error(`Critical: IntelligentFileSystem initialization failed. This is a required component for deep analysis and memory integration. ${error}`);
+        }
+    }
+    /**
+     * 関数を登録
+     */
+    registerFunction(func) {
+        this.functions.set(func.name, func);
+        logger.debug(`Internal function registered: ${func.name}`);
+    }
+    /**
+     * 外部から関数を登録（統合用）
+     */
+    register(func) {
+        this.registerFunction(func);
+    }
+    /**
+     * 関数を取得
+     */
+    get(name) {
+        return this.functions.get(name);
+    }
+    /**
+     * 関数の登録を解除
+     */
+    unregisterFunction(name) {
+        const deleted = this.functions.delete(name);
+        if (deleted) {
+            logger.debug(`Internal function unregistered: ${name}`);
+        }
+        return deleted;
+    }
+    /**
+     * 関数の登録を解除（統合用エイリアス）
+     */
+    unregister(name) {
+        return this.unregisterFunction(name);
+    }
+    /**
+     * 関数が登録されているかチェック
+     */
+    hasFunction(name) {
+        return this.functions.has(name);
+    }
+    /**
+     * 関数を実行
+     */
+    async executeFunction(name, params) {
+        const func = this.functions.get(name);
+        if (!func) {
+            return {
+                success: false,
+                error: `Internal function '${name}' not found`
+            };
+        }
+        try {
+            logger.debug(`Executing internal function: ${name}`, params);
+            const result = await func.handler(params);
+            logger.debug(`Internal function executed successfully: ${name}`);
+            return {
+                success: true,
+                result
+            };
+        }
+        catch (error) {
+            const errorMessage = `Internal function '${name}' failed: ${error instanceof Error ? error.message : String(error)}`;
+            logger.error(errorMessage);
+            return {
+                success: false,
+                error: errorMessage
+            };
+        }
+    }
+    /**
+     * 登録されている関数の一覧を取得
+     */
+    listFunctions() {
+        return Array.from(this.functions.keys());
+    }
+    /**
+     * 関数定義を取得
+     */
+    getFunctionDefinition(name) {
+        return this.functions.get(name);
+    }
+    /**
+     * すべての関数定義を取得
+     */
+    getAllFunctionDefinitions() {
+        return Array.from(this.functions.values());
+    }
+    /**
+     * OpenAI Function Calling形式の定義を取得
+     */
+    getFunctionCallDefinitions() {
+        return this.getAllFunctionDefinitions().map(func => ({
+            name: func.name,
+            description: func.description,
+            parameters: func.parameters
+        }));
+    }
+    /**
+     * セキュリティ設定を更新
+     */
+    updateSecurityConfig(config) {
+        this.fileSystem.updateSecurityConfig(config);
+        logger.debug('Internal function registry security config updated');
+    }
+}
+//# sourceMappingURL=registry.js.map

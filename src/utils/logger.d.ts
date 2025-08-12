@@ -55,4 +55,3 @@ export declare class PerformanceLogger {
     constructor(taskName: string);
     end(message?: string): void;
 }
-//# sourceMappingURL=logger.d.ts.map
