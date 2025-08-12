@@ -19,8 +19,28 @@ import { Parser, Language } from 'web-tree-sitter';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// WASMパーサーのパス（プロジェクトルートのnode_modules/wasm）
-const WASM_PATH = path.resolve(__dirname, '../../../../../../node_modules/@vscode/tree-sitter-wasm/wasm');
+// WASMパーサーのパス（動的検索）
+function findWasmPath(): string {
+  // 複数の候補パスを試行
+  const candidates = [
+    path.resolve(__dirname, '../../../../../node_modules/@vscode/tree-sitter-wasm/wasm'),
+    path.resolve(__dirname, '../../../../../../node_modules/@vscode/tree-sitter-wasm/wasm'),
+    path.resolve(__dirname, '../../../node_modules/@vscode/tree-sitter-wasm/wasm'),
+    path.resolve(process.cwd(), 'node_modules/@vscode/tree-sitter-wasm/wasm'),
+    path.resolve('/agents/node_modules/@vscode/tree-sitter-wasm/wasm'),
+  ];
+  
+  for (const candidate of candidates) {
+    if (require('fs').existsSync(path.join(candidate, 'tree-sitter-javascript.wasm'))) {
+      console.log(`✓ Found WASM path: ${candidate}`);
+      return candidate;
+    }
+  }
+  
+  throw new Error(`Tree-sitter WASM directory not found. Tried: ${candidates.join(', ')}`);
+}
+
+const WASM_PATH = findWasmPath();
 
 /**
  * サポート言語（Tree-sitter版）
