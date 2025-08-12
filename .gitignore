@@ -192,3 +192,6 @@ scripts/init-db.sql
 
 # ログディレクトリ
 logs/
+
+# 自動生成ファイル
+packages/cli/src/generated/git-commit.ts
