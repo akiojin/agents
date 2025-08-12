@@ -100,9 +100,10 @@ export class GeminiClient {
   /**
    * Threshold for compression token count as a fraction of the model's token limit.
    * If the chat history exceeds this threshold, it will be compressed.
-   * コンテキストがほぼ満杯（95%）になった時のみ圧縮を実行するように設定
+   * 通常は95%だが、ツール実行後は85%に下げて余裕を持たせる
    */
   private readonly COMPRESSION_TOKEN_THRESHOLD = 0.95;
+  private readonly COMPRESSION_TOKEN_THRESHOLD_AFTER_TOOLS = 0.85;
   /**
    * The fraction of the latest chat history to keep. A value of 0.3
    * means that only the last 30% of the chat history will be kept after compression.
@@ -404,6 +405,16 @@ export class GeminiClient {
       }
       yield event;
     }
+    
+    // ツール実行後に圧縮チェック（トークンが増えている可能性があるため）
+    // ツール実行後は閾値を85%に下げて、次のターンで余裕を持たせる
+    if (turn.pendingToolCalls.length > 0) {
+      const compressedAfterTools = await this.tryCompressChat(prompt_id, false, true);
+      if (compressedAfterTools) {
+        yield { type: GeminiEventType.ChatCompressed, value: compressedAfterTools };
+      }
+    }
+    
     if (!turn.pendingToolCalls.length && signal && !signal.aborted) {
       // Check if model was switched during the call (likely due to quota error)
       const currentModel = this.config.getModel();
@@ -419,6 +430,12 @@ export class GeminiClient {
         signal,
       );
       if (nextSpeakerCheck?.next_speaker === 'model') {
+        // 再帰呼び出し前に圧縮チェック（次のターンでエラーにならないように）
+        const compressedBeforeRecursion = await this.tryCompressChat(prompt_id);
+        if (compressedBeforeRecursion) {
+          yield { type: GeminiEventType.ChatCompressed, value: compressedBeforeRecursion };
+        }
+        
         const nextRequest = [{ text: 'Please continue.' }];
         // This recursive call's events will be yielded out, but the final
         // turn object will be from the top-level call.
@@ -619,6 +636,7 @@ export class GeminiClient {
   async tryCompressChat(
     prompt_id: string,
     force: boolean = false,
+    useToolThreshold: boolean = false,
   ): Promise<ChatCompressionInfo | null> {
     const curatedHistory = this.getChat().getHistory(true);
 
@@ -640,7 +658,11 @@ export class GeminiClient {
     }
 
     const modelTokenLimit = tokenLimit(model);
-    const threshold = this.COMPRESSION_TOKEN_THRESHOLD * modelTokenLimit;
+    // ツール実行後は閾値を下げて余裕を持たせる
+    const thresholdRatio = useToolThreshold 
+      ? this.COMPRESSION_TOKEN_THRESHOLD_AFTER_TOOLS 
+      : this.COMPRESSION_TOKEN_THRESHOLD;
+    const threshold = thresholdRatio * modelTokenLimit;
     const remainingTokens = modelTokenLimit - originalTokenCount;
     const usagePercentage = Math.round(originalTokenCount / modelTokenLimit * 100);
     
@@ -648,12 +670,12 @@ export class GeminiClient {
     console.log(`[Compression Debug] Model: ${model}, Token Limit: ${modelTokenLimit}`);
     console.log(`[Compression Debug] Current Usage: ${originalTokenCount}/${modelTokenLimit} (${usagePercentage}%)`);
     console.log(`[Compression Debug] Remaining: ${remainingTokens} tokens`);
-    console.log(`[Compression Debug] Compression Threshold: ${threshold} (${Math.round(this.COMPRESSION_TOKEN_THRESHOLD * 100)}%)`);
-    console.log(`[Compression Debug] Force flag: ${force}`);
+    console.log(`[Compression Debug] Compression Threshold: ${threshold} (${Math.round(thresholdRatio * 100)}%)`);
+    console.log(`[Compression Debug] Force flag: ${force}, Tool threshold: ${useToolThreshold}`);
     
     // UIに表示される残量が0%の場合の警告
     if (usagePercentage >= 100 && !force) {
-      console.warn(`[Compression Warning] Context is at ${usagePercentage}% but compression threshold is ${Math.round(this.COMPRESSION_TOKEN_THRESHOLD * 100)}%`);
+      console.warn(`[Compression Warning] Context is at ${usagePercentage}% but compression threshold is ${Math.round(thresholdRatio * 100)}%`);
       console.warn(`[Compression Warning] UI may show 0% context remaining. Use /compress command to manually compress.`);
     }
     
