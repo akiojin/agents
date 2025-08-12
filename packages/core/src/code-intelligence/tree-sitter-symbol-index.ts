@@ -19,8 +19,8 @@ import { Parser, Language } from 'web-tree-sitter';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// WASMパーサーのパス
-const WASM_PATH = path.resolve(__dirname, '../../node_modules/@vscode/tree-sitter-wasm');
+// WASMパーサーのパス（実行時のdistディレクトリからの相対パス）
+const WASM_PATH = path.resolve(__dirname, '../../../node_modules/@vscode/tree-sitter-wasm');
 
 /**
  * サポート言語（Tree-sitter版）
