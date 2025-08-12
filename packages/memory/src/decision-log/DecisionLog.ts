@@ -28,7 +28,7 @@ export class DecisionLog {
   private currentSession: string;
   private schemaPath: string;
 
-  constructor(dbPath: string = '.agents/decisions.db') {
+  constructor(dbPath: string = '.agents/cache/decisions.db') {
     // ディレクトリが存在しない場合は作成
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {
