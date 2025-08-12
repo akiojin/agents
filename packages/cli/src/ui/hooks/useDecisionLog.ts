@@ -5,7 +5,22 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getMemoryManager } from '../../memory/memoryManager.js';
-import { DecisionLog, WhyChain, Decision } from '@agents/memory/decision-log';
+// import { WhyChain, Decision } from '@agents/memory/decision-log/types.js';
+
+interface Decision {
+  id: number;
+  timestamp: Date;
+  action_type: string;
+  action_target?: string;
+  reason: string;
+  result?: string;
+  output?: string;
+}
+
+interface WhyChain {
+  chain: any[];
+  summary: string;
+}
 
 export interface DecisionLogHookState {
   isEnabled: boolean;
@@ -121,7 +136,7 @@ export function useDecisionLog(): UseDecisionLogReturn {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       
       const memoryManager = getMemoryManager();
-      await memoryManager.updateDecisionResult(decisionId, result, output);
+      await memoryManager.updateDecisionResult(decisionId, result as any, output);
       
       // 最近の決定を更新
       await loadRecentDecisions();
@@ -320,7 +335,7 @@ export function formatWhyChain(whyChain: WhyChain | null): string {
   
   let output = '## Why Chain - Decision Causality\\n\\n';
   
-  whyChain.chain.forEach((link, index) => {
+  whyChain.chain.forEach((link: any, index: number) => {
     const indent = '  '.repeat(index);
     const arrow = index > 0 ? '↳ ' : '';
     
