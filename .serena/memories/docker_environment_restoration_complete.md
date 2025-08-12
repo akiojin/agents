@@ -16,13 +16,11 @@
 
 - **docker-compose.yml**: 完全復旧
   - agents サービス: メイン開発コンテナ
-  - chroma サービス: ChromaDB (シナプス記憶システム用)
   - 適切なボリュームマウント (Claude設定、Gitconfig、Docker socket)
   - 必要な環境変数設定済み
 
 - **.env.example**: API キー設定テンプレート作成
   - ANTHROPIC_API_KEY, GOOGLE_API_KEY, GITHUB_TOKEN
-  - ChromaDB URL設定
 
 ### 3. CI/CD最適化
 - **.github/workflows/ci.yml**: 不要な本番環境デプロイ部分削除

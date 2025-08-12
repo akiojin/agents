@@ -135,7 +135,7 @@ user_input = interrupt(value="Ready for user input")
 ## 本プロジェクトへの適用ポイント
 
 ### 1. StateGraphの導入
-- 現在のagent.tsをLangGraphパターンに移行
+- 現在のagent.tsをLangGraphパターンに適用
 - より柔軟な状態管理
 - 複雑なワークフローのサポート
 

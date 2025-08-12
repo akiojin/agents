@@ -53,7 +53,7 @@
 - **追加ツール**:
   - GitHub CLI (gh)
   - Docker CLI + Compose
-  - ChromaDB（docker-compose経由）
+  - SQLite（ローカルファイル）
 
 ## ワークスペース構成
 
@@ -78,7 +78,7 @@ workspaces:
 
 ## データ永続化
 
-- **ChromaDB**: ベクターデータベース（Docker経由）
+- **SQLite**: ベクトルデータベース（サーバー不要）
 - **ローカルファイル**: 設定・キャッシュ
 - **Serenaメモリ**: プロジェクトコンテキスト
 
