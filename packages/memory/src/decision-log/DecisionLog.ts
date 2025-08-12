@@ -23,10 +23,6 @@ import {
   ActionType
 } from './types.js';
 
-// ESモジュール用に__dirnameを定義
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 export class DecisionLog {
   private db: Database.Database;
   private currentSession: string;
@@ -44,6 +40,10 @@ export class DecisionLog {
     this.db.pragma('journal_mode = WAL'); // パフォーマンス向上
     this.db.pragma('foreign_keys = ON');   // 外部キー制約を有効化
 
+    // ESモジュール用に__dirnameを取得
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    
     // スキーマのパスを取得
     this.schemaPath = path.join(__dirname, 'schema.sql');
     

@@ -78,24 +78,16 @@ export class MemoryManager {
     if (this.config.enableDecisionLog !== false) {
       const decisionDbPath = path.join(this.config.projectRoot, '.agents', 'decisions.db');
       this.decisionLog = new DecisionLog(decisionDbPath);
-      console.log('🧠 Decision logging enabled');
     }
     
     this.initialized = true;
     
-    // 既存の記憶統計を表示
+    // 既存の記憶統計を取得（ログは出力しない）
     const stats = await this.memorySystem.getStatistics();
-    if (stats.totalMemories > 0) {
-      console.log(`📚 Loaded ${stats.totalMemories} memories from previous sessions`);
-      console.log(`   Average success rate: ${(stats.averageSuccessRate * 100).toFixed(1)}%`);
-    }
     
-    // 決定ログの統計も表示
+    // 決定ログの統計を取得（ログは出力しない）
     if (this.decisionLog) {
       const decisionStats = await this.decisionLog.getStatistics();
-      if (decisionStats.totalDecisions > 0) {
-        console.log(`🎯 Loaded ${decisionStats.totalDecisions} decisions from previous sessions`);
-      }
     }
   }
   
@@ -118,7 +110,7 @@ export class MemoryManager {
           projectId: this.projectId
         }
       );
-      console.log('💾 Error pattern saved to memory');
+      // Error pattern saved to memory
     } catch (e) {
       console.debug('Failed to save error pattern:', e);
     }
@@ -139,7 +131,7 @@ export class MemoryManager {
           projectId: this.projectId
         }
       );
-      console.log('✨ Success pattern saved to memory');
+      // Success pattern saved to memory
     } catch (e) {
       console.debug('Failed to save success pattern:', e);
     }

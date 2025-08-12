@@ -245,11 +245,9 @@ export async function connectAndDiscover(
       throw error;
     }
   } catch (error) {
-    // デバッグモードでない場合は簡潔なメッセージのみ
+    // デバッグモードの場合のみエラーを表示
     if (debugMode) {
       console.error(`Error connecting to MCP server '${mcpServerName}':`, error);
-    } else {
-      console.warn(`⚠️ MCP server '${mcpServerName}' is unavailable`);
     }
     updateMCPServerStatus(mcpServerName, MCPServerStatus.DISCONNECTED);
   }
