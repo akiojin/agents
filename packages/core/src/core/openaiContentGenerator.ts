@@ -32,6 +32,8 @@ import OpenAI from 'openai';
 
 
 
+
+
 export class OpenAIContentGenerator implements ContentGenerator {
     private openai: OpenAI;
     private configForTelemetry?: Config;
@@ -39,6 +41,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
 
     constructor(private readonly config: ContentGeneratorConfig, configForTelemetry?: Config) {
         this.configForTelemetry = configForTelemetry;
+        
         // ローカルLLMまたはOpenAI互換APIのベースURL設定
         let baseURL = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL || 'https://api.openai.com/v1';
         
@@ -153,6 +156,30 @@ export class OpenAIContentGenerator implements ContentGenerator {
     private convertOpenAIFunctionCallsToAgents(toolCalls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]): FunctionCall[] {
         return OpenAIToAgentsConverter.convertOpenAIFunctionCallsToAgents(toolCalls);
     }
+    
+    /**
+     * ユーザーフレンドリーなエラーメッセージを生成し表示
+     */
+    private logUserFriendlyError(error: any): void {
+        const errorMsg = error?.message || String(error);
+        
+        let userFriendlyMessage = '';
+        if (errorMsg.includes('The number of tokens to keep from the initial prompt is greater than the context length')) {
+            userFriendlyMessage = '✖ ローカルLLMのコンテキスト長が不足しています。LLMサーバーの--context-lengthパラメータを大きく設定するか、より短いプロンプトを使用してください。';
+        } else if (errorMsg.includes('context length') || errorMsg.includes('context')) {
+            userFriendlyMessage = '✖ コンテキスト長の制限に達しました。より短いメッセージを送信するか、LLMの設定を確認してください。';
+        } else if (errorMsg.includes('400')) {
+            userFriendlyMessage = '✖ リクエストの形式に問題があります。LLMサーバーの設定を確認してください。';
+        } else {
+            userFriendlyMessage = `✖ LLMサーバーエラー: ${errorMsg}`;
+        }
+        
+        // エラーメッセージを目立つ形で出力
+        console.error('\n' + '='.repeat(80));
+        console.error(userFriendlyMessage);
+        console.error('='.repeat(80) + '\n');
+    }
+    
     /**
      * 使用OpenAI API生成内容（非流式）
      */
@@ -242,6 +269,10 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 baseURL: process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL,
                 hasApiKey: !!(this.config.apiKey || process.env.OPENAI_API_KEY),
             });
+            
+            // ユーザーフレンドリーなエラーメッセージを表示
+            this.logUserFriendlyError(error);
+            
             throw error;
         }
     }
@@ -254,19 +285,20 @@ export class OpenAIContentGenerator implements ContentGenerator {
     async generateContentStream(
         request: GenerateContentParameters,
     ): Promise<AsyncGenerator<GenerateContentResponse>> {
-        this.startTime = Date.now();
-        const messages = this.convertToOpenAIMessages(request.contents);
+        try {
+            this.startTime = Date.now();
+            const messages = this.convertToOpenAIMessages(request.contents);
 
-        // 构建OpenAI请求参数
-        const openaiRequest: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
-            model: this.config.model || 'gpt-3.5-turbo',
-            messages,
-            ...AgentsToOpenAIConverter.convertConfigToOpenAIParams(request.config),
-            stream: true,
-            stream_options: { include_usage: true }, // 启用流式响应中的用量统计
-        };
+            // 构建OpenAI请求参数
+            const openaiRequest: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
+                model: this.config.model || 'gpt-3.5-turbo',
+                messages,
+                ...AgentsToOpenAIConverter.convertConfigToOpenAIParams(request.config),
+                stream: true,
+                stream_options: { include_usage: true }, // 启用流式响应中的用量统计
+            };
 
-        // 添加工具支持
+            // 添加工具支持
             if (request.config?.tools) {
                 const openaiTools = await this.convertGeminiToolsToOpenAI(request.config.tools);
                 if (openaiTools.length > 0) {
@@ -288,45 +320,58 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 }
             }
 
-        // 添加系统指令支持
-        if (request.config?.systemInstruction) {
-            let systemContent = '';
-            
-            // 处理系统指令（可能是字符串或Part对象）
-            if (typeof request.config.systemInstruction === 'string') {
-                systemContent = request.config.systemInstruction;
-            } else if (typeof request.config.systemInstruction === 'object' && 'text' in request.config.systemInstruction && request.config.systemInstruction.text) {
-                systemContent = request.config.systemInstruction.text;
-            }
-            
-            if (systemContent) {
-                // 如果需要JSON响应，将JSON格式要求追加到系统指令
-                if (request.config?.responseMimeType === 'application/json') {
-                    systemContent += '\n\nYou must respond with valid JSON only. Do not wrap your response in markdown code blocks.';
-                    // LM Studio requires 'text' instead of 'json_object'
-                        const isLMStudio = this.openai.baseURL?.includes('1234') || this.openai.baseURL?.includes('lmstudio');
-                        openaiRequest.response_format = { type: isLMStudio ? 'text' : 'json_object' };
+            // 添加系统指令支持
+            if (request.config?.systemInstruction) {
+                let systemContent = '';
+                
+                // 处理系统指令（可能是字符串或Part对象）
+                if (typeof request.config.systemInstruction === 'string') {
+                    systemContent = request.config.systemInstruction;
+                } else if (typeof request.config.systemInstruction === 'object' && 'text' in request.config.systemInstruction && request.config.systemInstruction.text) {
+                    systemContent = request.config.systemInstruction.text;
                 }
                 
-                openaiRequest.messages.unshift({
-                    role: 'system',
-                    content: systemContent
-                });
-            }
-        } else if (request.config?.responseMimeType === 'application/json') {
-            // JSON响应但没有系统指令的情况
-            // LM Studio requires 'text' instead of 'json_object'
+                if (systemContent) {
+                    // 如果需要JSON响应，将JSON格式要求追加到系统指令
+                    if (request.config?.responseMimeType === 'application/json') {
+                        systemContent += '\n\nYou must respond with valid JSON only. Do not wrap your response in markdown code blocks.';
+                        // LM Studio requires 'text' instead of 'json_object'
                         const isLMStudio = this.openai.baseURL?.includes('1234') || this.openai.baseURL?.includes('lmstudio');
                         openaiRequest.response_format = { type: isLMStudio ? 'text' : 'json_object' };
-            openaiRequest.messages.unshift({
-                role: 'system',
-                content: 'You must respond with valid JSON only. Do not wrap your response in markdown code blocks.'
+                    }
+                    
+                    openaiRequest.messages.unshift({
+                        role: 'system',
+                        content: systemContent
+                    });
+                }
+            } else if (request.config?.responseMimeType === 'application/json') {
+                // JSON响应但没有系统指令的情况
+                // LM Studio requires 'text' instead of 'json_object'
+                const isLMStudio = this.openai.baseURL?.includes('1234') || this.openai.baseURL?.includes('lmstudio');
+                openaiRequest.response_format = { type: isLMStudio ? 'text' : 'json_object' };
+                openaiRequest.messages.unshift({
+                    role: 'system',
+                    content: 'You must respond with valid JSON only. Do not wrap your response in markdown code blocks.'
+                });
+            }
+
+            const stream = await this.openai.chat.completions.create(openaiRequest);
+
+            return this.createGeminiStreamFromOpenAI(stream, request.config?.responseMimeType === 'application/json');
+        } catch (error) {
+            console.error('[OpenAI Compatible API] Stream request failed:', error);
+            console.error('Request details:', {
+                model: this.config.model || 'gpt-3.5-turbo',
+                baseURL: process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL,
+                hasApiKey: !!(this.config.apiKey || process.env.OPENAI_API_KEY),
             });
+            
+            // ユーザーフレンドリーなエラーメッセージを表示
+            this.logUserFriendlyError(error);
+            
+            throw error;
         }
-
-        const stream = await this.openai.chat.completions.create(openaiRequest);
-
-        return this.createGeminiStreamFromOpenAI(stream, request.config?.responseMimeType === 'application/json');
     }
 
     /**
@@ -357,8 +402,8 @@ export class OpenAIContentGenerator implements ContentGenerator {
                 responseText += chunk.choices[0].delta.content;
             }
 
-            // 対于包含usage信息的chunk，即使没有其他内容也要处理
-            // 传递当前chunk的usage信息（如果有的话）或者累積的finalUsage
+            // 对于包含usage信息的chunk，即使没有其他内容也要处理
+            // 传递当前chunk的usage信息（如果有的话）或者累积的finalUsage
             const agentsResponse = OpenAIToAgentsConverter.convertStreamingChunkToAgents(
                 chunk,
                 isJsonResponse,
