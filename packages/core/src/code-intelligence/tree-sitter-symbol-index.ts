@@ -166,7 +166,7 @@ export class TreeSitterSymbolIndex {
       await Parser.init();
       this.parser = new Parser();
       
-      // サポート対象言語のWASMファイルパス
+      // サポート対象言語のWASMファイルパス（存在するファイルのみ）
       const wasmLanguages = [
         { lang: TreeSitterLanguage.JavaScript, file: 'tree-sitter-javascript.wasm' },
         { lang: TreeSitterLanguage.TypeScript, file: 'tree-sitter-typescript.wasm' },
@@ -174,10 +174,10 @@ export class TreeSitterSymbolIndex {
         { lang: TreeSitterLanguage.Java, file: 'tree-sitter-java.wasm' },
         { lang: TreeSitterLanguage.Go, file: 'tree-sitter-go.wasm' },
         { lang: TreeSitterLanguage.Rust, file: 'tree-sitter-rust.wasm' },
-        { lang: TreeSitterLanguage.C, file: 'tree-sitter-c.wasm' },
         { lang: TreeSitterLanguage.Cpp, file: 'tree-sitter-cpp.wasm' },
-        { lang: TreeSitterLanguage.CSharp, file: 'tree-sitter-c_sharp.wasm' },
+        { lang: TreeSitterLanguage.CSharp, file: 'tree-sitter-c-sharp.wasm' }, // 正しいファイル名
         { lang: TreeSitterLanguage.Ruby, file: 'tree-sitter-ruby.wasm' }
+        // 注意: C言語のWASMファイルはパッケージに含まれていないため除外
       ];
       
       // 各言語のWASMファイルを読み込み（必須）
