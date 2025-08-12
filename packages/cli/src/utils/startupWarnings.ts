@@ -5,11 +5,18 @@
  */
 
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import os from 'os';
 import { join as pathJoin } from 'node:path';
 import { getErrorMessage } from '@indenscale/open-gemini-cli-core';
 
-const warningsFilePath = pathJoin(os.tmpdir(), 'gemini-cli-warnings.txt');
+// ログディレクトリの作成を確実にする
+const logDir = pathJoin(process.cwd(), '.agents', 'logs');
+if (!fsSync.existsSync(logDir)) {
+  fsSync.mkdirSync(logDir, { recursive: true });
+}
+
+const warningsFilePath = pathJoin(logDir, 'gemini-cli-warnings.txt');
 
 export async function getStartupWarnings(): Promise<string[]> {
   try {

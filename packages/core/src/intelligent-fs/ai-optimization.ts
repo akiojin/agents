@@ -5,7 +5,7 @@
 
 import { IntelligentFileSystem, IntelligentReadResult } from './intelligent-filesystem.js';
 import { MemoryIntegrationManager } from './memory-integration.js';
-import { SymbolIndexInfo } from '../code-intelligence/symbol-index.js';
+import { TreeSitterSymbolInfo } from '../code-intelligence/tree-sitter-symbol-index.js';
 import { TypeScriptLSPClient } from '../code-intelligence/lsp-client.js';
 import * as path from 'path';
 

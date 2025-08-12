@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { IntelligentFileSystem, createIntelligentFileSystem } from './intelligent-filesystem.js';
 import { MemoryIntegrationManager, createMemoryIntegrationManager } from './memory-integration.js';
 import { AIOptimizationEngine, createAIOptimizationEngine } from './ai-optimization.js';
-import { SymbolIndex } from '../code-intelligence/symbol-index.js';
+import { TreeSitterSymbolIndex } from '../code-intelligence/tree-sitter-symbol-index.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { existsSync } from 'fs';

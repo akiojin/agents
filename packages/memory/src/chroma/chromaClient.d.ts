@@ -21,15 +21,62 @@ export interface Memory {
         }>;
     };
 }
+/**
+ * シナプス記憶ノード - 生物学的記憶システムの基本単位
+ */
+export interface SynapticMemoryNode {
+    id: string;
+    content: string;
+    activationLevel: number;
+    connections: Array<{
+        targetId: string;
+        strength: number;
+        coActivationCount: number;
+        lastCoActivated: Date;
+    }>;
+    contextSignature: string;
+    lastActivated: Date;
+    memoryType: 'episodic' | 'semantic' | 'procedural';
+}
+/**
+ * ヘブ則学習パラメータ
+ */
+export interface HebbianLearningConfig {
+    learningRate: number;
+    decayRate: number;
+    maxPropagationSteps: number;
+    activationThreshold: number;
+    synapticStrengthThreshold: number;
+}
 export declare class ChromaMemoryClient {
     private client;
     private collection;
     private collectionName;
+    private synapticNodes;
+    private hebbianConfig;
+    private activationHistory;
     constructor(collectionName?: string);
     /**
      * 初期化：コレクションの作成または取得
      */
     initialize(): Promise<void>;
+    /**
+     * ヘブ則学習に基づくシナプス結合強化
+     * "一緒に発火するニューロンは結びつく"
+     */
+    private strengthenSynapticConnection;
+    /**
+     * 活性化伝播メカニズム（最大3段階、減衰率0.7）
+     */
+    private propagateActivation;
+    /**
+     * シナプス記憶ノードをChromaDBと同期
+     */
+    private syncSynapticNodeToChroma;
+    /**
+     * キーワードから関連シナプス記憶を活性化
+     */
+    activateSynapticMemories(keyword: string, contextSignature?: string): Promise<SynapticMemoryNode[]>;
     /**
      * 記憶の保存
      */

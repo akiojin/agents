@@ -15,8 +15,8 @@ import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   getCurrentGeminiMdFilename,
   ApprovalMode,
-  DEFAULT_GEMINI_MODEL,
-  DEFAULT_GEMINI_EMBEDDING_MODEL,
+  DEFAULT_AGENTS_MODEL,
+  DEFAULT_AGENTS_EMBEDDING_MODEL,
   FileDiscoveryService,
   TelemetryTarget,
   MCPServerConfig,
@@ -67,16 +67,16 @@ export interface CliArgs {
 
 export async function parseArguments(): Promise<CliArgs> {
   const yargsInstance = yargs(hideBin(process.argv))
-    .scriptName('gemini')
+    .scriptName('agents')
     .usage(
       '$0 [options]',
-      'Gemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode',
+      'AGENTS - Launch an interactive CLI, use -p/--prompt for non-interactive mode',
     )
     .option('model', {
       alias: 'm',
       type: 'string',
       description: `Model`,
-      default: process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
+      default: process.env.AGENTS_MODEL || DEFAULT_AGENTS_MODEL,
     })
     .option('prompt', {
       alias: 'p',
@@ -325,13 +325,13 @@ export async function loadCliConfig(
   if (debugMode) {
     console.debug(`[Config] authType: ${authType}, AuthType.OPENAI_COMPATIBLE: ${AuthType.OPENAI_COMPATIBLE}`);
     console.debug(`[Config] LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL}, localModel: ${localModel}`);
-    console.debug(`[Config] GEMINI_MODEL: ${process.env.GEMINI_MODEL}, DEFAULT_GEMINI_MODEL: ${DEFAULT_GEMINI_MODEL}`);
+    console.debug(`[Config] AGENTS_MODEL: ${process.env.AGENTS_MODEL}, DEFAULT_AGENTS_MODEL: ${DEFAULT_AGENTS_MODEL}`);
   }
   
   const modelName = argv.model || (
     authType === AuthType.OPENAI_COMPATIBLE
       ? (process.env.LOCAL_LLM_MODEL || localModel || 'llama-3.2-3b-instruct')
-      : (process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL)
+      : (process.env.AGENTS_MODEL || DEFAULT_AGENTS_MODEL)
   );
   
   if (debugMode) {
@@ -379,7 +379,7 @@ export async function loadCliConfig(
         `Ignoring user-defined MCP server config for "${IDE_SERVER_NAME}" as it is a reserved name.`,
       );
     }
-    const companionPort = process.env.GEMINI_CLI_IDE_SERVER_PORT;
+    const companionPort = process.env.AGENTS_CLI_IDE_SERVER_PORT;
     if (!companionPort) {
       throw new Error(
         'Could not connect to IDE. Make sure you have the companion VS Code extension installed from the marketplace or via /ide install.',
@@ -408,7 +408,7 @@ export async function loadCliConfig(
 
   return new Config({
     sessionId,
-    embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
+    embeddingModel: DEFAULT_AGENTS_EMBEDDING_MODEL,
     sandbox: sandboxConfig,
     targetDir: process.cwd(),
     debugMode,

@@ -24,7 +24,7 @@ import {
   ThoughtSummary,
   UnauthorizedError,
   UserPromptEvent,
-  DEFAULT_GEMINI_FLASH_MODEL,
+  DEFAULT_AGENTS_FLASH_MODEL,
   uiTelemetryService,
 } from '@indenscale/open-gemini-cli-core';
 import { type Part, type PartListUnion } from '@google/genai';
@@ -413,7 +413,7 @@ export const useGeminiStream = (
         config.getContentGeneratorConfig()?.authType,
         undefined,
         config.getModel(),
-        DEFAULT_GEMINI_FLASH_MODEL,
+        DEFAULT_AGENTS_FLASH_MODEL,
       );
       
       // 記憶システムからエラー解決策を検索
@@ -688,7 +688,7 @@ export const useGeminiStream = (
                 config.getContentGeneratorConfig()?.authType,
                 undefined,
                 config.getModel(),
-                DEFAULT_GEMINI_FLASH_MODEL,
+                DEFAULT_AGENTS_FLASH_MODEL,
               ),
             },
             userMessageTimestamp,

@@ -12,7 +12,7 @@ export {
   GeminiVLMService 
 } from './src/services/vlmService.js';
 export {
-  DEFAULT_GEMINI_MODEL,
-  DEFAULT_GEMINI_FLASH_MODEL,
-  DEFAULT_GEMINI_EMBEDDING_MODEL,
+  DEFAULT_AGENTS_MODEL,
+  DEFAULT_AGENTS_FLASH_MODEL,
+  DEFAULT_AGENTS_EMBEDDING_MODEL,
 } from './src/config/models.js';

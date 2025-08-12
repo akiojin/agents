@@ -13,7 +13,7 @@ import {
   EmbedContentParameters,
 } from '@google/genai';
 import { createCodeAssistContentGenerator } from '../code_assist/codeAssist.js';
-import { DEFAULT_GEMINI_MODEL } from '../config/models.js';
+import { DEFAULT_AGENTS_MODEL } from '../config/models.js';
 import { Config } from '../config/config.js';
 import { getEffectiveModel } from './modelCheck.js';
 import { UserTierId } from '../code_assist/types.js';
@@ -76,7 +76,7 @@ export function createContentGeneratorConfig(
     }
   } else {
     // Use runtime model from config if available, otherwise fallback to default
-    effectiveModel = config.getModel() || DEFAULT_GEMINI_MODEL;
+    effectiveModel = config.getModel() || DEFAULT_AGENTS_MODEL;
     if (config.getDebugMode()) {
       console.debug(`[ContentGenerator] Non-OPENAI model resolved: ${effectiveModel}`);
     }

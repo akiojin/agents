@@ -17,8 +17,8 @@ describe('AuthDialog', () => {
 
   beforeEach(() => {
     originalEnv = { ...process.env };
-    process.env.GEMINI_API_KEY = '';
-    process.env.GEMINI_DEFAULT_AUTH_TYPE = '';
+    process.env.AGENTS_API_KEY = '';
+    process.env.AGENTS_DEFAULT_AUTH_TYPE = '';
     vi.clearAllMocks();
   });
 
@@ -27,7 +27,7 @@ describe('AuthDialog', () => {
   });
 
   it('should show an error if the initial auth type is invalid', () => {
-    process.env.GEMINI_API_KEY = '';
+    process.env.AGENTS_API_KEY = '';
 
     const settings: LoadedSettings = new LoadedSettings(
       {
@@ -51,18 +51,18 @@ describe('AuthDialog', () => {
       <AuthDialog
         onSelect={() => {}}
         settings={settings}
-        initialErrorMessage="GEMINI_API_KEY  environment variable not found"
+        initialErrorMessage="AGENTS_API_KEY  environment variable not found"
       />,
     );
 
     expect(lastFrame()).toContain(
-      'GEMINI_API_KEY  environment variable not found',
+      'AGENTS_API_KEY  environment variable not found',
     );
   });
 
-  describe('GEMINI_API_KEY environment variable', () => {
-    it('should detect GEMINI_API_KEY environment variable', () => {
-      process.env.GEMINI_API_KEY = 'foobar';
+  describe('AGENTS_API_KEY environment variable', () => {
+    it('should detect AGENTS_API_KEY environment variable', () => {
+      process.env.AGENTS_API_KEY = 'foobar';
 
       const settings: LoadedSettings = new LoadedSettings(
         {
@@ -83,13 +83,13 @@ describe('AuthDialog', () => {
       );
 
       expect(lastFrame()).toContain(
-        'Existing API key detected (GEMINI_API_KEY)',
+        'Existing API key detected (AGENTS_API_KEY)',
       );
     });
 
-    it('should not show the GEMINI_API_KEY message if GEMINI_DEFAULT_AUTH_TYPE is set to something else', () => {
-      process.env.GEMINI_API_KEY = 'foobar';
-      process.env.GEMINI_DEFAULT_AUTH_TYPE = AuthType.LOGIN_WITH_GOOGLE;
+    it('should not show the AGENTS_API_KEY message if AGENTS_DEFAULT_AUTH_TYPE is set to something else', () => {
+      process.env.AGENTS_API_KEY = 'foobar';
+      process.env.AGENTS_DEFAULT_AUTH_TYPE = AuthType.LOGIN_WITH_GOOGLE;
 
       const settings: LoadedSettings = new LoadedSettings(
         {
@@ -110,13 +110,13 @@ describe('AuthDialog', () => {
       );
 
       expect(lastFrame()).not.toContain(
-        'Existing API key detected (GEMINI_API_KEY)',
+        'Existing API key detected (AGENTS_API_KEY)',
       );
     });
 
-    it('should show the GEMINI_API_KEY message if GEMINI_DEFAULT_AUTH_TYPE is set to use api key', () => {
-      process.env.GEMINI_API_KEY = 'foobar';
-      process.env.GEMINI_DEFAULT_AUTH_TYPE = AuthType.USE_GEMINI;
+    it('should show the AGENTS_API_KEY message if AGENTS_DEFAULT_AUTH_TYPE is set to use api key', () => {
+      process.env.AGENTS_API_KEY = 'foobar';
+      process.env.AGENTS_DEFAULT_AUTH_TYPE = AuthType.USE_GEMINI;
 
       const settings: LoadedSettings = new LoadedSettings(
         {
@@ -137,14 +137,14 @@ describe('AuthDialog', () => {
       );
 
       expect(lastFrame()).toContain(
-        'Existing API key detected (GEMINI_API_KEY)',
+        'Existing API key detected (AGENTS_API_KEY)',
       );
     });
   });
 
-  describe('GEMINI_DEFAULT_AUTH_TYPE environment variable', () => {
-    it('should select the auth type specified by GEMINI_DEFAULT_AUTH_TYPE', () => {
-      process.env.GEMINI_DEFAULT_AUTH_TYPE = AuthType.LOGIN_WITH_GOOGLE;
+  describe('AGENTS_DEFAULT_AUTH_TYPE environment variable', () => {
+    it('should select the auth type specified by AGENTS_DEFAULT_AUTH_TYPE', () => {
+      process.env.AGENTS_DEFAULT_AUTH_TYPE = AuthType.LOGIN_WITH_GOOGLE;
 
       const settings: LoadedSettings = new LoadedSettings(
         {
@@ -168,7 +168,7 @@ describe('AuthDialog', () => {
       expect(lastFrame()).toContain('● Login with Google');
     });
 
-    it('should fall back to default if GEMINI_DEFAULT_AUTH_TYPE is not set', () => {
+    it('should fall back to default if AGENTS_DEFAULT_AUTH_TYPE is not set', () => {
       const settings: LoadedSettings = new LoadedSettings(
         {
           settings: {
@@ -191,8 +191,8 @@ describe('AuthDialog', () => {
       expect(lastFrame()).toContain('● Login with Google');
     });
 
-    it('should show an error and fall back to default if GEMINI_DEFAULT_AUTH_TYPE is invalid', () => {
-      process.env.GEMINI_DEFAULT_AUTH_TYPE = 'invalid-auth-type';
+    it('should show an error and fall back to default if AGENTS_DEFAULT_AUTH_TYPE is invalid', () => {
+      process.env.AGENTS_DEFAULT_AUTH_TYPE = 'invalid-auth-type';
 
       const settings: LoadedSettings = new LoadedSettings(
         {
@@ -213,7 +213,7 @@ describe('AuthDialog', () => {
       );
 
       expect(lastFrame()).toContain(
-        'Invalid value for GEMINI_DEFAULT_AUTH_TYPE: "invalid-auth-type"',
+        'Invalid value for AGENTS_DEFAULT_AUTH_TYPE: "invalid-auth-type"',
       );
 
       // Default is LOGIN_WITH_GOOGLE

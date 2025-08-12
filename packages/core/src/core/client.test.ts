@@ -19,7 +19,7 @@ import { GeminiChat } from './geminiChat.js';
 import { Config } from '../config/config.js';
 import { GeminiEventType, Turn } from './turn.js';
 import { getCoreSystemPrompt } from './prompts.js';
-import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
+import { DEFAULT_AGENTS_FLASH_MODEL } from '../config/models.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { setSimulate429 } from '../utils/testUtils.js';
 import { tokenLimit } from './tokenLimits.js';
@@ -1000,7 +1000,7 @@ describe('Gemini Client (client.ts)', () => {
   describe('handleFlashFallback', () => {
     it('should use current model from config when checking for fallback', async () => {
       const initialModel = client['config'].getModel();
-      const fallbackModel = DEFAULT_GEMINI_FLASH_MODEL;
+      const fallbackModel = DEFAULT_AGENTS_FLASH_MODEL;
 
       // mock config been changed
       const currentModel = initialModel + '-changed';

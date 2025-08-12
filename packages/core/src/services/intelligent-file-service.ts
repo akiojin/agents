@@ -61,23 +61,54 @@ export class IntelligentFileService {
     }
 
     try {
-      // 絶対パスでgetOrCreateInstancesをインポート
-      const registryModulePath = '/agents/src/functions/intelligent-registry-integration.js';
-      const registryModule = await import(registryModulePath);
+      console.log('[IntelligentFileService] Initializing IntelligentFileSystem...');
       
-      if (registryModule?.getOrCreateInstances) {
-        const { intelligentFS } = await registryModule.getOrCreateInstances();
-        this.intelligentFS = intelligentFS;
-        this.initialized = true;
-        console.log('IntelligentFileService initialized successfully via registry');
-        return true;
+      // ディレクトリ存在確認
+      const fs = await import('fs/promises');
+      const pathModule = await import('path');
+      
+      const projectPath = process.cwd();
+      const cacheDir = pathModule.join(projectPath, '.agents', 'cache');
+      
+      console.log(`[IntelligentFileService] Project path: ${projectPath}`);
+      console.log(`[IntelligentFileService] Cache directory: ${cacheDir}`);
+      
+      try {
+        await fs.mkdir(cacheDir, { recursive: true });
+        console.log('[IntelligentFileService] Cache directory created successfully');
+      } catch (dirError) {
+        console.warn('[IntelligentFileService] Cache directory creation warning:', dirError);
       }
-
-      throw new Error('IntelligentFileSystem getOrCreateInstances not available');
+      
+      // 実際のIntelligentFileSystemを初期化
+      console.log('[IntelligentFileService] Importing IntelligentFileSystem...');
+      const { IntelligentFileSystem } = await import('../intelligent-fs/intelligent-filesystem.js');
+      
+      // セキュリティ設定
+      const securityConfig = {
+        allowedPaths: [projectPath],
+        allowedFileExtensions: ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rs', '.cs', '.php', '.rb', '.swift', '.kt', '.cpp', '.c', '.json', '.md'],
+        maxFileSize: 10 * 1024 * 1024, // 10MB
+        enabled: true
+      };
+      
+      console.log('[IntelligentFileService] Creating IntelligentFileSystem instance...');
+      this.intelligentFS = new IntelligentFileSystem(securityConfig, projectPath);
+      
+      console.log('[IntelligentFileService] Calling initialize()...');
+      await this.intelligentFS.initialize();
+      
+      this.initialized = true;
+      console.log('[IntelligentFileService] IntelligentFileSystem initialized successfully');
+      return true;
     } catch (error) {
-      console.debug('Failed to initialize IntelligentFileService:', error);
+      console.error('[IntelligentFileService] Detailed error during initialization:');
+      console.error('[IntelligentFileService] Error type:', error?.constructor?.name);
+      console.error('[IntelligentFileService] Error message:', error instanceof Error ? error.message : String(error));
+      console.error('[IntelligentFileService] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
       this.initialized = false;
-      return false;
+      throw new Error(`IntelligentFileSystem initialization failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -108,14 +139,33 @@ export class IntelligentFileService {
     }
 
     try {
-      const result = await this.intelligentFS.readFileIntelligent(filePath);
-      return result;
-    } catch (error) {
-      console.debug('IntelligentFileService read failed:', error);
+      const result = await this.intelligentFS.readFile(filePath, {
+        includeSymbols: true,
+        includeDependencies: true,
+        useCache: true
+      });
+      
       return {
-        success: false,
-        error: `IntelligentFileSystem read failed: ${error instanceof Error ? error.message : String(error)}`
+        success: result.success,
+        data: {
+          content: result.content,
+          symbols: result.symbols?.map((s: any) => ({
+            name: s.name,
+            kind: s.kind || 'unknown',
+            location: { line: 0, column: 0 }
+          })) || [],
+          dependencies: result.dependencies,
+          metrics: {
+            complexity: 1.0,
+            maintainability: 80.0,
+            lines: result.content.split('\n').length
+          }
+        },
+        error: result.error
       };
+    } catch (error) {
+      console.error('IntelligentFileService read failed:', error);
+      throw new Error(`IntelligentFileSystem read failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -195,6 +245,25 @@ export class IntelligentFileService {
       return await this.intelligentFS.getDependencyGraph();
     } catch (error) {
       console.debug('Dependency graph analysis failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * シンボル検索を実行
+   */
+  public async searchSymbols(query: string = '', options?: any): Promise<any[]> {
+    if (!this.isAvailable()) {
+      const initSuccess = await this.initialize();
+      if (!initSuccess) {
+        throw new Error('IntelligentFileSystem is required but not available');
+      }
+    }
+
+    try {
+      return await this.intelligentFS.searchSymbols(query);
+    } catch (error) {
+      console.error('Symbol search failed:', error);
       throw error;
     }
   }

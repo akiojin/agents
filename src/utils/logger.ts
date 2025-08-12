@@ -18,7 +18,7 @@ export class SimpleLogger {
     // Configの優先順位: Options > 環境変数 > デフォルト値
     this.level = this.parseLogLevel(options?.logLevel || process.env.AGENTS_LOG_LEVEL || 'info');
     this.silent = options?.silent ?? process.env.AGENTS_SILENT === 'true' ?? false;
-    this.logDir = options?.logDir || process.env.AGENTS_LOG_DIR || './logs';
+    this.logDir = options?.logDir || process.env.AGENTS_LOG_DIR || '.agents/logs';
     this.ensureLogDir();
   }
 

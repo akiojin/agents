@@ -930,7 +930,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
                 width="100%"
               >
                 <Box>
-                  {process.env.GEMINI_SYSTEM_MD && (
+                  {process.env.AGENTS_SYSTEM_MD && (
                     <Text color={Colors.AccentRed}>|⌐■_■| </Text>
                   )}
                   {ctrlCPressedOnce ? (

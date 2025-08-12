@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/hook_stop_words.sh"
+            "command": "/agents/.claude/hooks/hook_stop_words.sh"
           }
         ]
       }
@@ -57,7 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/hook_pre_commands.sh"
+            "command": "/agents/.claude/hooks/hook_pre_commands.sh"
           }
         ]
       }

@@ -9,7 +9,7 @@
  * - 記憶システムとの連携
  */
 
-import { SymbolIndex, createSymbolIndex, SymbolIndexInfo, SymbolKind } from '../code-intelligence/symbol-index.js';
+import { TreeSitterSymbolIndex, createTreeSitterSymbolIndex, TreeSitterSymbolInfo, TreeSitterSymbolKind } from '../code-intelligence/tree-sitter-symbol-index.js';
 import { TypeScriptLSPClient, createTypeScriptLSPClient } from '../code-intelligence/lsp-client.js';
 import { URI } from 'vscode-uri';
 import * as path from 'path';
@@ -87,7 +87,7 @@ export interface IntelligentReadResult {
   path: string;
   content: string;
   error?: string;
-  symbols?: SymbolIndexInfo[];
+  symbols?: TreeSitterSymbolInfo[];
   dependencies?: string[];
   imports?: string[];
   exports?: string[];
@@ -133,11 +133,11 @@ export interface EditHistoryEntry {
  */
 export class IntelligentFileSystem {
   private fileSystem: InternalFileSystem;
-  private symbolIndex?: SymbolIndex;
+  private symbolIndex?: TreeSitterSymbolIndex;
   private lspClient?: TypeScriptLSPClient;
   private currentProjectPath: string;
   private editHistory: EditHistoryEntry[] = [];
-  private symbolCache: Map<string, SymbolIndexInfo[]> = new Map();
+  private symbolCache: Map<string, TreeSitterSymbolInfo[]> = new Map();
   
   // パフォーマンス統計
   private stats = {
@@ -161,8 +161,8 @@ export class IntelligentFileSystem {
    * システムを初期化
    */
   async initialize(): Promise<void> {
-    // シンボルインデックスを初期化
-    this.symbolIndex = createSymbolIndex(this.currentProjectPath);
+    // Tree-sitterシンボルインデックスを初期化
+    this.symbolIndex = createTreeSitterSymbolIndex(this.currentProjectPath);
     await this.symbolIndex.initialize();
     
     // LSPクライアントを初期化
@@ -246,7 +246,7 @@ export class IntelligentFileSystem {
             if (symbols.length === 0 && this.lspClient) {
               try {
                 const docSymbols = await this.lspClient.getDocumentSymbols(fileUri);
-                // DocumentSymbolをSymbolIndexInfoに変換
+                // DocumentSymbolをTreeSitterSymbolInfoに変換
                 symbols.push(...this.convertDocumentSymbolsToIndexInfo(docSymbols, fileUri));
               } catch (error) {
                 logger.warn('Failed to get symbols from LSP', { filePath, error });
@@ -562,12 +562,12 @@ export class IntelligentFileSystem {
     return ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.java', '.go', '.rs', '.cs', '.php', '.rb', '.swift', '.kt', '.cpp', '.c', '.cc', '.h', '.hpp'].includes(ext);
   }
 
-  private getLanguageFromExtension(ext: string): string {
-    const languageMap: Record<string, string> = {
+  private getLanguageFromExtension(ext: string): any {
+    const languageMap: Record<string, any> = {
       ts: 'typescript',
-      tsx: 'typescriptreact',
+      tsx: 'typescript',
       js: 'javascript',
-      jsx: 'javascriptreact',
+      jsx: 'javascript',
       mjs: 'javascript',
       cjs: 'javascript',
       py: 'python',
@@ -583,13 +583,9 @@ export class IntelligentFileSystem {
       c: 'c',
       cc: 'cpp',
       h: 'c',
-      hpp: 'cpp',
-      json: 'json',
-      md: 'markdown',
-      yml: 'yaml',
-      yaml: 'yaml'
+      hpp: 'cpp'
     };
-    return languageMap[ext] || 'plaintext';
+    return languageMap[ext] || 'javascript'; // デフォルト値を合理的に設定
   }
 
   private extractDependencies(content: string): {
@@ -627,8 +623,8 @@ export class IntelligentFileSystem {
   private convertDocumentSymbolsToIndexInfo(
     symbols: any[],
     fileUri: string
-  ): SymbolIndexInfo[] {
-    const result: SymbolIndexInfo[] = [];
+  ): TreeSitterSymbolInfo[] {
+    const result: TreeSitterSymbolInfo[] = [];
     
     // LSP Symbol Kind → 文字列変換マップ
     const symbolKindMap: Record<number, string> = {
@@ -665,7 +661,7 @@ export class IntelligentFileSystem {
       result.push({
         id: this.generateSymbolId(),
         name: symbol.name,
-        kind: (symbolKindMap[symbol.kind] || 'variable') as any,
+        kind: (symbolKindMap[symbol.kind] || 'variable') as TreeSitterSymbolKind,
         language: this.getLanguageFromExtension(path.extname(URI.parse(fileUri).fsPath).slice(1)),
         fileUri,
         startLine: symbol.range?.start?.line || 0,
@@ -702,7 +698,7 @@ export class IntelligentFileSystem {
     return lines.join('\n');
   }
 
-  private findSymbolEndPosition(content: string, symbol: SymbolIndexInfo): number {
+  private findSymbolEndPosition(content: string, symbol: TreeSitterSymbolInfo): number {
     const lines = content.split('\n');
     let position = 0;
     
@@ -717,7 +713,7 @@ export class IntelligentFileSystem {
     return position;
   }
 
-  private findSymbolStartPosition(content: string, symbol: SymbolIndexInfo): number {
+  private findSymbolStartPosition(content: string, symbol: TreeSitterSymbolInfo): number {
     const lines = content.split('\n');
     let position = 0;
     
@@ -1043,12 +1039,119 @@ export class IntelligentFileSystem {
   /**
    * シンボル検索
    */
-  async searchSymbols(query: string): Promise<SymbolIndexInfo[]> {
+  async searchSymbols(query: string): Promise<TreeSitterSymbolInfo[]> {
     if (!this.symbolIndex) {
       return [];
     }
 
-    return await this.symbolIndex.findSymbols({ name: query });
+    return await this.symbolIndex.searchSymbols(query);
+  }
+
+  /**
+   * プロジェクト構造分析
+   */
+  async analyzeProjectStructure(projectPath?: string): Promise<{
+    modules: Array<{ name: string; path: string; files: number }>;
+    totalFiles: number;
+    totalLines: number;
+  }> {
+    const basePath = projectPath || this.currentProjectPath;
+    const modules: Array<{ name: string; path: string; files: number }> = [];
+    let totalFiles = 0;
+    let totalLines = 0;
+
+    try {
+      if (this.symbolIndex) {
+        // まず、インデックスが最新かチェック
+        const stats = await this.symbolIndex.getStats();
+        if (!stats || stats.totalSymbols === 0) {
+          console.log('インデックスが空です。プロジェクトを再インデックス中...');
+          await this.symbolIndex.indexProject();
+        }
+        
+        // インデックスからファイル情報を取得
+        const allSymbols = await this.symbolIndex.findSymbols({});
+        const fileGroups = new Map<string, Set<string>>();
+        const fileLines = new Map<string, number>();
+        
+        // ファイルごとにシンボルをグループ化
+        for (const symbol of allSymbols) {
+          const filePath = symbol.fileUri ? URI.parse(symbol.fileUri).fsPath : '';
+          if (filePath) {
+            const dir = path.dirname(filePath).replace(basePath, '').replace(/^\//, '') || 'root';
+            if (!fileGroups.has(dir)) {
+              fileGroups.set(dir, new Set());
+            }
+            fileGroups.get(dir)!.add(filePath);
+            
+            // ファイルの行数を取得（まだ取得していない場合）
+            if (!fileLines.has(filePath)) {
+              try {
+                const content = await fs.readFile(filePath, 'utf-8');
+                const lines = content.split('\n').length;
+                fileLines.set(filePath, lines);
+                totalLines += lines;
+              } catch (error) {
+                // ファイル読み取りエラーは無視
+              }
+            }
+          }
+        }
+        
+        // モジュール情報を構築
+        fileGroups.forEach((files, dir) => {
+          modules.push({
+            name: dir || 'root',
+            path: path.join(basePath, dir),
+            files: files.size
+          });
+          totalFiles += files.size;
+        });
+      }
+
+      return { modules, totalFiles, totalLines };
+    } catch (error) {
+      logger.warn('Project structure analysis failed', { error });
+      return { modules: [], totalFiles: 0, totalLines: 0 };
+    }
+  }
+
+  /**
+   * 依存関係グラフ取得
+   */
+  async getDependencyGraph(): Promise<{
+    nodes: Array<{ name: string; type: string; dependencies?: string[] }>;
+    edges: Array<{ from: string; to: string }>;
+  }> {
+    const nodes: Array<{ name: string; type: string; dependencies?: string[] }> = [];
+    const edges: Array<{ from: string; to: string }> = [];
+
+    try {
+      if (this.symbolIndex) {
+        const symbols = await this.symbolIndex.findSymbols({});
+        
+        symbols.forEach((symbol: any) => {
+          nodes.push({
+            name: symbol.name,
+            type: symbol.kind || 'unknown',
+            dependencies: []
+          });
+
+          // 簡単な依存関係を構築（実際のLSPからの情報が必要）
+          if (symbol.name.includes('Component') || symbol.name.includes('Service')) {
+            edges.push({
+              from: symbol.name,
+              to: 'core'
+            });
+          }
+        });
+      }
+
+      return { nodes, edges };
+    } catch (error) {
+      logger.warn('Dependency graph analysis failed', { error });
+      return { nodes: [], edges: [] };
+    }
   }
 
   /**

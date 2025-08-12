@@ -39,7 +39,7 @@ import {
   createContentGenerator,
 } from './contentGenerator.js';
 import { ProxyAgent, setGlobalDispatcher } from 'undici';
-import { DEFAULT_GEMINI_FLASH_MODEL } from '../config/models.js';
+import { DEFAULT_AGENTS_FLASH_MODEL } from '../config/models.js';
 import { LoopDetectionService } from '../services/loopDetectionService.js';
 import { FileParserService, VLMService } from '../services/fileParserService.js';
 import { CompositeVLMService } from '../services/vlmService.js';
@@ -461,7 +461,7 @@ export class GeminiClient {
   ): Promise<Record<string, unknown>> {
     // Use current model from config instead of hardcoded Flash model
     const modelToUse =
-      model || this.config.getModel() || DEFAULT_GEMINI_FLASH_MODEL;
+      model || this.config.getModel() || DEFAULT_AGENTS_FLASH_MODEL;
     try {
       const userMemory = this.config.getUserMemory();
       const systemInstruction = getCoreSystemPrompt(userMemory);
@@ -853,7 +853,7 @@ export class GeminiClient {
       console.warn('[Quota Error]:', getErrorMessage(error));
     }
 
-    const flashModel = DEFAULT_GEMINI_FLASH_MODEL;
+    const flashModel = DEFAULT_AGENTS_FLASH_MODEL;
     const currentModel = this.config.getModel();
     
     if (currentModel === flashModel) {

@@ -30,10 +30,50 @@ export interface Memory {
   };
 }
 
+/**
+ * シナプス記憶ノード - 生物学的記憶システムの基本単位
+ */
+export interface SynapticMemoryNode {
+  id: string;
+  content: string;
+  activationLevel: number; // 0.0-1.0の活性化レベル
+  connections: Array<{
+    targetId: string;
+    strength: number; // 0.0-1.0のシナプス結合強度
+    coActivationCount: number; // 共起回数（ヘブ則学習用）
+    lastCoActivated: Date;
+  }>;
+  contextSignature: string; // 文脈特徴量
+  lastActivated: Date;
+  memoryType: 'episodic' | 'semantic' | 'procedural';
+}
+
+/**
+ * ヘブ則学習パラメータ
+ */
+export interface HebbianLearningConfig {
+  learningRate: number; // 学習率（デフォルト: 0.1）
+  decayRate: number; // 減衰率（デフォルト: 0.7）
+  maxPropagationSteps: number; // 最大伝播段階数（デフォルト: 3）
+  activationThreshold: number; // 活性化閾値（デフォルト: 0.3）
+  synapticStrengthThreshold: number; // シナプス結合閾値（デフォルト: 0.1）
+}
+
 export class ChromaMemoryClient {
   private client: ChromaClient;
   private collection: Collection | null = null;
   private collectionName: string;
+  
+  // シナプス記憶システム
+  private synapticNodes: Map<string, SynapticMemoryNode> = new Map();
+  private hebbianConfig: HebbianLearningConfig = {
+    learningRate: 0.1,
+    decayRate: 0.7,
+    maxPropagationSteps: 3,
+    activationThreshold: 0.3,
+    synapticStrengthThreshold: 0.1
+  };
+  private activationHistory: Array<{ nodeId: string, timestamp: Date, strength: number }> = [];
 
   constructor(collectionName: string = 'agent_memories') {
     // ChromaDBサーバーに接続（デフォルトでサーバーモードを使用）
@@ -140,6 +180,223 @@ export class ChromaMemoryClient {
         console.log(`Retrying in ${retryDelay / 1000} seconds...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
+    }
+  }
+
+  /**
+   * ヘブ則学習に基づくシナプス結合強化
+   * "一緒に発火するニューロンは結びつく"
+   */
+  private strengthenSynapticConnection(nodeA: string, nodeB: string): void {
+    const nodeAData = this.synapticNodes.get(nodeA);
+    const nodeBData = this.synapticNodes.get(nodeB);
+    
+    if (!nodeAData || !nodeBData) return;
+    
+    // A→Bの結合を強化
+    const connectionAtoB = nodeAData.connections.find(conn => conn.targetId === nodeB);
+    if (connectionAtoB) {
+      const oldStrength = connectionAtoB.strength;
+      connectionAtoB.strength = Math.min(1.0, oldStrength + this.hebbianConfig.learningRate * (1 - oldStrength));
+      connectionAtoB.coActivationCount++;
+      connectionAtoB.lastCoActivated = new Date();
+    } else if (nodeAData.connections.length < 20) { // 最大結合数制限
+      nodeAData.connections.push({
+        targetId: nodeB,
+        strength: this.hebbianConfig.learningRate,
+        coActivationCount: 1,
+        lastCoActivated: new Date()
+      });
+    }
+    
+    // B→Aの結合も強化（双方向）
+    const connectionBtoA = nodeBData.connections.find(conn => conn.targetId === nodeA);
+    if (connectionBtoA) {
+      const oldStrength = connectionBtoA.strength;
+      connectionBtoA.strength = Math.min(1.0, oldStrength + this.hebbianConfig.learningRate * (1 - oldStrength));
+      connectionBtoA.coActivationCount++;
+      connectionBtoA.lastCoActivated = new Date();
+    } else if (nodeBData.connections.length < 20) {
+      nodeBData.connections.push({
+        targetId: nodeA,
+        strength: this.hebbianConfig.learningRate,
+        coActivationCount: 1,
+        lastCoActivated: new Date()
+      });
+    }
+  }
+  
+  /**
+   * 活性化伝播メカニズム（最大3段階、減衰率0.7）
+   */
+  private propagateActivation(initialNodeIds: string[], steps: number = 3): SynapticMemoryNode[] {
+    const activatedNodes = new Map<string, number>(); // nodeId -> activation level
+    const processedNodes = new Set<string>();
+    
+    // 初期ノードの活性化
+    initialNodeIds.forEach(nodeId => {
+      activatedNodes.set(nodeId, 1.0);
+    });
+    
+    let currentNodes = [...initialNodeIds];
+    let currentDecay = 1.0;
+    
+    for (let step = 0; step < steps; step++) {
+      const nextNodes: string[] = [];
+      currentDecay *= this.hebbianConfig.decayRate;
+      
+      currentNodes.forEach(nodeId => {
+        if (processedNodes.has(nodeId)) return;
+        processedNodes.add(nodeId);
+        
+        const node = this.synapticNodes.get(nodeId);
+        if (!node) return;
+        
+        const currentActivation = activatedNodes.get(nodeId) || 0;
+        
+        // 結合先ノードに活性化を伝播
+        node.connections.forEach(connection => {
+          if (connection.strength < this.hebbianConfig.synapticStrengthThreshold) return;
+          
+          const propagatedActivation = currentActivation * connection.strength * currentDecay;
+          const existingActivation = activatedNodes.get(connection.targetId) || 0;
+          const newActivation = Math.min(1.0, existingActivation + propagatedActivation);
+          
+          if (newActivation > this.hebbianConfig.activationThreshold) {
+            activatedNodes.set(connection.targetId, newActivation);
+            if (!nextNodes.includes(connection.targetId)) {
+              nextNodes.push(connection.targetId);
+            }
+          }
+        });
+      });
+      
+      currentNodes = nextNodes;
+      if (currentNodes.length === 0) break; // 伝播終了
+    }
+    
+    // 活性化されたノードのデータを返す
+    const result: SynapticMemoryNode[] = [];
+    activatedNodes.forEach((activationLevel, nodeId) => {
+      const node = this.synapticNodes.get(nodeId);
+      if (node && activationLevel > this.hebbianConfig.activationThreshold) {
+        const activatedNode = { ...node };
+        activatedNode.activationLevel = activationLevel;
+        activatedNode.lastActivated = new Date();
+        result.push(activatedNode);
+      }
+    });
+    
+    // 活性化履歴を記録
+    result.forEach(node => {
+      this.activationHistory.push({
+        nodeId: node.id,
+        timestamp: new Date(),
+        strength: node.activationLevel
+      });
+    });
+    
+    // 古い履歴を削除（最新1000件のみ保持）
+    if (this.activationHistory.length > 1000) {
+      this.activationHistory.splice(0, this.activationHistory.length - 1000);
+    }
+    
+    return result.sort((a, b) => b.activationLevel - a.activationLevel);
+  }
+  
+  /**
+   * シナプス記憶ノードをChromaDBと同期
+   */
+  private async syncSynapticNodeToChroma(node: SynapticMemoryNode): Promise<void> {
+    if (!this.collection) throw new Error('ChromaDB collection not initialized');
+    
+    const document = `${node.content} [Type: ${node.memoryType}] [Context: ${node.contextSignature}]`;
+    const metadata = {
+      memory_type: node.memoryType,
+      context_signature: node.contextSignature,
+      activation_level: node.activationLevel,
+      connection_count: node.connections.length,
+      last_activated: node.lastActivated.toISOString(),
+      synaptic_strength: node.connections.reduce((sum, conn) => sum + conn.strength, 0)
+    };
+    
+    try {
+      await this.collection.upsert({
+        ids: [node.id],
+        documents: [document],
+        metadatas: [metadata]
+      });
+    } catch (error) {
+      console.error('Failed to sync synaptic node to ChromaDB:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * キーワードから関連シナプス記憶を活性化
+   */
+  async activateSynapticMemories(keyword: string, contextSignature?: string): Promise<SynapticMemoryNode[]> {
+    if (!this.collection) throw new Error('ChromaDB collection not initialized');
+    
+    try {
+      // ChromaDBから関連記憶を検索
+      const queryResult = await this.collection.query({
+        queryTexts: [keyword],
+        nResults: 20,
+        where: contextSignature ? { context_signature: contextSignature } : undefined,
+        include: ['documents', 'metadatas', 'distances']
+      });
+      
+      const relatedNodeIds: string[] = [];
+      
+      if (queryResult.ids && queryResult.ids[0]) {
+        // 検索結果からシナプスノードを更新/作成
+        queryResult.ids[0].forEach((id, index) => {
+          const document = queryResult.documents?.[0]?.[index];
+          const metadata = queryResult.metadatas?.[0]?.[index] as any;
+          const distance = queryResult.distances?.[0]?.[index];
+          
+          if (!document || !metadata) return;
+          
+          // 距離から活性化レベルを計算（距離が小さいほど高い活性化）
+          const activationLevel = Math.max(0, 1 - (distance || 1));
+          
+          if (activationLevel < this.hebbianConfig.activationThreshold) return;
+          
+          const synapticNode: SynapticMemoryNode = {
+            id,
+            content: document,
+            activationLevel,
+            connections: this.synapticNodes.get(id)?.connections || [],
+            contextSignature: metadata.context_signature || 'unknown',
+            lastActivated: new Date(),
+            memoryType: metadata.memory_type || 'semantic'
+          };
+          
+          this.synapticNodes.set(id, synapticNode);
+          relatedNodeIds.push(id);
+        });
+      }
+      
+      // 関連ノード間でシナプス結合を強化（ヘブ則学習）
+      for (let i = 0; i < relatedNodeIds.length; i++) {
+        for (let j = i + 1; j < relatedNodeIds.length; j++) {
+          this.strengthenSynapticConnection(relatedNodeIds[i], relatedNodeIds[j]);
+        }
+      }
+      
+      // 活性化伝播を実行
+      const activatedNodes = this.propagateActivation(relatedNodeIds, this.hebbianConfig.maxPropagationSteps);
+      
+      // ChromaDBに同期
+      for (const node of activatedNodes) {
+        await this.syncSynapticNodeToChroma(node);
+      }
+      
+      return activatedNodes;
+    } catch (error) {
+      console.error('Failed to activate synaptic memories:', error);
+      throw error;
     }
   }
 
