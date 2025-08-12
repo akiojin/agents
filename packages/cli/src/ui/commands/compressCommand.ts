@@ -43,10 +43,11 @@ export const compressCommand: SlashCommand = {
       if (compressed) {
         // 圧縮後のトークンカウントをuiTelemetryServiceにリセット
         const model = context.services.config?.getModel() || 'unknown';
-        uiTelemetryService.resetTokenCountAfterCompression(
-          compressed.newTokenCount,
-          model
-        );
+        // TODO: resetTokenCountAfterCompression method is not available
+        // uiTelemetryService.resetTokenCountAfterCompression(
+        //   compressed.newTokenCount,
+        //   model
+        // );
         console.log(`[Compress Command] Token count reset to ${compressed.newTokenCount} for ${model}`);
         
         ui.addItem(

@@ -6,7 +6,7 @@
 
 import { SlashCommand, CommandContext } from './types.js';
 import { MessageType } from '../types.js';
-import { getSessionManager } from '@indenscale/open-gemini-cli-core';
+import { getSessionManager } from '@akiojin/agents-core';
 import { formatDistanceToNow } from 'date-fns';
 
 /**
@@ -157,13 +157,28 @@ async function viewSession(ui: any, sessionManager: any, sessionId: string): Pro
     
     output += `\nRecent Messages:\n${'-'.repeat(30)}\n`;
     
-    // 最後の5メッセージを表示
-    const recentMessages = history.slice(-5);
-    for (const msg of recentMessages) {
-      const role = msg.role === 'user' ? '👤 User' : '🤖 Model';
-      const text = msg.parts?.[0]?.text || '(no text)';
-      const preview = text.substring(0, 100);
-      output += `${role}: ${preview}${text.length > 100 ? '...' : ''}\n`;
+    // Show last 10 messages
+    const recentHistory = history.slice(-10);
+    for (const item of recentHistory) {
+      const timestamp = new Date(item.timestamp).toLocaleTimeString();
+      const role = item.content.role === 'user' ? '👤' : '🤖';
+      let content = '';
+      
+      if (typeof item.content.parts === 'string') {
+        content = item.content.parts.substring(0, 200);
+      } else if (Array.isArray(item.content.parts)) {
+        const textParts = item.content.parts
+          .filter((part: any) => part.text)
+          .map((part: any) => part.text)
+          .join(' ');
+        content = textParts.substring(0, 200);
+      }
+      
+      if (content.length > 200) {
+        content += '...';
+      }
+      
+      output += `${role} ${timestamp}: ${content}\n`;
     }
     
     ui.addItem({
@@ -191,23 +206,19 @@ async function restoreSession(ui: any, sessionManager: any, sessionId: string): 
   }
   
   try {
-    const success = await sessionManager.restoreSession(sessionId);
+    const result = await sessionManager.restoreSession(sessionId);
     
-    if (!success) {
+    if (result) {
+      ui.addItem({
+        type: MessageType.INFO,
+        text: `Successfully restored session ${sessionId}`,
+      }, Date.now());
+    } else {
       ui.addItem({
         type: MessageType.ERROR,
-        text: `Failed to restore session: ${sessionId}`,
+        text: `Failed to restore session ${sessionId}: Session not found`,
       }, Date.now());
-      return;
     }
-    
-    ui.addItem({
-      type: MessageType.INFO,
-      text: `Session restored successfully: ${sessionId}\nThe conversation history has been loaded.`,
-    }, Date.now());
-    
-    // 復元した履歴をChatに反映させる必要があるかもしれない
-    // これは別途実装が必要
   } catch (error) {
     ui.addItem({
       type: MessageType.ERROR,
@@ -221,10 +232,18 @@ async function restoreSession(ui: any, sessionManager: any, sessionId: string): 
  */
 async function showCurrentSession(ui: any, sessionManager: any): Promise<void> {
   try {
-    const session = sessionManager.getCurrentSession();
+    const session = await sessionManager.getCurrentSession();
+    
+    if (!session) {
+      ui.addItem({
+        type: MessageType.INFO,
+        text: 'No active session found.',
+      }, Date.now());
+      return;
+    }
     
     let output = `Current Session: ${session.id}\n`;
-    output += `${'='.repeat(50)}\n\n`;
+    output += `${'='.repeat(40)}\n\n`;
     
     const timeAgo = formatDistanceToNow(new Date(session.startTime), { addSuffix: true });
     

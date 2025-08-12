@@ -15,8 +15,8 @@ import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   getCurrentGeminiMdFilename,
   ApprovalMode,
-  DEFAULT_AGENTS_MODEL,
-  DEFAULT_AGENTS_EMBEDDING_MODEL,
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_GEMINI_EMBEDDING_MODEL,
   FileDiscoveryService,
   TelemetryTarget,
   MCPServerConfig,
@@ -76,7 +76,7 @@ export async function parseArguments(): Promise<CliArgs> {
       alias: 'm',
       type: 'string',
       description: `Model`,
-      default: process.env.AGENTS_MODEL || DEFAULT_AGENTS_MODEL,
+      default: process.env.AGENTS_MODEL || DEFAULT_GEMINI_MODEL,
     })
     .option('prompt', {
       alias: 'p',
@@ -325,13 +325,13 @@ export async function loadCliConfig(
   if (debugMode) {
     console.debug(`[Config] authType: ${authType}, AuthType.OPENAI_COMPATIBLE: ${AuthType.OPENAI_COMPATIBLE}`);
     console.debug(`[Config] LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL}, localModel: ${localModel}`);
-    console.debug(`[Config] AGENTS_MODEL: ${process.env.AGENTS_MODEL}, DEFAULT_AGENTS_MODEL: ${DEFAULT_AGENTS_MODEL}`);
+    console.debug(`[Config] AGENTS_MODEL: ${process.env.AGENTS_MODEL}, DEFAULT_GEMINI_MODEL: ${DEFAULT_GEMINI_MODEL}`);
   }
   
   const modelName = argv.model || (
     authType === AuthType.OPENAI_COMPATIBLE
       ? (process.env.LOCAL_LLM_MODEL || localModel || 'llama-3.2-3b-instruct')
-      : (process.env.AGENTS_MODEL || DEFAULT_AGENTS_MODEL)
+      : (process.env.AGENTS_MODEL || DEFAULT_GEMINI_MODEL)
   );
   
   if (debugMode) {
@@ -408,7 +408,7 @@ export async function loadCliConfig(
 
   return new Config({
     sessionId,
-    embeddingModel: DEFAULT_AGENTS_EMBEDDING_MODEL,
+    embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
     sandbox: sandboxConfig,
     targetDir: process.cwd(),
     debugMode,

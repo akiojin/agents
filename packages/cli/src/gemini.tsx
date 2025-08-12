@@ -37,7 +37,7 @@ import {
   AuthType,
   getOauthClient,
 } from '@indenscale/open-gemini-cli-core';
-import { validateAuthMethod } from './config/auth.js';
+import { validateAuthMethod, getDefaultAuthMethod } from './config/auth.js';
 import { setMaxSizedBoxDebugging } from './ui/components/shared/MaxSizedBox.js';
 import { getMemoryManager } from './memory/memoryManager.js';
 
@@ -155,13 +155,16 @@ export async function main() {
       ? getNodeMemoryArgs(config)
       : [];
     // Sandboxは使用しません - 認証のみ処理
-    if (settings.merged.selectedAuthType) {
+    // 根本的解決: 認証タイプが未設定の場合、設定に基づいてデフォルトを選択
+    const defaultAuth = getDefaultAuthMethod(settings.merged);
+    const authType = settings.merged.selectedAuthType || defaultAuth as AuthType;
+    if (authType) {
       try {
-        const err = validateAuthMethod(settings.merged.selectedAuthType);
+        const err = validateAuthMethod(authType);
         if (err) {
           throw new Error(err);
         }
-        await config.refreshAuth(settings.merged.selectedAuthType);
+        await config.refreshAuth(authType);
       } catch (err) {
         console.error('Error authenticating:', err);
         process.exit(1);

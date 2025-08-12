@@ -1,3 +1,1749 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="0" failures="0" errors="0" time="0">
+<testsuites name="vitest tests" tests="459" failures="55" errors="0" time="4.17070213">
+    <testsuite name="src/gemini.test.tsx" timestamp="2025-08-12T16:15:06.445Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/gemini.test.tsx" name="src/gemini.test.tsx" time="0">
+            <failure message="Failed to resolve import &quot;../serena/serenaClient.js&quot; from &quot;../memory/dist/api/memoryApi.js&quot;. Does the file exist?" type="Error">
+Error: Failed to resolve import &quot;../serena/serenaClient.js&quot; from &quot;../memory/dist/api/memoryApi.js&quot;. Does the file exist?
+  Plugin: vite:import-analysis
+  File: /agents/packages/memory/dist/api/memoryApi.js:6:33
+  4  |   */
+  5  |  import { IntegratedMemorySystem } from &apos;../index.js&apos;;
+  6  |  import { SerenaMCPClient } from &apos;../serena/serenaClient.js&apos;;
+     |                                   ^
+  7  |  export class MemoryAPI {
+  8  |      memorySystem;
+ ❯ TransformPluginContext._formatLog ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31553:43
+ ❯ TransformPluginContext.error ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31550:14
+ ❯ normalizeUrl ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30022:18
+ ❯ ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30080:32
+ ❯ TransformPluginContext.transform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30048:4
+ ❯ EnvironmentPluginContainer.transform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31351:14
+ ❯ loadAndTransform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:26438:26
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/nonInteractiveCli.test.ts" timestamp="2025-08-12T16:15:06.447Z" hostname="dadcaeef10d0" tests="6" failures="6" errors="0" skipped="0" time="0.011336167">
+        <testcase classname="src/nonInteractiveCli.test.ts" name="runNonInteractive &gt; should process input and write text output" time="0.007490209">
+            <failure message="Cannot read properties of undefined (reading &apos;file&apos;)" type="TypeError">
+TypeError: Cannot read properties of undefined (reading &apos;file&apos;)
+ ❯ Module.runNonInteractive src/nonInteractiveCli.ts:71:12
+ ❯ src/nonInteractiveCli.test.ts:85:5
+            </failure>
+        </testcase>
+        <testcase classname="src/nonInteractiveCli.test.ts" name="runNonInteractive &gt; should handle a single tool call and respond" time="0.000756459">
+            <failure message="Cannot read properties of undefined (reading &apos;file&apos;)" type="TypeError">
+TypeError: Cannot read properties of undefined (reading &apos;file&apos;)
+ ❯ Module.runNonInteractive src/nonInteractiveCli.ts:71:12
+ ❯ src/nonInteractiveCli.test.ts:138:5
+            </failure>
+        </testcase>
+        <testcase classname="src/nonInteractiveCli.test.ts" name="runNonInteractive &gt; should handle error during tool execution" time="0.000666083">
+            <failure message="Cannot read properties of undefined (reading &apos;file&apos;)" type="TypeError">
+TypeError: Cannot read properties of undefined (reading &apos;file&apos;)
+ ❯ Module.runNonInteractive src/nonInteractiveCli.ts:71:12
+ ❯ src/nonInteractiveCli.test.ts:198:5
+            </failure>
+        </testcase>
+        <testcase classname="src/nonInteractiveCli.test.ts" name="runNonInteractive &gt; should exit with error if sendMessageStream throws initially" time="0.000519875">
+            <failure message="Cannot read properties of undefined (reading &apos;file&apos;)" type="TypeError">
+TypeError: Cannot read properties of undefined (reading &apos;file&apos;)
+ ❯ Module.runNonInteractive src/nonInteractiveCli.ts:71:12
+ ❯ src/nonInteractiveCli.test.ts:222:5
+            </failure>
+        </testcase>
+        <testcase classname="src/nonInteractiveCli.test.ts" name="runNonInteractive &gt; should not exit if a tool is not found, and should send error back to model" time="0.000563958">
+            <failure message="Cannot read properties of undefined (reading &apos;file&apos;)" type="TypeError">
+TypeError: Cannot read properties of undefined (reading &apos;file&apos;)
+ ❯ Module.runNonInteractive src/nonInteractiveCli.ts:71:12
+ ❯ src/nonInteractiveCli.test.ts:274:5
+            </failure>
+        </testcase>
+        <testcase classname="src/nonInteractiveCli.test.ts" name="runNonInteractive &gt; should exit when max session turns are exceeded" time="0.000548375">
+            <failure message="Cannot read properties of undefined (reading &apos;file&apos;)" type="TypeError">
+TypeError: Cannot read properties of undefined (reading &apos;file&apos;)
+ ❯ Module.runNonInteractive src/nonInteractiveCli.ts:71:12
+ ❯ src/nonInteractiveCli.test.ts:335:5
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/config/auth.test.ts" timestamp="2025-08-12T16:15:06.452Z" hostname="dadcaeef10d0" tests="14" failures="0" errors="0" skipped="0" time="0.00391975">
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; should return null for LOGIN_WITH_GOOGLE" time="0.001217">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; should return null for CLOUD_SHELL" time="0.000239125">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_GEMINI &gt; should return null if AGENTS_API_KEY is set" time="0.000096708">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_GEMINI &gt; should return an error message if AGENTS_API_KEY is not set" time="0.000335">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_VERTEX_AI &gt; should return null if GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION are set" time="0.000120084">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_VERTEX_AI &gt; should return null if GOOGLE_API_KEY is set" time="0.000181417">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; USE_VERTEX_AI &gt; should return an error message if no required environment variables are set" time="0.000084584">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return null if OPENAI_API_KEY and OPENAI_BASE_URL are set for external API" time="0.000077">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return null if only base URL is set for local LLM" time="0.000176292">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return null if LOCAL_LLM_BASE_URL is set for local LLM" time="0.000103292">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return null if LOCAL_LLM_BASE_URL is set with host.docker.internal" time="0.000154667">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return an error message if API KEY is not set for external API" time="0.000069291">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; OPENAI_COMPATIBLE &gt; should return an error message if no base URL is set" time="0.000150625">
+        </testcase>
+        <testcase classname="src/config/auth.test.ts" name="validateAuthMethod &gt; should return an error message for an invalid auth method" time="0.000059916">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/config/config.integration.test.ts" timestamp="2025-08-12T16:15:06.455Z" hostname="dadcaeef10d0" tests="11" failures="0" errors="0" skipped="0" time="0.029014125">
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; File Filtering Configuration &gt; should load default file filtering settings" time="0.023063584">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; File Filtering Configuration &gt; should load custom file filtering settings from configuration" time="0.000803208">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; File Filtering Configuration &gt; should merge user and workspace file filtering settings" time="0.000519417">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; Configuration Integration &gt; should handle partial configuration objects gracefully" time="0.000488334">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; Configuration Integration &gt; should handle empty configuration objects gracefully" time="0.000485709">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; Configuration Integration &gt; should handle missing configuration sections gracefully" time="0.000422792">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; Real-world Configuration Scenarios &gt; should handle a security-focused configuration" time="0.000407458">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; Real-world Configuration Scenarios &gt; should handle a CI/CD environment configuration" time="0.000374417">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; Checkpointing Configuration &gt; should enable checkpointing when the setting is true" time="0.000418208">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; Extension Context Files &gt; should have an empty array for extension context files by default" time="0.000681708">
+        </testcase>
+        <testcase classname="src/config/config.integration.test.ts" name="Configuration Integration Tests &gt; Extension Context Files &gt; should correctly store and return extension context file paths" time="0.000494417">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/config/config.test.ts" timestamp="2025-08-12T16:15:06.458Z" hostname="dadcaeef10d0" tests="59" failures="0" errors="0" skipped="0" time="0.378212458">
+        <testcase classname="src/config/config.test.ts" name="parseArguments &gt; should throw an error when both --prompt and --prompt-interactive are used together" time="0.042377333">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="parseArguments &gt; should throw an error when using short flags -p and -i together" time="0.009430292">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="parseArguments &gt; should allow --prompt without --prompt-interactive" time="0.002671917">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="parseArguments &gt; should allow --prompt-interactive without --prompt" time="0.00286725">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="parseArguments &gt; should allow -i flag as alias for --prompt-interactive" time="0.004994166">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig &gt; should set showMemoryUsage to true when --show-memory-usage flag is present" time="0.031422751">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig &gt; should set showMemoryUsage to false when --memory flag is not present" time="0.007637459">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig &gt; should set showMemoryUsage to false by default from settings if CLI flag is not present" time="0.013684333">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig &gt; should prioritize CLI flag over settings for showMemoryUsage (CLI true, settings false)" time="0.006657083">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should set telemetry to false by default when no flag or setting is present" time="0.012480292">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should set telemetry to true when --telemetry flag is present" time="0.011288125">
+            <system-out>
+OpenTelemetry SDK started successfully.
+
+            </system-out>
+            <system-err>
+Accessing resource attributes before async attributes settled
+
+            </system-err>
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should set telemetry to false when --no-telemetry flag is present" time="0.00525125">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should use telemetry value from settings if CLI flag is not present (settings true)" time="0.004050042">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should use telemetry value from settings if CLI flag is not present (settings false)" time="0.004236708">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should prioritize --telemetry CLI flag (true) over settings (false)" time="0.005996958">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should prioritize --no-telemetry CLI flag (false) over settings (true)" time="0.005599458">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should use telemetry OTLP endpoint from settings if CLI flag is not present" time="0.004612208">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should prioritize --telemetry-otlp-endpoint CLI flag over settings" time="0.003931167">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should use default endpoint if no OTLP endpoint is provided via CLI or settings" time="0.003366958">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should use telemetry target from settings if CLI flag is not present" time="0.008546667">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should prioritize --telemetry-target CLI flag over settings" time="0.003968125">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should use default target if no target is provided via CLI or settings" time="0.003593375">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should use telemetry log prompts from settings if CLI flag is not present" time="0.006901375">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should prioritize --telemetry-log-prompts CLI flag (true) over settings (false)" time="0.006379125">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should prioritize --no-telemetry-log-prompts CLI flag (false) over settings (true)" time="0.004605417">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig telemetry &gt; should use default log prompts (true) if no value is provided via CLI or settings" time="0.004509834">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="Hierarchical Memory Loading (config.ts) - Placeholder Suite &gt; should pass extension context file paths to loadServerHierarchicalMemory" time="0.003761166">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="mergeMcpServers &gt; should not modify the original settings object" time="0.003746375">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="mergeExcludeTools &gt; should merge excludeTools from settings and extensions" time="0.008048916">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="mergeExcludeTools &gt; should handle overlapping excludeTools between settings and extensions" time="0.003366">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="mergeExcludeTools &gt; should handle overlapping excludeTools between extensions" time="0.005776458">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="mergeExcludeTools &gt; should return an empty array when no excludeTools are specified" time="0.006572083">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="mergeExcludeTools &gt; should handle settings with excludeTools but no extensions" time="0.003258042">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="mergeExcludeTools &gt; should handle extensions with excludeTools but no settings" time="0.003556">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="mergeExcludeTools &gt; should not modify the original settings object" time="0.003739708">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should allow all MCP servers if the flag is not provided" time="0.004794125">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should allow only the specified MCP server" time="0.003365">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should allow multiple specified MCP servers" time="0.004293375">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should handle server names that do not exist" time="0.00386275">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should allow no MCP servers if the flag is provided but empty" time="0.004533959">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should read allowMCPServers from settings" time="0.003180625">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should read excludeMCPServers from settings" time="0.002719875">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should override allowMCPServers with excludeMCPServers if overlapping " time="0.00371325">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig with allowed-mcp-server-names &gt; should prioritize mcp server flag if set " time="0.00389525">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig extensions &gt; should not filter extensions if --extensions flag is not used" time="0.007229708">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig extensions &gt; should filter extensions if --extensions flag is used" time="0.003653042">
+            <system-out>
+Activated extension: ext1 (version: 1.0.0)
+Disabled extension: ext2
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should be false by default" time="0.003721125">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should be false if --ide-mode is true but TERM_PROGRAM is not vscode" time="0.004534542">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should be false if settings.ideMode is true but TERM_PROGRAM is not vscode" time="0.003015666">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should be true when --ide-mode is set and TERM_PROGRAM is vscode" time="0.004355625">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should be true when settings.ideMode is true and TERM_PROGRAM is vscode" time="0.00923875">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should prioritize --ide-mode (true) over settings (false) when TERM_PROGRAM is vscode" time="0.00667325">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should prioritize --no-ide-mode (false) over settings (true) even when TERM_PROGRAM is vscode" time="0.009135">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should be false when --ide-mode is true, TERM_PROGRAM is vscode, but SANDBOX is set" time="0.003737958">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should be false when settings.ideMode is true, TERM_PROGRAM is vscode, but SANDBOX is set" time="0.003614166">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should add _ide_server when ideMode is true" time="0.008318417">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should throw an error if ideMode is true and no port is set" time="0.003083667">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should warn and overwrite if settings contain the reserved _ide_server name and ideMode is active" time="0.005248375">
+        </testcase>
+        <testcase classname="src/config/config.test.ts" name="loadCliConfig ideMode &gt; should NOT warn if settings contain the reserved _ide_server name and ideMode is NOT active" time="0.003650709">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/config/extension.test.ts" timestamp="2025-08-12T16:15:06.473Z" hostname="dadcaeef10d0" tests="7" failures="1" errors="0" skipped="0" time="0.013153792">
+        <testcase classname="src/config/extension.test.ts" name="loadExtensions &gt; should load context file path when GEMINI.md is present" time="0.010527292">
+            <system-out>
+Loading extension: ext1 (version: 1.0.0)
+Loading extension: ext2 (version: 2.0.0)
+
+            </system-out>
+            <failure message="expected [] to deeply equal [ Array(1) ]" type="AssertionError">
+AssertionError: expected [] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+- [
+-   &quot;/tmp/gemini-cli-test-workspace-ei2Y5H/.gemini/extensions/ext1/GEMINI.md&quot;,
+- ]
++ []
+
+ ❯ src/config/extension.test.ts:59:32
+            </failure>
+        </testcase>
+        <testcase classname="src/config/extension.test.ts" name="loadExtensions &gt; should load context file path from the extension config" time="0.000905625">
+            <system-out>
+Loading extension: ext1 (version: 1.0.0)
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/config/extension.test.ts" name="filterActiveExtensions &gt; should return all extensions if no enabled extensions are provided" time="0.000138667">
+        </testcase>
+        <testcase classname="src/config/extension.test.ts" name="filterActiveExtensions &gt; should return only the enabled extensions" time="0.000247708">
+            <system-out>
+Activated extension: ext1 (version: 1.0.0)
+Disabled extension: ext2
+Activated extension: ext3 (version: 1.0.0)
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/config/extension.test.ts" name="filterActiveExtensions &gt; should return no extensions when &quot;none&quot; is provided" time="0.000108958">
+            <system-out>
+All extensions are disabled.
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/config/extension.test.ts" name="filterActiveExtensions &gt; should handle case-insensitivity" time="0.000129958">
+            <system-out>
+Activated extension: ext1 (version: 1.0.0)
+Disabled extension: ext2
+Disabled extension: ext3
+
+            </system-out>
+        </testcase>
+        <testcase classname="src/config/extension.test.ts" name="filterActiveExtensions &gt; should log an error for unknown extensions" time="0.000319458">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/config/settings.test.ts" timestamp="2025-08-12T16:15:06.477Z" hostname="dadcaeef10d0" tests="25" failures="0" errors="0" skipped="0" time="0.014425708">
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should load empty settings if no files exist" time="0.002018333">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should load system settings if only system file exists" time="0.001080042">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should load user settings if only user file exists" time="0.000556167">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should load workspace settings if only workspace file exists" time="0.000492916">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should merge user and workspace settings, with workspace taking precedence" time="0.001219583">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should merge system, user and workspace settings, with system taking precedence over workspace, and workspace over user" time="0.000674333">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should handle contextFileName correctly when only in user settings" time="0.000353167">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should handle contextFileName correctly when only in workspace settings" time="0.000225958">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should default contextFileName to undefined if not in any settings file" time="0.000510708">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should load telemetry setting from user settings" time="0.000289917">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should load telemetry setting from workspace settings" time="0.00022675">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should prioritize workspace telemetry setting over user setting" time="0.000523166">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should have telemetry as undefined if not in any settings file" time="0.000240667">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should handle JSON parsing errors gracefully" time="0.000845209">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should resolve environment variables in user settings" time="0.000343666">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should resolve environment variables in workspace settings" time="0.000278917">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should prioritize user env variables over workspace env variables if keys clash after resolution" time="0.000538041">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should prioritize workspace env variables over user env variables if keys clash after resolution" time="0.000473916">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should prioritize system env variables over workspace env variables if keys clash after resolution" time="0.000455291">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should leave unresolved environment variables as is" time="0.000459583">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should resolve multiple environment variables in a single string" time="0.000266042">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should resolve environment variables in arrays" time="0.00034325">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should correctly pass through null, boolean, and number types, and handle undefined properties" time="0.000440834">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; loadSettings &gt; should resolve multiple concatenated environment variables in a single string value" time="0.000259125">
+        </testcase>
+        <testcase classname="src/config/settings.test.ts" name="Settings Loading and Merging &gt; LoadedSettings class &gt; setValue should update the correct scope and recompute merged settings" time="0.0004825">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/services/CommandService.test.ts" timestamp="2025-08-12T16:15:06.483Z" hostname="dadcaeef10d0" tests="6" failures="4" errors="0" skipped="0" time="0.012377584">
+        <testcase classname="src/services/CommandService.test.ts" name="CommandService &gt; when using default production loader &gt; should initialize with an empty command tree" time="0.001010541">
+        </testcase>
+        <testcase classname="src/services/CommandService.test.ts" name="CommandService &gt; when using default production loader &gt; loadCommands &gt; should load the built-in commands into the command tree" time="0.0085175">
+            <failure message="expected 18 to be 17 // Object.is equality" type="AssertionError">
+AssertionError: expected 18 to be 17 // Object.is equality
+
+- Expected
++ Received
+
+- 17
++ 18
+
+ ❯ src/services/CommandService.test.ts:117:29
+            </failure>
+        </testcase>
+        <testcase classname="src/services/CommandService.test.ts" name="CommandService &gt; when using default production loader &gt; loadCommands &gt; should include ide command when ideMode is on" time="0.000431959">
+            <failure message="expected 19 to be 18 // Object.is equality" type="AssertionError">
+AssertionError: expected 19 to be 18 // Object.is equality
+
+- Expected
++ Received
+
+- 18
++ 19
+
+ ❯ src/services/CommandService.test.ts:147:29
+            </failure>
+        </testcase>
+        <testcase classname="src/services/CommandService.test.ts" name="CommandService &gt; when using default production loader &gt; loadCommands &gt; should overwrite any existing commands when called again" time="0.000207292">
+            <failure message="expected 18 to be 17 // Object.is equality" type="AssertionError">
+AssertionError: expected 18 to be 17 // Object.is equality
+
+- Expected
++ Received
+
+- 17
++ 18
+
+ ❯ src/services/CommandService.test.ts:157:53
+            </failure>
+        </testcase>
+        <testcase classname="src/services/CommandService.test.ts" name="CommandService &gt; when using default production loader &gt; getCommandTree &gt; should return the current command tree" time="0.00029825">
+            <failure message="expected 18 to be 17 // Object.is equality" type="AssertionError">
+AssertionError: expected 18 to be 17 // Object.is equality
+
+- Expected
++ Received
+
+- 17
++ 18
+
+ ❯ src/services/CommandService.test.ts:176:35
+            </failure>
+        </testcase>
+        <testcase classname="src/services/CommandService.test.ts" name="CommandService &gt; when initialized with an injected loader function &gt; should use the provided loader instead of the built-in one" time="0.000526">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/test-utils/mockCommandContext.test.ts" timestamp="2025-08-12T16:15:06.486Z" hostname="dadcaeef10d0" tests="3" failures="0" errors="0" skipped="0" time="0.002771167">
+        <testcase classname="src/test-utils/mockCommandContext.test.ts" name="createMockCommandContext &gt; should return a valid CommandContext object with default mocks" time="0.001491417">
+        </testcase>
+        <testcase classname="src/test-utils/mockCommandContext.test.ts" name="createMockCommandContext &gt; should apply top-level overrides correctly" time="0.000398875">
+        </testcase>
+        <testcase classname="src/test-utils/mockCommandContext.test.ts" name="createMockCommandContext &gt; should apply deeply nested overrides correctly" time="0.000200458">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/startupWarnings.test.ts" timestamp="2025-08-12T16:15:06.487Z" hostname="dadcaeef10d0" tests="4" failures="0" errors="0" skipped="4" time="0">
+        <testcase classname="src/utils/startupWarnings.test.ts" name="startupWarnings &gt; should return warnings from the file and delete it" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/utils/startupWarnings.test.ts" name="startupWarnings &gt; should return an empty array if the file does not exist" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/utils/startupWarnings.test.ts" name="startupWarnings &gt; should return an error message if reading the file fails" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/utils/startupWarnings.test.ts" name="startupWarnings &gt; should return a warning if deleting the file fails" time="0">
+            <skipped/>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/utils/userStartupWarnings.test.ts" timestamp="2025-08-12T16:15:06.489Z" hostname="dadcaeef10d0" tests="3" failures="0" errors="0" skipped="0" time="0.002251833">
+        <testcase classname="src/utils/userStartupWarnings.test.ts" name="getUserStartupWarnings &gt; home directory check &gt; should return a warning when running in home directory" time="0.001208916">
+        </testcase>
+        <testcase classname="src/utils/userStartupWarnings.test.ts" name="getUserStartupWarnings &gt; home directory check &gt; should not return a warning when running in a project directory" time="0.000148166">
+        </testcase>
+        <testcase classname="src/utils/userStartupWarnings.test.ts" name="getUserStartupWarnings &gt; home directory check &gt; should handle errors when checking directory" time="0.000194667">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/App.test.tsx" timestamp="2025-08-12T16:15:06.490Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/App.test.tsx" name="src/ui/App.test.tsx" time="0">
+            <failure message="Failed to resolve import &quot;../serena/serenaClient.js&quot; from &quot;../memory/dist/api/memoryApi.js&quot;. Does the file exist?" type="Error">
+Error: Failed to resolve import &quot;../serena/serenaClient.js&quot; from &quot;../memory/dist/api/memoryApi.js&quot;. Does the file exist?
+  Plugin: vite:import-analysis
+  File: /agents/packages/memory/dist/api/memoryApi.js:6:33
+  4  |   */
+  5  |  import { IntegratedMemorySystem } from &apos;../index.js&apos;;
+  6  |  import { SerenaMCPClient } from &apos;../serena/serenaClient.js&apos;;
+     |                                   ^
+  7  |  export class MemoryAPI {
+  8  |      memorySystem;
+ ❯ TransformPluginContext._formatLog ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31553:43
+ ❯ TransformPluginContext.error ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31550:14
+ ❯ normalizeUrl ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30022:18
+ ❯ ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30080:32
+ ❯ TransformPluginContext.transform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30048:4
+ ❯ EnvironmentPluginContainer.transform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31351:14
+ ❯ loadAndTransform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:26438:26
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/contexts/SessionContext.test.tsx" timestamp="2025-08-12T16:15:06.491Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/contexts/SessionContext.test.tsx" name="src/ui/contexts/SessionContext.test.tsx" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/aboutCommand.test.ts" timestamp="2025-08-12T16:15:06.492Z" hostname="dadcaeef10d0" tests="4" failures="0" errors="0" skipped="0" time="0.004727875">
+        <testcase classname="src/ui/commands/aboutCommand.test.ts" name="aboutCommand &gt; should have the correct name and description" time="0.001334292">
+        </testcase>
+        <testcase classname="src/ui/commands/aboutCommand.test.ts" name="aboutCommand &gt; should call addItem with all version info" time="0.001835291">
+        </testcase>
+        <testcase classname="src/ui/commands/aboutCommand.test.ts" name="aboutCommand &gt; should show the correct sandbox environment variable" time="0.000575459">
+        </testcase>
+        <testcase classname="src/ui/commands/aboutCommand.test.ts" name="aboutCommand &gt; should show sandbox-exec profile when applicable" time="0.000293166">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/authCommand.test.ts" timestamp="2025-08-12T16:15:06.493Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.002693625">
+        <testcase classname="src/ui/commands/authCommand.test.ts" name="authCommand &gt; should return a dialog action to open the auth dialog" time="0.001789625">
+        </testcase>
+        <testcase classname="src/ui/commands/authCommand.test.ts" name="authCommand &gt; should have the correct name and description" time="0.000240375">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/bugCommand.test.ts" timestamp="2025-08-12T16:15:06.494Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.003053583">
+        <testcase classname="src/ui/commands/bugCommand.test.ts" name="bugCommand &gt; should generate the default GitHub issue URL" time="0.002022791">
+        </testcase>
+        <testcase classname="src/ui/commands/bugCommand.test.ts" name="bugCommand &gt; should use a custom URL template from config if provided" time="0.000302917">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/chatCommand.test.ts" timestamp="2025-08-12T16:15:06.495Z" hostname="dadcaeef10d0" tests="11" failures="0" errors="0" skipped="0" time="0.007019584">
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; should have the correct main command definition" time="0.001751666">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; list subcommand &gt; should inform when no checkpoints are found" time="0.000773958">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; list subcommand &gt; should list found checkpoints" time="0.000533459">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; save subcommand &gt; should return an error if tag is missing" time="0.000287625">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; save subcommand &gt; should inform if conversation history is empty" time="0.000265667">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; save subcommand &gt; should save the conversation" time="0.0007535">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; resume subcommand &gt; should return an error if tag is missing" time="0.000359542">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; resume subcommand &gt; should inform if checkpoint is not found" time="0.0003485">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; resume subcommand &gt; should resume a conversation" time="0.000335334">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; resume subcommand &gt; completion &gt; should provide completion suggestions" time="0.000373958">
+        </testcase>
+        <testcase classname="src/ui/commands/chatCommand.test.ts" name="chatCommand &gt; resume subcommand &gt; completion &gt; should suggest filenames sorted by modified time (newest first)" time="0.000400542">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/clearCommand.test.ts" timestamp="2025-08-12T16:15:06.498Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.003421958">
+        <testcase classname="src/ui/commands/clearCommand.test.ts" name="clearCommand &gt; should set debug message, reset chat, and clear UI when config is available" time="0.002314833">
+        </testcase>
+        <testcase classname="src/ui/commands/clearCommand.test.ts" name="clearCommand &gt; should not attempt to reset chat if config service is not available" time="0.00042">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/compressCommand.test.ts" timestamp="2025-08-12T16:15:06.498Z" hostname="dadcaeef10d0" tests="5" failures="1" errors="0" skipped="0" time="0.016206084">
+        <testcase classname="src/ui/commands/compressCommand.test.ts" name="compressCommand &gt; should do nothing if a compression is already pending" time="0.003575583">
+        </testcase>
+        <testcase classname="src/ui/commands/compressCommand.test.ts" name="compressCommand &gt; should set pending item, call tryCompressChat, and add result on success" time="0.010864667">
+            <failure message="expected &quot;spy&quot; to be called with arguments: [ ObjectContaining{…}, Any&lt;Number&gt; ][90m
+
+Received: 
+
+[1m  1st spy call:
+
+[22m[2m  [[22m
+[32m-   ObjectContaining {[90m
+[32m-     &quot;compression&quot;: {[90m
+[32m-       &quot;isPending&quot;: false,[90m
+[32m-       &quot;newTokenCount&quot;: 100,[90m
+[32m-       &quot;originalTokenCount&quot;: 200,[90m
+[31m+   {[90m
+[31m+     &quot;text&quot;: &quot;Failed to compress chat history: context.services.config?.getModel is not a function&quot;,[90m
+[31m+     &quot;type&quot;: &quot;error&quot;,[90m
+[2m    },[22m
+[32m-     &quot;type&quot;: &quot;compression&quot;,[90m
+[32m-   },[90m
+[32m-   Any&lt;Number&gt;,[90m
+[31m+   1755015283361,[90m
+[2m  ][22m
+[39m[90m
+
+Number of calls: [1m1[22m
+[39m" type="AssertionError">
+AssertionError: expected &quot;spy&quot; to be called with arguments: [ ObjectContaining{…}, Any&lt;Number&gt; ]
+
+Received: 
+
+  1st spy call:
+
+  [
+-   ObjectContaining {
+-     &quot;compression&quot;: {
+-       &quot;isPending&quot;: false,
+-       &quot;newTokenCount&quot;: 100,
+-       &quot;originalTokenCount&quot;: 200,
++   {
++     &quot;text&quot;: &quot;Failed to compress chat history: context.services.config?.getModel is not a function&quot;,
++     &quot;type&quot;: &quot;error&quot;,
+    },
+-     &quot;type&quot;: &quot;compression&quot;,
+-   },
+-   Any&lt;Number&gt;,
++   1755015283361,
+  ]
+
+
+Number of calls: 1
+
+ ❯ src/ui/commands/compressCommand.test.ts:78:32
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/compressCommand.test.ts" name="compressCommand &gt; should add an error message if tryCompressChat returns falsy" time="0.000409542">
+        </testcase>
+        <testcase classname="src/ui/commands/compressCommand.test.ts" name="compressCommand &gt; should add an error message if tryCompressChat throws" time="0.000430958">
+        </testcase>
+        <testcase classname="src/ui/commands/compressCommand.test.ts" name="compressCommand &gt; should clear the pending item in a finally block" time="0.00017975">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/docsCommand.test.ts" timestamp="2025-08-12T16:15:06.500Z" hostname="dadcaeef10d0" tests="3" failures="0" errors="0" skipped="0" time="0.0038845">
+        <testcase classname="src/ui/commands/docsCommand.test.ts" name="docsCommand &gt; should add an info message and call &apos;open&apos; in a non-sandbox environment" time="0.002545042">
+        </testcase>
+        <testcase classname="src/ui/commands/docsCommand.test.ts" name="docsCommand &gt; should only add an info message in a sandbox environment" time="0.000400291">
+        </testcase>
+        <testcase classname="src/ui/commands/docsCommand.test.ts" name="docsCommand &gt; should not open browser for &apos;sandbox-exec&apos;" time="0.000236208">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/editorCommand.test.ts" timestamp="2025-08-12T16:15:06.501Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.002564084">
+        <testcase classname="src/ui/commands/editorCommand.test.ts" name="editorCommand &gt; should return a dialog action to open the editor dialog" time="0.001752875">
+        </testcase>
+        <testcase classname="src/ui/commands/editorCommand.test.ts" name="editorCommand &gt; should have the correct name and description" time="0.000135708">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/extensionsCommand.test.ts" timestamp="2025-08-12T16:15:06.502Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.0041005">
+        <testcase classname="src/ui/commands/extensionsCommand.test.ts" name="extensionsCommand &gt; should display &quot;No active extensions.&quot; when none are found" time="0.003083125">
+        </testcase>
+        <testcase classname="src/ui/commands/extensionsCommand.test.ts" name="extensionsCommand &gt; should list active extensions when they are found" time="0.000338458">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/helpCommand.test.ts" timestamp="2025-08-12T16:15:06.502Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.002791917">
+        <testcase classname="src/ui/commands/helpCommand.test.ts" name="helpCommand &gt; should return a dialog action and log a debug message for &apos;/help&apos;" time="0.002046166">
+        </testcase>
+        <testcase classname="src/ui/commands/helpCommand.test.ts" name="helpCommand &gt; should also be triggered by its alternative name &apos;?&apos;" time="0.000118625">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/ideCommand.test.ts" timestamp="2025-08-12T16:15:06.503Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/commands/ideCommand.test.ts" name="src/ui/commands/ideCommand.test.ts" time="0">
+            <failure message="Failed to resolve import &quot;@google/gemini-cli-core&quot; from &quot;src/ui/commands/ideCommand.test.ts&quot;. Does the file exist?" type="Error">
+Error: Failed to resolve import &quot;@google/gemini-cli-core&quot; from &quot;src/ui/commands/ideCommand.test.ts&quot;. Does the file exist?
+  Plugin: vite:import-analysis
+  File: /agents/packages/cli/src/ui/commands/ideCommand.test.ts:14:0
+  12 |  const __vi_import_1__ = await import(&quot;child_process&quot;);
+  13 |  const __vi_import_2__ = await import(&quot;glob&quot;);
+  14 |  const __vi_import_3__ = await import(&quot;@google/gemini-cli-core&quot;);
+     |                                       ^
+  15 |  /**
+  16 |   * @license
+ ❯ TransformPluginContext._formatLog ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31553:43
+ ❯ TransformPluginContext.error ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31550:14
+ ❯ normalizeUrl ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30022:18
+ ❯ ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30080:32
+ ❯ TransformPluginContext.transform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30048:4
+ ❯ EnvironmentPluginContainer.transform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31351:14
+ ❯ loadAndTransform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:26438:26
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/mcpCommand.test.ts" timestamp="2025-08-12T16:15:06.504Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/commands/mcpCommand.test.ts" name="src/ui/commands/mcpCommand.test.ts" time="0">
+            <failure message="Failed to resolve import &quot;@google/gemini-cli-core&quot; from &quot;src/ui/commands/mcpCommand.test.ts&quot;. Does the file exist?" type="Error">
+Error: Failed to resolve import &quot;@google/gemini-cli-core&quot; from &quot;src/ui/commands/mcpCommand.test.ts&quot;. Does the file exist?
+  Plugin: vite:import-analysis
+  File: /agents/packages/cli/src/ui/commands/mcpCommand.test.ts:10:0
+  12 |  const __vi_import_0__ = await import(&quot;./mcpCommand.js&quot;);
+  13 |  const __vi_import_1__ = await import(&quot;../../test-utils/mockCommandContext.js&quot;);
+  14 |  const __vi_import_2__ = await import(&quot;@google/gemini-cli-core&quot;);
+     |                                       ^
+  15 |  const __vi_import_3__ = await import(&quot;open&quot;);
+  16 |  const __vi_import_4__ = await import(&quot;@google/genai&quot;);
+ ❯ TransformPluginContext._formatLog ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31553:43
+ ❯ TransformPluginContext.error ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31550:14
+ ❯ normalizeUrl ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30022:18
+ ❯ ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30080:32
+ ❯ TransformPluginContext.transform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:30048:4
+ ❯ EnvironmentPluginContainer.transform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:31351:14
+ ❯ loadAndTransform ../../node_modules/vite/dist/node/chunks/dep-CMEinpL-.js:26438:26
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/memoryCommand.test.ts" timestamp="2025-08-12T16:15:06.505Z" hostname="dadcaeef10d0" tests="8" failures="0" errors="0" skipped="0" time="0.005955875">
+        <testcase classname="src/ui/commands/memoryCommand.test.ts" name="memoryCommand &gt; /memory show &gt; should display a message if memory is empty" time="0.002641958">
+        </testcase>
+        <testcase classname="src/ui/commands/memoryCommand.test.ts" name="memoryCommand &gt; /memory show &gt; should display the memory content and file count if it exists" time="0.000342708">
+        </testcase>
+        <testcase classname="src/ui/commands/memoryCommand.test.ts" name="memoryCommand &gt; /memory add &gt; should return an error message if no arguments are provided" time="0.000356375">
+        </testcase>
+        <testcase classname="src/ui/commands/memoryCommand.test.ts" name="memoryCommand &gt; /memory add &gt; should return a tool action and add an info message when arguments are provided" time="0.000243917">
+        </testcase>
+        <testcase classname="src/ui/commands/memoryCommand.test.ts" name="memoryCommand &gt; /memory refresh &gt; should display success message when memory is refreshed with content" time="0.000366417">
+        </testcase>
+        <testcase classname="src/ui/commands/memoryCommand.test.ts" name="memoryCommand &gt; /memory refresh &gt; should display success message when memory is refreshed with no content" time="0.000213917">
+        </testcase>
+        <testcase classname="src/ui/commands/memoryCommand.test.ts" name="memoryCommand &gt; /memory refresh &gt; should display an error message if refreshing fails" time="0.000421459">
+        </testcase>
+        <testcase classname="src/ui/commands/memoryCommand.test.ts" name="memoryCommand &gt; /memory refresh &gt; should not throw if config service is unavailable" time="0.000573291">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/privacyCommand.test.ts" timestamp="2025-08-12T16:15:06.507Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.00268775">
+        <testcase classname="src/ui/commands/privacyCommand.test.ts" name="privacyCommand &gt; should return a dialog action to open the privacy dialog" time="0.001779875">
+        </testcase>
+        <testcase classname="src/ui/commands/privacyCommand.test.ts" name="privacyCommand &gt; should have the correct name and description" time="0.000243167">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/quitCommand.test.ts" timestamp="2025-08-12T16:15:06.508Z" hostname="dadcaeef10d0" tests="1" failures="0" errors="0" skipped="0" time="0.003942542">
+        <testcase classname="src/ui/commands/quitCommand.test.ts" name="quitCommand &gt; returns a QuitActionReturn object with the correct messages" time="0.003244333">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/statsCommand.test.ts" timestamp="2025-08-12T16:15:06.508Z" hostname="dadcaeef10d0" tests="3" failures="0" errors="0" skipped="0" time="0.005152792">
+        <testcase classname="src/ui/commands/statsCommand.test.ts" name="statsCommand &gt; should display general session stats when run with no subcommand" time="0.003919834">
+        </testcase>
+        <testcase classname="src/ui/commands/statsCommand.test.ts" name="statsCommand &gt; should display model stats when using the &quot;model&quot; subcommand" time="0.000323958">
+        </testcase>
+        <testcase classname="src/ui/commands/statsCommand.test.ts" name="statsCommand &gt; should display tool stats when using the &quot;tools&quot; subcommand" time="0.000231">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/synapticCommand.test.ts" timestamp="2025-08-12T16:15:06.509Z" hostname="dadcaeef10d0" tests="17" failures="17" errors="0" skipped="0" time="0.024553">
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; 引数なしでダッシュボードを表示すること" time="0.011984834">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:45:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; helpコマンドでヘルプメッセージを表示すること" time="0.000360125">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:57:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; --helpフラグでヘルプメッセージを表示すること" time="0.000180625">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:66:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; -hフラグでヘルプメッセージを表示すること" time="0.000163333">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:73:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; statusコマンドでシステム状態を表示すること" time="0.000820791">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:109:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; searchコマンドでメモリ検索を実行すること" time="0.000887916">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:143:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; 検索クエリなしでsearchコマンドを実行した場合エラーになること" time="0.000212791">
+            <failure message="expected undefined to be false // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected: 
+false
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:153:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; activateコマンドでメモリ活性化を実行すること" time="0.000519083">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:179:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; メモリIDなしでactivateコマンドを実行した場合エラーになること" time="0.000652917">
+            <failure message="expected undefined to be false // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected: 
+false
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:188:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; 存在しないサブコマンドでエラーになること" time="0.000349208">
+            <failure message="expected undefined to be false // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected: 
+false
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:195:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; ダッシュボード表示エラーをハンドリングすること" time="0.000452333">
+            <failure message="expected undefined to be false // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected: 
+false
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:204:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; status取得エラーをハンドリングすること" time="0.001068208">
+            <failure message="expected undefined to be false // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected: 
+false
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:221:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; 検索エラーをハンドリングすること" time="0.001383291">
+            <failure message="expected undefined to be false // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected: 
+false
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:236:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; 活性化エラーをハンドリングすること" time="0.000293292">
+            <failure message="expected undefined to be false // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be false // Object.is equality
+
+- Expected: 
+false
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:253:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; 検索結果が空の場合の処理" time="0.000231042">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:268:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; 活性化結果が空の場合の処理" time="0.0002165">
+            <failure message="expected undefined to be true // Object.is equality" type="AssertionError">
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ ❯ src/ui/commands/synapticCommand.test.ts:285:28
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/commands/synapticCommand.test.ts" name="synapticCommand &gt; 複雑な検索クエリを正しく解析すること" time="0.003975667">
+            <failure message="expected &quot;spy&quot; to be called with arguments: [ &apos;複雑な検索クエリ&apos;, 10 ][90m
+
+Number of calls: [1m0[22m
+[39m" type="AssertionError">
+AssertionError: expected &quot;spy&quot; to be called with arguments: [ &apos;複雑な検索クエリ&apos;, 10 ]
+
+Number of calls: 0
+
+ ❯ src/ui/commands/synapticCommand.test.ts:301:34
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/themeCommand.test.ts" timestamp="2025-08-12T16:15:06.520Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.002784833">
+        <testcase classname="src/ui/commands/themeCommand.test.ts" name="themeCommand &gt; should return a dialog action to open the theme dialog" time="0.001820541">
+        </testcase>
+        <testcase classname="src/ui/commands/themeCommand.test.ts" name="themeCommand &gt; should have the correct name and description" time="0.000273666">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/commands/toolsCommand.test.ts" timestamp="2025-08-12T16:15:06.520Z" hostname="dadcaeef10d0" tests="4" failures="0" errors="0" skipped="0" time="0.005018875">
+        <testcase classname="src/ui/commands/toolsCommand.test.ts" name="toolsCommand &gt; should display an error if the tool registry is unavailable" time="0.002986292">
+        </testcase>
+        <testcase classname="src/ui/commands/toolsCommand.test.ts" name="toolsCommand &gt; should display &quot;No tools available&quot; when none are found" time="0.000678042">
+        </testcase>
+        <testcase classname="src/ui/commands/toolsCommand.test.ts" name="toolsCommand &gt; should list tools without descriptions by default" time="0.000405916">
+        </testcase>
+        <testcase classname="src/ui/commands/toolsCommand.test.ts" name="toolsCommand &gt; should list tools with descriptions when &quot;desc&quot; arg is passed" time="0.000217625">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/AuthDialog.test.tsx" timestamp="2025-08-12T16:15:06.521Z" hostname="dadcaeef10d0" tests="10" failures="0" errors="0" skipped="0" time="0.379716792">
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; should show an error if the initial auth type is invalid" time="0.020019">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; AGENTS_API_KEY environment variable &gt; should detect AGENTS_API_KEY environment variable" time="0.009939958">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; AGENTS_API_KEY environment variable &gt; should not show the AGENTS_API_KEY message if AGENTS_DEFAULT_AUTH_TYPE is set to something else" time="0.004852416">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; AGENTS_API_KEY environment variable &gt; should show the AGENTS_API_KEY message if AGENTS_DEFAULT_AUTH_TYPE is set to use api key" time="0.003576834">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; AGENTS_DEFAULT_AUTH_TYPE environment variable &gt; should select the auth type specified by AGENTS_DEFAULT_AUTH_TYPE" time="0.008791041">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; AGENTS_DEFAULT_AUTH_TYPE environment variable &gt; should fall back to default if AGENTS_DEFAULT_AUTH_TYPE is not set" time="0.0038065">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; AGENTS_DEFAULT_AUTH_TYPE environment variable &gt; should show an error and fall back to default if AGENTS_DEFAULT_AUTH_TYPE is invalid" time="0.005337958">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; should prevent exiting when no auth method is selected and show error message" time="0.108068541">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; should not exit if there is already an error message" time="0.106735375">
+        </testcase>
+        <testcase classname="src/ui/components/AuthDialog.test.tsx" name="AuthDialog &gt; should allow exiting when auth method is already selected" time="0.107695375">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/HistoryItemDisplay.test.tsx" timestamp="2025-08-12T16:15:06.524Z" hostname="dadcaeef10d0" tests="6" failures="0" errors="0" skipped="0" time="0.065585459">
+        <testcase classname="src/ui/components/HistoryItemDisplay.test.tsx" name="&lt;HistoryItemDisplay /&gt; &gt; renders UserMessage for &quot;user&quot; type" time="0.013648834">
+        </testcase>
+        <testcase classname="src/ui/components/HistoryItemDisplay.test.tsx" name="&lt;HistoryItemDisplay /&gt; &gt; renders StatsDisplay for &quot;stats&quot; type" time="0.005070625">
+        </testcase>
+        <testcase classname="src/ui/components/HistoryItemDisplay.test.tsx" name="&lt;HistoryItemDisplay /&gt; &gt; renders AboutBox for &quot;about&quot; type" time="0.004588458">
+        </testcase>
+        <testcase classname="src/ui/components/HistoryItemDisplay.test.tsx" name="&lt;HistoryItemDisplay /&gt; &gt; renders ModelStatsDisplay for &quot;model_stats&quot; type" time="0.001617333">
+        </testcase>
+        <testcase classname="src/ui/components/HistoryItemDisplay.test.tsx" name="&lt;HistoryItemDisplay /&gt; &gt; renders ToolStatsDisplay for &quot;tool_stats&quot; type" time="0.001473084">
+        </testcase>
+        <testcase classname="src/ui/components/HistoryItemDisplay.test.tsx" name="&lt;HistoryItemDisplay /&gt; &gt; renders SessionSummaryDisplay for &quot;quit&quot; type" time="0.038335375">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/InputPrompt.test.tsx" timestamp="2025-08-12T16:15:06.526Z" hostname="dadcaeef10d0" tests="22" failures="0" errors="0" skipped="0" time="2.429940792">
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should call shellHistory.getPreviousCommand on up arrow in shell mode" time="0.119981625">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should call shellHistory.getNextCommand on down arrow in shell mode" time="0.10495275">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should set the buffer text when a shell history command is retrieved" time="0.105836417">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should call shellHistory.addCommandToHistory on submit in shell mode" time="0.106825958">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should NOT call shell history methods when not in shell mode" time="0.207072417">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; clipboard image paste &gt; should handle Ctrl+V when clipboard has an image" time="0.10456125">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; clipboard image paste &gt; should not insert anything when clipboard has no image" time="0.103833041">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; clipboard image paste &gt; should handle image save failure gracefully" time="0.10415525">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; clipboard image paste &gt; should insert image path at cursor position with proper spacing" time="0.105226208">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; clipboard image paste &gt; should handle errors during clipboard operations" time="0.105204375">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should complete a partial parent command and add a space" time="0.10539875">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should append a sub-command when the parent command is already complete with a space" time="0.105025542">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should handle the &quot;backspace&quot; edge case correctly" time="0.105163167">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should complete a partial argument for a command" time="0.104625917">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should autocomplete on Enter when suggestions are active, without submitting" time="0.105154708">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should complete a command based on its altName" time="0.104724375">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should not submit on Enter when the buffer is empty or only contains whitespace" time="0.104937292">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should submit directly on Enter when a complete leaf command is typed" time="0.105059458">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should autocomplete an @-path on Enter without submitting" time="0.105035125">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should add a newline on enter when the line ends with a backslash" time="0.105098458">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should clear the buffer on Ctrl+C if it has text" time="0.105606208">
+        </testcase>
+        <testcase classname="src/ui/components/InputPrompt.test.tsx" name="InputPrompt &gt; should NOT clear the buffer on Ctrl+C if it is empty" time="0.10505925">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/LoadingIndicator.test.tsx" timestamp="2025-08-12T16:15:06.531Z" hostname="dadcaeef10d0" tests="11" failures="0" errors="0" skipped="0" time="0.028202541">
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should not render when streamingState is Idle" time="0.008522875">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should render spinner, phrase, and time when streamingState is Responding" time="0.005742708">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should render spinner (static), phrase but no time/cancel when streamingState is WaitingForConfirmation" time="0.001789209">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should display the currentLoadingPhrase correctly" time="0.001260083">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should display the elapsedTime correctly when Responding" time="0.001137">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should display the elapsedTime correctly in human-readable format" time="0.001045208">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should render rightContent when provided" time="0.001178708">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should transition correctly between states using rerender" time="0.003563375">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should display fallback phrase if thought is empty" time="0.000957042">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should display the subject of a thought" time="0.001171833">
+        </testcase>
+        <testcase classname="src/ui/components/LoadingIndicator.test.tsx" name="&lt;LoadingIndicator /&gt; &gt; should prioritize thought.subject over currentLoadingPhrase" time="0.001054292">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/ModelStatsDisplay.test.tsx" timestamp="2025-08-12T16:15:06.534Z" hostname="dadcaeef10d0" tests="6" failures="0" errors="0" skipped="0" time="0.053059125">
+        <testcase classname="src/ui/components/ModelStatsDisplay.test.tsx" name="&lt;ModelStatsDisplay /&gt; &gt; should render &quot;no API calls&quot; message when there are no active models" time="0.013560667">
+        </testcase>
+        <testcase classname="src/ui/components/ModelStatsDisplay.test.tsx" name="&lt;ModelStatsDisplay /&gt; &gt; should not display conditional rows if no model has data for them" time="0.011124542">
+        </testcase>
+        <testcase classname="src/ui/components/ModelStatsDisplay.test.tsx" name="&lt;ModelStatsDisplay /&gt; &gt; should display conditional rows if at least one model has data" time="0.007790458">
+        </testcase>
+        <testcase classname="src/ui/components/ModelStatsDisplay.test.tsx" name="&lt;ModelStatsDisplay /&gt; &gt; should display stats for multiple models correctly" time="0.009527125">
+        </testcase>
+        <testcase classname="src/ui/components/ModelStatsDisplay.test.tsx" name="&lt;ModelStatsDisplay /&gt; &gt; should handle large values without wrapping or overlapping" time="0.005583">
+        </testcase>
+        <testcase classname="src/ui/components/ModelStatsDisplay.test.tsx" name="&lt;ModelStatsDisplay /&gt; &gt; should display a single model correctly" time="0.004650959">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/SessionSummaryDisplay.test.tsx" timestamp="2025-08-12T16:15:06.535Z" hostname="dadcaeef10d0" tests="1" failures="0" errors="0" skipped="0" time="0.053890292">
+        <testcase classname="src/ui/components/SessionSummaryDisplay.test.tsx" name="&lt;SessionSummaryDisplay /&gt; &gt; renders the summary display with a title" time="0.053197291">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/StatsDisplay.test.tsx" timestamp="2025-08-12T16:15:06.536Z" hostname="dadcaeef10d0" tests="10" failures="0" errors="0" skipped="0" time="0.096137625">
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; renders only the Performance section in its zero state" time="0.017318292">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; renders a table with two models correctly" time="0.015948666">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; renders all sections when all data is present" time="0.009342666">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; Conditional Rendering Tests &gt; hides User Agreement when no decisions are made" time="0.00409125">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; Conditional Rendering Tests &gt; hides Efficiency section when cache is not used" time="0.005160417">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; Conditional Color Tests &gt; renders success rate in green for high values" time="0.005818">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; Conditional Color Tests &gt; renders success rate in yellow for medium values" time="0.003426125">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; Conditional Color Tests &gt; renders success rate in red for low values" time="0.00374575">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; Title Rendering &gt; renders the default title when no title prop is provided" time="0.002392125">
+        </testcase>
+        <testcase classname="src/ui/components/StatsDisplay.test.tsx" name="&lt;StatsDisplay /&gt; &gt; Title Rendering &gt; renders the custom title when a title prop is provided" time="0.027996792">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/SynapticMemoryDashboard.test.tsx" timestamp="2025-08-12T16:15:06.539Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/components/SynapticMemoryDashboard.test.tsx" name="src/ui/components/SynapticMemoryDashboard.test.tsx" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/ToolStatsDisplay.test.tsx" timestamp="2025-08-12T16:15:06.540Z" hostname="dadcaeef10d0" tests="5" failures="0" errors="0" skipped="0" time="0.041203375">
+        <testcase classname="src/ui/components/ToolStatsDisplay.test.tsx" name="&lt;ToolStatsDisplay /&gt; &gt; should render &quot;no tool calls&quot; message when there are no active tools" time="0.014137083">
+        </testcase>
+        <testcase classname="src/ui/components/ToolStatsDisplay.test.tsx" name="&lt;ToolStatsDisplay /&gt; &gt; should display stats for a single tool correctly" time="0.007090167">
+        </testcase>
+        <testcase classname="src/ui/components/ToolStatsDisplay.test.tsx" name="&lt;ToolStatsDisplay /&gt; &gt; should display stats for multiple tools correctly" time="0.00923525">
+        </testcase>
+        <testcase classname="src/ui/components/ToolStatsDisplay.test.tsx" name="&lt;ToolStatsDisplay /&gt; &gt; should handle large values without wrapping or overlapping" time="0.005647125">
+        </testcase>
+        <testcase classname="src/ui/components/ToolStatsDisplay.test.tsx" name="&lt;ToolStatsDisplay /&gt; &gt; should handle zero decisions gracefully" time="0.004324375">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/atCommandProcessor.test.ts" timestamp="2025-08-12T16:15:06.541Z" hostname="dadcaeef10d0" tests="17" failures="0" errors="0" skipped="0" time="0.013253959">
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should pass through query if no @ command is present" time="0.002802542">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should pass through original query if only a lone @ symbol is present" time="0.000431666">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should process a valid text file path" time="0.001952625">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should process a valid directory path and convert to glob" time="0.000842541">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should process a valid image file path (as text content for now)" time="0.000292792">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should handle query with text before and after @command" time="0.000326125">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should correctly unescape paths with escaped spaces" time="0.000457125">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should handle multiple @file references" time="0.0005565">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should handle multiple @file references with interleaved text" time="0.00055425">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should handle a mix of valid, invalid, and lone @ references" time="0.000954375">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should return original query if all @paths are invalid or lone @" time="0.000302708">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; should process a file path case-insensitively" time="0.000657416">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; git-aware filtering &gt; should skip git-ignored files in @ commands" time="0.000472084">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; git-aware filtering &gt; should process non-git-ignored files normally" time="0.000588666">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; git-aware filtering &gt; should handle mixed git-ignored and valid files" time="0.000609083">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; git-aware filtering &gt; should always ignore .git directory files" time="0.000320792">
+        </testcase>
+        <testcase classname="src/ui/hooks/atCommandProcessor.test.ts" name="handleAtCommand &gt; when recursive file search is disabled &gt; should not use glob search for a nonexistent file" time="0.000324083">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/shellCommandProcessor.test.ts" timestamp="2025-08-12T16:15:06.545Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/shellCommandProcessor.test.ts" name="src/ui/hooks/shellCommandProcessor.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/slashCommandProcessor.test.ts" timestamp="2025-08-12T16:15:06.546Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/slashCommandProcessor.test.ts" name="src/ui/hooks/slashCommandProcessor.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useAutoAcceptIndicator.test.ts" timestamp="2025-08-12T16:15:06.547Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useAutoAcceptIndicator.test.ts" name="src/ui/hooks/useAutoAcceptIndicator.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useCompletion.integration.test.ts" timestamp="2025-08-12T16:15:06.548Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useCompletion.integration.test.ts" name="src/ui/hooks/useCompletion.integration.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useCompletion.test.ts" timestamp="2025-08-12T16:15:06.549Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useCompletion.test.ts" name="src/ui/hooks/useCompletion.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useConsoleMessages.test.ts" timestamp="2025-08-12T16:15:06.550Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useConsoleMessages.test.ts" name="src/ui/hooks/useConsoleMessages.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useEditorSettings.test.ts" timestamp="2025-08-12T16:15:06.551Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useEditorSettings.test.ts" name="src/ui/hooks/useEditorSettings.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useGeminiStream.test.tsx" timestamp="2025-08-12T16:15:06.552Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useGeminiStream.test.tsx" name="src/ui/hooks/useGeminiStream.test.tsx" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useGitBranchName.test.ts" timestamp="2025-08-12T16:15:06.552Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useGitBranchName.test.ts" name="src/ui/hooks/useGitBranchName.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useHistoryManager.test.ts" timestamp="2025-08-12T16:15:06.553Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useHistoryManager.test.ts" name="src/ui/hooks/useHistoryManager.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useInputHistory.test.ts" timestamp="2025-08-12T16:15:06.554Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useInputHistory.test.ts" name="src/ui/hooks/useInputHistory.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useKeypress.test.ts" timestamp="2025-08-12T16:15:06.555Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useKeypress.test.ts" name="src/ui/hooks/useKeypress.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useLoadingIndicator.test.ts" timestamp="2025-08-12T16:15:06.556Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useLoadingIndicator.test.ts" name="src/ui/hooks/useLoadingIndicator.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/usePhraseCycler.test.ts" timestamp="2025-08-12T16:15:06.557Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/usePhraseCycler.test.ts" name="src/ui/hooks/usePhraseCycler.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useShellHistory.test.ts" timestamp="2025-08-12T16:15:06.558Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useShellHistory.test.ts" name="src/ui/hooks/useShellHistory.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useSynapticMemory.test.ts" timestamp="2025-08-12T16:15:06.559Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useSynapticMemory.test.ts" name="src/ui/hooks/useSynapticMemory.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useTimer.test.ts" timestamp="2025-08-12T16:15:06.559Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useTimer.test.ts" name="src/ui/hooks/useTimer.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/hooks/useToolScheduler.test.ts" timestamp="2025-08-12T16:15:06.560Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/hooks/useToolScheduler.test.ts" name="src/ui/hooks/useToolScheduler.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/MarkdownDisplay.test.tsx" timestamp="2025-08-12T16:15:06.561Z" hostname="dadcaeef10d0" tests="14" failures="0" errors="0" skipped="0" time="0.144189916">
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders nothing for empty text" time="0.00931425">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders a simple paragraph" time="0.004806292">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders headers with correct levels" time="0.002466959">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders a fenced code block with a language" time="0.010613209">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders a fenced code block without a language" time="0.083370375">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; handles unclosed (pending) code blocks" time="0.002263667">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders unordered lists with different markers" time="0.001910917">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders nested unordered lists" time="0.001725958">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders ordered lists" time="0.00287275">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders horizontal rules" time="0.001531291">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; renders tables correctly" time="0.004855292">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; handles a table at the end of the input" time="0.001784083">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; inserts a single space between paragraphs" time="0.000949583">
+        </testcase>
+        <testcase classname="src/ui/utils/MarkdownDisplay.test.tsx" name="&lt;MarkdownDisplay /&gt; &gt; correctly parses a mix of markdown elements" time="0.014748375">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/clipboardUtils.test.ts" timestamp="2025-08-12T16:15:06.565Z" hostname="dadcaeef10d0" tests="6" failures="0" errors="0" skipped="0" time="0.003337459">
+        <testcase classname="src/ui/utils/clipboardUtils.test.ts" name="clipboardUtils &gt; clipboardHasImage &gt; should return false on non-macOS platforms" time="0.000777666">
+        </testcase>
+        <testcase classname="src/ui/utils/clipboardUtils.test.ts" name="clipboardUtils &gt; clipboardHasImage &gt; should return boolean on macOS" time="0.0000805">
+        </testcase>
+        <testcase classname="src/ui/utils/clipboardUtils.test.ts" name="clipboardUtils &gt; saveClipboardImage &gt; should return null on non-macOS platforms" time="0.000117833">
+        </testcase>
+        <testcase classname="src/ui/utils/clipboardUtils.test.ts" name="clipboardUtils &gt; saveClipboardImage &gt; should handle errors gracefully" time="0.000052625">
+        </testcase>
+        <testcase classname="src/ui/utils/clipboardUtils.test.ts" name="clipboardUtils &gt; cleanupOldClipboardImages &gt; should not throw errors" time="0.000782625">
+        </testcase>
+        <testcase classname="src/ui/utils/clipboardUtils.test.ts" name="clipboardUtils &gt; cleanupOldClipboardImages &gt; should complete without errors on valid directory" time="0.000764417">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/computeStats.test.ts" timestamp="2025-08-12T16:15:06.566Z" hostname="dadcaeef10d0" tests="11" failures="0" errors="0" skipped="0" time="0.002696333">
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="calculateErrorRate &gt; should return 0 if totalRequests is 0" time="0.000777208">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="calculateErrorRate &gt; should calculate the error rate correctly" time="0.000072791">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="calculateAverageLatency &gt; should return 0 if totalRequests is 0" time="0.000063292">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="calculateAverageLatency &gt; should calculate the average latency correctly" time="0.000047375">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="calculateCacheHitRate &gt; should return 0 if prompt tokens is 0" time="0.000061958">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="calculateCacheHitRate &gt; should calculate the cache hit rate correctly" time="0.000041834">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="computeSessionStats &gt; should return all zeros for initial empty metrics" time="0.000462459">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="computeSessionStats &gt; should correctly calculate API and tool time percentages" time="0.000148">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="computeSessionStats &gt; should correctly calculate cache efficiency" time="0.000091083">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="computeSessionStats &gt; should correctly calculate success and agreement rates" time="0.000063542">
+        </testcase>
+        <testcase classname="src/ui/utils/computeStats.test.ts" name="computeSessionStats &gt; should handle division by zero gracefully" time="0.0000865">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/displayUtils.test.ts" timestamp="2025-08-12T16:15:06.569Z" hostname="dadcaeef10d0" tests="5" failures="0" errors="0" skipped="0" time="0.002218084">
+        <testcase classname="src/ui/utils/displayUtils.test.ts" name="displayUtils &gt; getStatusColor &gt; should return green for values &gt;= green threshold" time="0.000974542">
+        </testcase>
+        <testcase classname="src/ui/utils/displayUtils.test.ts" name="displayUtils &gt; getStatusColor &gt; should return yellow for values &lt; green and &gt;= yellow threshold" time="0.000105041">
+        </testcase>
+        <testcase classname="src/ui/utils/displayUtils.test.ts" name="displayUtils &gt; getStatusColor &gt; should return red for values &lt; yellow threshold" time="0.000073125">
+        </testcase>
+        <testcase classname="src/ui/utils/displayUtils.test.ts" name="displayUtils &gt; getStatusColor &gt; should return defaultColor for values &lt; yellow threshold when provided" time="0.000055167">
+        </testcase>
+        <testcase classname="src/ui/utils/displayUtils.test.ts" name="displayUtils &gt; Threshold Constants &gt; should have the correct values" time="0.000222208">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/errorParsing.test.ts" timestamp="2025-08-12T16:15:06.570Z" hostname="dadcaeef10d0" tests="21" failures="0" errors="0" skipped="0" time="0.005000375">
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a valid API error JSON" time="0.000911375">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a 429 API error with the default message" time="0.00022275">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a 429 API error with the personal message" time="0.000153416">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a 429 API error with the vertex message" time="0.000170708">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should return the original message if it is not a JSON error" time="0.00004875">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should return the original message for malformed JSON" time="0.000310208">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should handle JSON that does not match the ApiError structure" time="0.000063292">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a nested API error" time="0.000086125">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a StructuredError" time="0.000051334">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a 429 StructuredError with the vertex message" time="0.000060875">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should handle an unknown error type" time="0.000185834">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a 429 API error with Pro quota exceeded message for Google auth (Free tier)" time="0.000103625">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a regular 429 API error with standard message for Google auth" time="0.000189292">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a 429 API error with generic quota exceeded message for Google auth" time="0.000096791">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should prioritize Pro quota message over generic quota message for Google auth" time="0.000146375">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a 429 API error with Pro quota exceeded message for Google auth (Standard tier)" time="0.000271166">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a 429 API error with Pro quota exceeded message for Google auth (Legacy tier)" time="0.000102083">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should handle different Gemini 2.5 version strings in Pro quota exceeded errors" time="0.000292709">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should not match non-Pro models with similar version strings" time="0.000222666">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a generic quota exceeded message for Google auth (Standard tier)" time="0.000184916">
+        </testcase>
+        <testcase classname="src/ui/utils/errorParsing.test.ts" name="parseAndFormatApiError &gt; should format a regular 429 API error with standard message for Google auth (Standard tier)" time="0.000137667">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/formatters.test.ts" timestamp="2025-08-12T16:15:06.576Z" hostname="dadcaeef10d0" tests="14" failures="0" errors="0" skipped="0" time="0.002215917">
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatMemoryUsage &gt; should format bytes into KB" time="0.000795958">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatMemoryUsage &gt; should format bytes into MB" time="0.000075667">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatMemoryUsage &gt; should format bytes into GB" time="0.000052042">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format milliseconds less than a second" time="0.000083417">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format a duration of 0" time="0.000040625">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format an exact number of seconds" time="0.000040458">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format a duration in seconds with one decimal place" time="0.000038333">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format an exact number of minutes" time="0.000045666">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format a duration in minutes and seconds" time="0.000038">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format an exact number of hours" time="0.000035291">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format a duration in hours and seconds" time="0.00003825">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should format a duration in hours, minutes, and seconds" time="0.000047834">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should handle large durations" time="0.000036583">
+        </testcase>
+        <testcase classname="src/ui/utils/formatters.test.ts" name="formatters &gt; formatDuration &gt; should handle negative durations" time="0.000039875">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/markdownUtilities.test.ts" timestamp="2025-08-12T16:15:06.579Z" hostname="dadcaeef10d0" tests="7" failures="0" errors="0" skipped="0" time="0.00185825">
+        <testcase classname="src/ui/utils/markdownUtilities.test.ts" name="markdownUtilities &gt; findLastSafeSplitPoint &gt; should split at the last double newline if not in a code block" time="0.000790708">
+        </testcase>
+        <testcase classname="src/ui/utils/markdownUtilities.test.ts" name="markdownUtilities &gt; findLastSafeSplitPoint &gt; should return content.length if no safe split point is found" time="0.000074292">
+        </testcase>
+        <testcase classname="src/ui/utils/markdownUtilities.test.ts" name="markdownUtilities &gt; findLastSafeSplitPoint &gt; should prioritize splitting at 
+
+ over being at the very end of the string if the end is not in a code block" time="0.00006125">
+        </testcase>
+        <testcase classname="src/ui/utils/markdownUtilities.test.ts" name="markdownUtilities &gt; findLastSafeSplitPoint &gt; should return content.length if the only 
+
+ is inside a code block and the end of content is not" time="0.000041875">
+        </testcase>
+        <testcase classname="src/ui/utils/markdownUtilities.test.ts" name="markdownUtilities &gt; findLastSafeSplitPoint &gt; should correctly identify the last 
+
+ even if it is followed by text not in a code block" time="0.000039083">
+        </testcase>
+        <testcase classname="src/ui/utils/markdownUtilities.test.ts" name="markdownUtilities &gt; findLastSafeSplitPoint &gt; should return content.length if content is empty" time="0.000036042">
+        </testcase>
+        <testcase classname="src/ui/utils/markdownUtilities.test.ts" name="markdownUtilities &gt; findLastSafeSplitPoint &gt; should return content.length if content has no newlines and no code blocks" time="0.000037958">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/textUtils.test.ts" timestamp="2025-08-12T16:15:06.581Z" hostname="dadcaeef10d0" tests="5" failures="0" errors="0" skipped="0" time="0.001998917">
+        <testcase classname="src/ui/utils/textUtils.test.ts" name="textUtils &gt; isBinary &gt; should return true for a buffer containing a null byte" time="0.000863375">
+        </testcase>
+        <testcase classname="src/ui/utils/textUtils.test.ts" name="textUtils &gt; isBinary &gt; should return false for a buffer containing only text" time="0.00008925">
+        </testcase>
+        <testcase classname="src/ui/utils/textUtils.test.ts" name="textUtils &gt; isBinary &gt; should return false for an empty buffer" time="0.00005525">
+        </testcase>
+        <testcase classname="src/ui/utils/textUtils.test.ts" name="textUtils &gt; isBinary &gt; should return false for a null or undefined buffer" time="0.000058417">
+        </testcase>
+        <testcase classname="src/ui/utils/textUtils.test.ts" name="textUtils &gt; isBinary &gt; should only check the sample size" time="0.00018725">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/utils/updateCheck.test.ts" timestamp="2025-08-12T16:15:06.582Z" hostname="dadcaeef10d0" tests="6" failures="1" errors="0" skipped="0" time="0.011289625">
+        <testcase classname="src/ui/utils/updateCheck.test.ts" name="checkForUpdates &gt; should return null if package.json is missing" time="0.000841917">
+        </testcase>
+        <testcase classname="src/ui/utils/updateCheck.test.ts" name="checkForUpdates &gt; should return null if there is no update" time="0.000092334">
+        </testcase>
+        <testcase classname="src/ui/utils/updateCheck.test.ts" name="checkForUpdates &gt; should return a message if a newer version is available" time="0.00892575">
+            <failure message="the given combination of arguments (null and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string" type="AssertionError">
+AssertionError: the given combination of arguments (null and string) is invalid for this assertion. You can use an array, a map, an object, a set, a string, or a weakset instead of a string
+ ❯ src/ui/utils/updateCheck.test.ts:50:20
+            </failure>
+        </testcase>
+        <testcase classname="src/ui/utils/updateCheck.test.ts" name="checkForUpdates &gt; should return null if the latest version is the same as the current version" time="0.000285542">
+        </testcase>
+        <testcase classname="src/ui/utils/updateCheck.test.ts" name="checkForUpdates &gt; should return null if the latest version is older than the current version" time="0.000115542">
+        </testcase>
+        <testcase classname="src/ui/utils/updateCheck.test.ts" name="checkForUpdates &gt; should handle errors gracefully" time="0.00007625">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/messages/DiffRenderer.test.tsx" timestamp="2025-08-12T16:15:06.584Z" hostname="dadcaeef10d0" tests="13" failures="0" errors="0" skipped="0" time="0.16100625">
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should call colorizeCode with correct language for new file with known extension" time="0.021198291">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should call colorizeCode with null language for new file with unknown extension" time="0.082864958">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should call colorizeCode with null language for new file if no filename is provided" time="0.01207675">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should render diff content for existing file (not calling colorizeCode directly for the whole block)" time="0.002808375">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should handle diff with only header and no changes" time="0.0015285">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should handle empty diff content" time="0.000577291">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should render a gap indicator for skipped lines" time="0.004795875">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should not render a gap indicator for small gaps (&lt;= MAX_CONTEXT_LINES_WITHOUT_GAP)" time="0.006398875">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should correctly render a diff with multiple hunks and a gap indicator &gt; with terminalWidth 80 and height undefined" time="0.011768625">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should correctly render a diff with multiple hunks and a gap indicator &gt; with terminalWidth 80 and height 6" time="0.003561375">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should correctly render a diff with multiple hunks and a gap indicator &gt; with terminalWidth 30 and height 6" time="0.003254625">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should correctly render a diff with a SVN diff format" time="0.002701375">
+        </testcase>
+        <testcase classname="src/ui/components/messages/DiffRenderer.test.tsx" name="&lt;OverflowProvider&gt;&lt;DiffRenderer /&gt;&lt;/OverflowProvider&gt; &gt; should correctly render a new file with no file extension correctly" time="0.0061745">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/messages/ToolConfirmationMessage.test.tsx" timestamp="2025-08-12T16:15:06.587Z" hostname="dadcaeef10d0" tests="2" failures="0" errors="0" skipped="0" time="0.02293775">
+        <testcase classname="src/ui/components/messages/ToolConfirmationMessage.test.tsx" name="ToolConfirmationMessage &gt; should not display urls if prompt and url are the same" time="0.017424958">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolConfirmationMessage.test.tsx" name="ToolConfirmationMessage &gt; should display urls if prompt and url are different" time="0.004815083">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/messages/ToolMessage.test.tsx" timestamp="2025-08-12T16:15:06.588Z" hostname="dadcaeef10d0" tests="11" failures="0" errors="0" skipped="0" time="0.034735458">
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; renders basic tool information" time="0.016558">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; ToolStatusIndicator rendering &gt; shows ✔ for Success status" time="0.001650417">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; ToolStatusIndicator rendering &gt; shows o for Pending status" time="0.001488541">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; ToolStatusIndicator rendering &gt; shows ? for Confirming status" time="0.001446458">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; ToolStatusIndicator rendering &gt; shows - for Canceled status" time="0.001418459">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; ToolStatusIndicator rendering &gt; shows x for Error status" time="0.001709792">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; ToolStatusIndicator rendering &gt; shows paused spinner for Executing status when streamingState is Idle" time="0.001639625">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; ToolStatusIndicator rendering &gt; shows paused spinner for Executing status when streamingState is WaitingForConfirmation" time="0.001314959">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; ToolStatusIndicator rendering &gt; shows MockRespondingSpinner for Executing status when streamingState is Responding" time="0.00150625">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; renders DiffRenderer for diff results" time="0.002297792">
+        </testcase>
+        <testcase classname="src/ui/components/messages/ToolMessage.test.tsx" name="&lt;ToolMessage /&gt; &gt; renders emphasis correctly" time="0.002885042">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/shared/MaxSizedBox.test.tsx" timestamp="2025-08-12T16:15:06.591Z" hostname="dadcaeef10d0" tests="21" failures="0" errors="0" skipped="0" time="0.048205875">
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; renders children without truncation when they fit" time="0.014382375">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; hides lines when content exceeds maxHeight" time="0.001668875">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; hides lines at the end when content exceeds maxHeight and overflowDirection is bottom" time="0.001100875">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; wraps text that exceeds maxWidth" time="0.001496125">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; handles mixed wrapping and non-wrapping segments" time="0.005671166">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; handles words longer than maxWidth by splitting them" time="0.003280375">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; does not truncate when maxHeight is undefined" time="0.000898708">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; shows plural &quot;lines&quot; when more than one line is hidden" time="0.00083625">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; shows plural &quot;lines&quot; when more than one line is hidden and overflowDirection is bottom" time="0.000815625">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; renders an empty box for empty children" time="0.000327292">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; wraps text with multi-byte unicode characters correctly" time="0.000830417">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; wraps text with multi-byte emoji characters correctly" time="0.001627167">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; falls back to an ellipsis when width is extremely small" time="0.000951041">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; truncates long non-wrapping text with ellipsis" time="0.000705667">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; truncates non-wrapping text containing line breaks" time="0.001125416">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; truncates emoji characters correctly with ellipsis" time="0.000763167">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; shows ellipsis for multiple rows with long non-wrapping text" time="0.001304875">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; accounts for additionalHiddenLinesCount" time="0.000931291">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; handles React.Fragment as a child" time="0.001206333">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; clips a long single text child from the top" time="0.003313167">
+        </testcase>
+        <testcase classname="src/ui/components/shared/MaxSizedBox.test.tsx" name="&lt;MaxSizedBox /&gt; &gt; clips a long single text child from the bottom" time="0.004084458">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/ui/components/shared/text-buffer.test.ts" timestamp="2025-08-12T16:15:06.596Z" hostname="dadcaeef10d0" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/ui/components/shared/text-buffer.test.ts" name="src/ui/components/shared/text-buffer.test.ts" time="0">
+            <failure message="Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js" type="Error">
+Error: Cannot find module &apos;@testing-library/dom&apos;
+Require stack:
+- /agents/packages/cli/node_modules/@testing-library/react/dist/pure.js
+ ❯ Object.&lt;anonymous&gt; node_modules/@testing-library/react/dist/pure.js:46:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: &apos;MODULE_NOT_FOUND&apos;, requireStack: [ &apos;/agents/packages/cli/node_modules/@testing-library/react/dist/pure.js&apos; ] }
+            </failure>
+        </testcase>
+    </testsuite>
 </testsuites>

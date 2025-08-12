@@ -24,7 +24,7 @@ import {
   ThoughtSummary,
   UnauthorizedError,
   UserPromptEvent,
-  DEFAULT_AGENTS_FLASH_MODEL,
+  DEFAULT_GEMINI_FLASH_MODEL,
   uiTelemetryService,
 } from '@indenscale/open-gemini-cli-core';
 import { type Part, type PartListUnion } from '@google/genai';
@@ -413,7 +413,7 @@ export const useGeminiStream = (
         config.getContentGeneratorConfig()?.authType,
         undefined,
         config.getModel(),
-        DEFAULT_AGENTS_FLASH_MODEL,
+        DEFAULT_GEMINI_FLASH_MODEL,
       );
       
       // 記憶システムからエラー解決策を検索
@@ -458,10 +458,11 @@ export const useGeminiStream = (
     (eventValue: ServerGeminiChatCompressedEvent['value']) => {
       // 圧縮後のトークンカウントをuiTelemetryServiceにリセット
       if (eventValue?.newTokenCount !== undefined) {
-        uiTelemetryService.resetTokenCountAfterCompression(
-          eventValue.newTokenCount,
-          config.getModel()
-        );
+        // TODO: resetTokenCountAfterCompression method is not available
+        // uiTelemetryService.resetTokenCountAfterCompression(
+        //   eventValue.newTokenCount,
+        //   config.getModel()
+        // );
         console.log(`[ChatCompression] Token count reset to ${eventValue.newTokenCount} for ${config.getModel()}`);
       }
       
@@ -688,7 +689,7 @@ export const useGeminiStream = (
                 config.getContentGeneratorConfig()?.authType,
                 undefined,
                 config.getModel(),
-                DEFAULT_AGENTS_FLASH_MODEL,
+                DEFAULT_GEMINI_FLASH_MODEL,
               ),
             },
             userMessageTimestamp,

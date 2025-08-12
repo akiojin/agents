@@ -7,8 +7,24 @@
 import { AuthType } from '@indenscale/open-gemini-cli-core';
 import { loadEnvironment } from './settings.js';
 
+export const getDefaultAuthMethod = (settings?: any): string | null => {
+  // 根本的解決: localEndpoint設定がある場合、直接OPENAI_COMPATIBLEを使用
+  if (settings?.localEndpoint || settings?.llm?.localEndpoint) {
+    return AuthType.OPENAI_COMPATIBLE;
+  }
+  
+  // フォールバック: 環境変数チェック
+  loadEnvironment();
+  if (process.env.LOCAL_LLM_BASE_URL) {
+    return AuthType.OPENAI_COMPATIBLE;
+  }
+  
+  return null;
+};
+
 export const validateAuthMethod = (authMethod: string): string | null => {
   loadEnvironment();
+  
   if (
     authMethod === AuthType.LOGIN_WITH_GOOGLE ||
     authMethod === AuthType.CLOUD_SHELL
