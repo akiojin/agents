@@ -5,7 +5,6 @@
 
 import { ChromaClient, Collection } from 'chromadb';
 import * as process from 'process';
-import * as path from 'path';
 
 // Embedding型定義（ChromaDBから利用できない場合の手動定義）
 type Embedding = number[];
@@ -37,43 +36,31 @@ export class ChromaMemoryClient {
   private collectionName: string;
 
   constructor(collectionName: string = 'agent_memories') {
-    // ChromaDBの保存場所を.agents/cache/に統一
-    const chromaPath = path.join(process.cwd(), '.agents', 'cache', 'chroma');
+    // ChromaDBサーバーに接続（デフォルトでサーバーモードを使用）
+    let chromaHost = process.env.CHROMA_HOST;
     
-    // 環境変数でサーバーモードが指定されている場合はサーバー接続を使用
-    const useServer = process.env.CHROMA_HOST || process.env.CHROMA_SERVER_MODE;
-    
-    if (useServer) {
-      // サーバーモード（既存の動作）
-      let chromaHost = process.env.CHROMA_HOST;
+    if (!chromaHost) {
+      // ホスト名でDocker環境内かどうかを判定
+      const hostname = process.env.HOSTNAME || '';
+      const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
       
-      if (!chromaHost) {
-        // ホスト名でDocker環境内かどうかを判定
-        const hostname = process.env.HOSTNAME || '';
-        const isInDocker = hostname.length === 12 && /^[a-f0-9]{12}$/.test(hostname);
-        
-        if (isInDocker) {
-          // Docker環境内ではchromaコンテナ名を使用
-          chromaHost = 'chroma';
-        } else {
-          // ローカル環境ではlocalhostを使用
-          chromaHost = 'localhost';
-        }
+      if (isInDocker) {
+        // Docker環境内ではhost.docker.internalを使用
+        chromaHost = 'host.docker.internal';
+      } else {
+        // ローカル環境ではlocalhostを使用
+        chromaHost = 'localhost';
       }
-      
-      const chromaPort = process.env.CHROMA_PORT || '8000';
-      
-      this.client = new ChromaClient({
-        host: chromaHost,
-        port: parseInt(chromaPort),
-        ssl: false
-      });
-    } else {
-      // ローカルファイルシステムモード（新しい動作）
-      this.client = new ChromaClient({
-        path: chromaPath
-      });
     }
+    
+    const chromaPort = process.env.CHROMA_PORT || '8000';
+    
+    // サーバーモードで接続（pathパラメータは使用しない）
+    this.client = new ChromaClient({
+      host: chromaHost,
+      port: parseInt(chromaPort),
+      ssl: false
+    });
     
     this.collectionName = collectionName;
     
@@ -90,11 +77,55 @@ export class ChromaMemoryClient {
     for (let i = 0; i < maxRetries; i++) {
       try {
         // 既存のコレクションを取得または新規作成
+        // OpenAI互換APIを使用した埋め込み関数
+        const embeddingFunction = {
+          generate: async (texts: string[]): Promise<number[][]> => {
+            try {
+              // OpenAI互換APIのエンドポイントから埋め込みを生成
+              const baseUrl = process.env.LOCAL_LLM_BASE_URL || 'http://host.docker.internal:1234';
+              const apiKey = process.env.LOCAL_LLM_API_KEY || 'lm-studio';
+              
+              const response = await fetch(`${baseUrl}/v1/embeddings`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                  input: texts,
+                  model: 'nomic-embed-text-v1.5' // 軽量な埋め込みモデル
+                })
+              });
+              
+              if (response.ok) {
+                const data: any = await response.json();
+                return data.data.map((item: any) => item.embedding);
+              }
+            } catch (error) {
+              console.warn('Failed to generate embeddings via API, using fallback:', error);
+            }
+            
+            // フォールバック: シンプルなハッシュベースの埋め込み
+            // 完璧ではないが、ランダムよりはマシ
+            return texts.map(text => {
+              const embedding = new Array(384).fill(0);
+              for (let i = 0; i < text.length; i++) {
+                const charCode = text.charCodeAt(i);
+                embedding[i % 384] = (embedding[i % 384] + charCode / 255) / 2;
+              }
+              // 正規化
+              const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+              return embedding.map(val => val / (norm || 1));
+            });
+          }
+        };
+        
         this.collection = await this.client.getOrCreateCollection({
           name: this.collectionName,
           metadata: { 
             description: 'Agent memory storage with synaptic connections' 
-          }
+          },
+          embeddingFunction
         });
         console.log(`ChromaDB collection '${this.collectionName}' initialized`);
         return; // 成功したら終了
