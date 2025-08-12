@@ -25,7 +25,6 @@ import { DEFAULT_DIFF_OPTIONS } from './diffOptions.js';
 import { ReadFileTool } from './read-file.js';
 import { ModifiableTool, ModifyContext } from './modifiable-tool.js';
 import { isWithinRoot } from '../utils/fileUtils.js';
-import { getIntelligentFileService } from '../services/intelligent-file-service.js';
 
 /**
  * Parameters for the Edit tool
@@ -379,79 +378,7 @@ Expectation for required parameters:
     try {
       this.ensureParentDirectoriesExist(params.file_path);
       
-      // IntelligentFileSystemを優先的に使用
-      const intelligentService = getIntelligentFileService();
-      const isTextFile = this.isTextFile(params.file_path);
-      
-      if (isTextFile) {
-        try {
-          const writeOptions = {
-            updateIndex: true,
-            trackHistory: true,
-            validateSemantics: !editData.isNewFile,
-            updateReferences: !editData.isNewFile && (!params.expected_replacements || params.expected_replacements === 1),
-            encoding: 'utf8' as const
-          };
-          
-          const intelligentResult = await intelligentService.writeFileIntelligent(
-            params.file_path,
-            editData.newContent,
-            writeOptions
-          );
-          
-          if (intelligentResult.success) {
-            // IntelligentFileSystemでの書き込み成功
-            let displayResult: ToolResultDisplay;
-            if (editData.isNewFile) {
-              displayResult = `Created ${shortenPath(makeRelative(params.file_path, this.config.getTargetDir()))} with IntelligentFileSystem`;
-            } else {
-              const fileName = path.basename(params.file_path);
-              const fileDiff = Diff.createPatch(
-                fileName,
-                editData.currentContent ?? '',
-                editData.newContent,
-                'Current',
-                'Proposed',
-                DEFAULT_DIFF_OPTIONS,
-              );
-              displayResult = { fileDiff, fileName };
-            }
-
-            // IntelligentFileSystemからの情報を含むメッセージを構築
-            let intelligentInfo = '';
-            if (intelligentResult.data?.symbolsUpdated) {
-              intelligentInfo = ` (Updated ${intelligentResult.data.symbolsUpdated} symbols`;
-              if (intelligentResult.data.referencesUpdated) {
-                intelligentInfo += `, ${intelligentResult.data.referencesUpdated} references`;
-              }
-              intelligentInfo += ')';
-            }
-
-            const llmSuccessMessageParts = [
-              editData.isNewFile
-                ? `Created new file: ${params.file_path} with IntelligentFileSystem tracking.`
-                : `Successfully modified file: ${params.file_path} (${editData.occurrences} replacements)${intelligentInfo}.`,
-            ];
-            if (params.modified_by_user) {
-              llmSuccessMessageParts.push(
-                `User modified the \`new_string\` content to be: ${params.new_string}.`,
-              );
-            }
-
-            return {
-              llmContent: llmSuccessMessageParts.join(' '),
-              returnDisplay: displayResult,
-            };
-          } else {
-            // IntelligentFileSystemでの書き込み失敗、フォールバック
-            console.debug('IntelligentFileSystem write failed, falling back to standard writing:', intelligentResult.error);
-          }
-        } catch (error) {
-          console.debug('IntelligentFileSystem failed, falling back to standard writing:', error);
-        }
-      }
-      
-      // 通常の書き込み（フォールバック）
+      // 通常の書き込み
       fs.writeFileSync(params.file_path, editData.newContent, 'utf8');
 
       let displayResult: ToolResultDisplay;
@@ -544,12 +471,4 @@ Expectation for required parameters:
     };
   }
 
-  /**
-   * ファイルがテキストファイルかどうかを判定
-   */
-  private isTextFile(filePath: string): boolean {
-    const ext = path.extname(filePath).toLowerCase();
-    const textExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.cpp', '.c', '.h', '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.cs', '.scala', '.clj', '.ml', '.hs', '.sql', '.html', '.css', '.scss', '.less', '.md', '.txt', '.json', '.yaml', '.yml', '.xml', '.toml', '.ini', '.conf'];
-    return textExtensions.includes(ext);
-  }
 }

@@ -19,7 +19,6 @@ import {
   recordFileOperationMetric,
   FileOperation,
 } from '../telemetry/metrics.js';
-import { getIntelligentFileService } from '../services/intelligent-file-service.js';
 
 /**
  * Parameters for the ReadFile tool
@@ -131,69 +130,7 @@ export class ReadFileTool extends BaseTool<ReadFileToolParams, ToolResult> {
       };
     }
 
-    // IntelligentFileSystemを優先的に使用
-    const intelligentService = getIntelligentFileService();
-    
-    // テキストファイルかつoffset/limitが指定されていない場合はIntelligentFileSystemを使用
-    const isTextFile = this.isTextFile(params.absolute_path);
-    const useIntelligentFS = isTextFile && !params.offset && !params.limit;
-    
-    if (useIntelligentFS) {
-      try {
-        const intelligentResult = await intelligentService.readFileIntelligent(params.absolute_path);
-        
-        if (intelligentResult.success && intelligentResult.data) {
-          const lines = intelligentResult.data.content.split('\n').length;
-          const mimetype = getSpecificMimeType(params.absolute_path);
-          recordFileOperationMetric(
-            this.config,
-            FileOperation.READ,
-            lines,
-            mimetype,
-            path.extname(params.absolute_path),
-          );
-          
-          // IntelligentFileSystemから取得した豊富な情報を含むコンテンツを構築
-          let enhancedContent = intelligentResult.data.content;
-          
-          if (intelligentResult.data.symbols && intelligentResult.data.symbols.length > 0) {
-            enhancedContent += '\n\n// ========== IntelligentFileSystem Analysis ==========\n';
-            enhancedContent += `// Found ${intelligentResult.data.symbols.length} code symbols:\n`;
-            
-            for (const symbol of intelligentResult.data.symbols.slice(0, 10)) { // 最初の10個のシンボルを表示
-              enhancedContent += `//   - ${symbol.name} (${symbol.kind}) at line ${symbol.location.line}\n`;
-            }
-            
-            if (intelligentResult.data.symbols.length > 10) {
-              enhancedContent += `//   ... and ${intelligentResult.data.symbols.length - 10} more symbols\n`;
-            }
-          }
-          
-          if (intelligentResult.data.dependencies && intelligentResult.data.dependencies.length > 0) {
-            enhancedContent += `// Dependencies: ${intelligentResult.data.dependencies.join(', ')}\n`;
-          }
-          
-          if (intelligentResult.data.metrics) {
-            enhancedContent += `// Code Metrics:\n`;
-            enhancedContent += `//   - Complexity: ${intelligentResult.data.metrics.complexity}\n`;
-            enhancedContent += `//   - Maintainability: ${intelligentResult.data.metrics.maintainability}\n`;
-            enhancedContent += `//   - Lines of Code: ${intelligentResult.data.metrics.lines}\n`;
-          }
-          
-          enhancedContent += '// ====================================================\n';
-          
-          return {
-            llmContent: enhancedContent,
-            returnDisplay: `Read ${makeRelative(params.absolute_path, this.config.getTargetDir())} with IntelligentFileSystem analysis`,
-          };
-        }
-      } catch (error) {
-        // IntelligentFileSystemでエラーが発生した場合は通常の処理にフォールバック
-        console.debug('IntelligentFileSystem failed, falling back to standard processing:', error);
-      }
-    }
-
-    // 通常の処理（フォールバック）
+    // 標準の処理
     const result = await processSingleFileContent(
       params.absolute_path,
       this.config.getTargetDir(),
@@ -228,12 +165,4 @@ export class ReadFileTool extends BaseTool<ReadFileToolParams, ToolResult> {
     };
   }
 
-  /**
-   * ファイルがテキストファイルかどうかを判定
-   */
-  private isTextFile(filePath: string): boolean {
-    const ext = path.extname(filePath).toLowerCase();
-    const textExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.cpp', '.c', '.h', '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.cs', '.scala', '.clj', '.ml', '.hs', '.sql', '.html', '.css', '.scss', '.less', '.md', '.txt', '.json', '.yaml', '.yml', '.xml', '.toml', '.ini', '.conf'];
-    return textExtensions.includes(ext);
-  }
 }

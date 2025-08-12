@@ -61,11 +61,19 @@ export class IntelligentFileService {
     }
 
     try {
-      // 将来の統合のためのプレースホルダー
-      // 現在はIntelligentFileSystemの統合が完了していないため、
-      // このサービスは利用可能な状態を返さない
+      // 絶対パスでgetOrCreateInstancesをインポート
+      const registryModulePath = '/agents/src/functions/intelligent-registry-integration.js';
+      const registryModule = await import(registryModulePath);
+      
+      if (registryModule?.getOrCreateInstances) {
+        const { intelligentFS } = await registryModule.getOrCreateInstances();
+        this.intelligentFS = intelligentFS;
+        this.initialized = true;
+        console.log('IntelligentFileService initialized successfully via registry');
+        return true;
+      }
 
-      throw new Error('IntelligentFileSystem is not available');
+      throw new Error('IntelligentFileSystem getOrCreateInstances not available');
     } catch (error) {
       console.debug('Failed to initialize IntelligentFileService:', error);
       this.initialized = false;
@@ -84,14 +92,19 @@ export class IntelligentFileService {
    * ファイルをインテリジェントに読み取り
    */
   public async readFileIntelligent(filePath: string): Promise<IntelligentReadResult> {
+    console.log(`[IntelligentFileService] readFileIntelligent called for: ${filePath}`);
+    
     if (!this.isAvailable()) {
+      console.log(`[IntelligentFileService] Not available, attempting initialization`);
       const initSuccess = await this.initialize();
       if (!initSuccess) {
+        console.log(`[IntelligentFileService] Initialization failed`);
         return {
           success: false,
           error: 'IntelligentFileSystem is required but not available'
         };
       }
+      console.log(`[IntelligentFileService] Initialization successful`);
     }
 
     try {

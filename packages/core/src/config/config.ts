@@ -25,7 +25,7 @@ import { WebFetchTool } from '../tools/web-fetch.js';
 import { ReadManyFilesTool } from '../tools/read-many-files.js';
 import {
   setGeminiMdFilename,
-  GEMINI_CONFIG_DIR as GEMINI_DIR,
+  AGENTS_CONFIG_DIR as GEMINI_DIR,
 } from '../tools/memoryTool.js';
 import {
   SaveMemoryTool,
@@ -35,6 +35,7 @@ import {
 } from '../tools/memory-tool.js';
 import { WebSearchTool } from '../tools/web-search.js';
 import { TodoWriteTool } from '../tools/todo-write-tool.js';
+import { IntelligentAnalysisTool } from '../tools/intelligent-analysis.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -50,8 +51,8 @@ import {
   StartSessionEvent,
 } from '../telemetry/index.js';
 import {
-  DEFAULT_GEMINI_EMBEDDING_MODEL,
-  DEFAULT_GEMINI_FLASH_MODEL,
+  DEFAULT_AGENTS_EMBEDDING_MODEL,
+  DEFAULT_AGENTS_FLASH_MODEL,
 } from './models.js';
 import { ClearcutLogger } from '../telemetry/clearcut-logger/clearcut-logger.js';
 
@@ -213,7 +214,7 @@ export class Config {
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
     this.embeddingModel =
-      params.embeddingModel ?? DEFAULT_GEMINI_EMBEDDING_MODEL;
+      params.embeddingModel ?? DEFAULT_AGENTS_EMBEDDING_MODEL;
     this.sandbox = params.sandbox;
     this.targetDir = path.resolve(params.targetDir);
     this.debugMode = params.debugMode;
@@ -654,10 +655,12 @@ export class Config {
     registerCoreTool(WebSearchTool, this);
     // TODOツールを登録（重要な機能）
     registerCoreTool(TodoWriteTool);
+    // IntelligentAnalysisツールを登録（深層分析用）
+    registerCoreTool(IntelligentAnalysisTool, this);
 
     await registry.discoverTools();
     return registry;
   }
 }
 // Export model constants for use in CLI
-export { DEFAULT_GEMINI_FLASH_MODEL };
+export { DEFAULT_AGENTS_FLASH_MODEL };

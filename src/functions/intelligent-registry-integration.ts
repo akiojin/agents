@@ -7,7 +7,7 @@ import { InternalFunctionRegistry, InternalFunction } from './registry.js';
 import { 
   initializeIntelligentFS, 
   registerIntelligentFunctions 
-} from '../../packages/core/src/intelligent-fs/tool-integration.js';
+} from '../../packages/core/dist/src/intelligent-fs/tool-integration.js';
 import { 
   AIOptimizationEngine, 
   createAIOptimizationEngine,
@@ -16,9 +16,9 @@ import {
   BugPrediction,
   ArchitectureAnalysis,
   OptimizationSuggestion
-} from '../../packages/core/src/intelligent-fs/ai-optimization.js';
-import { IntelligentFileSystem } from '../../packages/core/src/intelligent-fs/intelligent-filesystem.js';
-import { MemoryIntegrationManager } from '../../packages/core/src/intelligent-fs/memory-integration.js';
+} from '../../packages/core/dist/src/intelligent-fs/ai-optimization.js';
+import { IntelligentFileSystem } from '../../packages/core/dist/src/intelligent-fs/intelligent-filesystem.js';
+import { MemoryIntegrationManager } from '../../packages/core/dist/src/intelligent-fs/memory-integration.js';
 import { logger } from '../utils/logger.js';
 import * as path from 'path';
 
@@ -434,7 +434,7 @@ async function enhanceExistingTools(registry: InternalFunctionRegistry): Promise
 /**
  * インスタンスを取得または作成
  */
-async function getOrCreateInstances(): Promise<{
+export async function getOrCreateInstances(): Promise<{
   intelligentFS: IntelligentFileSystem;
   memoryManager: MemoryIntegrationManager;
 }> {
