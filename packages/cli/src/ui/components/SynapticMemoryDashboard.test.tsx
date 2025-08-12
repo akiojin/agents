@@ -73,7 +73,7 @@ describe('SynapticMemoryDashboard', () => {
         activateMemory: vi.fn(),
         refreshData: vi.fn(),
         config: {
-          chromaUrl: 'http://localhost:8000',
+          sqlitePath: '.agents/cache/memory.db',
           enableEventProcessing: true,
           maxEventQueueSize: 1000,
           eventProcessingInterval: 100
@@ -154,7 +154,7 @@ describe('SynapticMemoryDashboard', () => {
     fireEvent.click(screen.getByText('Config'));
     
     await waitFor(() => {
-      expect(screen.getByText('chromaUrl: http://localhost:8000')).toBeInTheDocument();
+      expect(screen.getByText('sqlitePath: .agents/cache/memory.db')).toBeInTheDocument();
       expect(screen.getByText('enableEventProcessing: true')).toBeInTheDocument();
       expect(screen.getByText('maxEventQueueSize: 1000')).toBeInTheDocument();
       expect(screen.getByText('eventProcessingInterval: 100')).toBeInTheDocument();
@@ -266,7 +266,7 @@ describe('SynapticMemoryDashboard', () => {
     // Configタブに切り替え
     fireEvent.click(screen.getByText('Config'));
     await waitFor(() => {
-      expect(screen.getByText(/chromaUrl:/)).toBeInTheDocument();
+      expect(screen.getByText(/sqlitePath:/)).toBeInTheDocument();
     });
     
     // Memoriesタブに戻る

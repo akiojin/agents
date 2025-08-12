@@ -120,7 +120,7 @@ Agents can be configured with:
   "tools": ["fileSystem", "command"],
   "memory": {
     "enabled": true,
-    "type": "chroma"
+    "type": "sqlite"
   }
 }
 ```
