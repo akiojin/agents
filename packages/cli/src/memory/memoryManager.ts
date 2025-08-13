@@ -62,7 +62,7 @@ export class MemoryManager {
     const collectionName = `memories_${this.projectId}`;
     
     // SQLiteデータベースパスを設定
-    const defaultSqlitePath = path.join(this.config.projectRoot, '.agents', `memories_${this.projectId}.db`);
+    const defaultSqlitePath = path.join(this.config.projectRoot, '.agents', 'cache', `memories_${this.projectId}.db`);
     
     this.memorySystem = new IntegratedMemorySystem({
       collectionName,
