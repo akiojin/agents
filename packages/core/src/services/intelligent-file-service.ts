@@ -99,7 +99,7 @@ export class IntelligentFileService {
       await this.intelligentFS.initialize();
       
       this.initialized = true;
-      console.log('[IntelligentFileService] IntelligentFileSystem initialized successfully');
+      // console.log('[IntelligentFileService] IntelligentFileSystem initialized successfully');
       return true;
     } catch (error) {
       console.error('[IntelligentFileService] Detailed error during initialization:');

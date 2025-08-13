@@ -7,11 +7,35 @@ import { IntelligentFileSystem, IntelligentReadResult, SemanticEditOptions, Secu
 
 // ロガー（簡易実装）
 const logger = {
-  debug: (message: string, data?: any) => console.debug(message, data),
-  info: (message: string, data?: any) => console.info(message, data),
-  warn: (message: string, data?: any) => console.warn(message, data),
-  error: (message: string, data?: any) => console.error(message, data)
-};
+  debug: (message: string, data?: any) => {
+    if (data !== undefined) {
+      console.debug(message, data);
+    } else {
+      console.debug(message);
+    }
+  },
+  info: (message: string, data?: any) => {
+    if (data !== undefined) {
+      console.info(message, data);
+    } else {
+      console.info(message);
+    }
+  },
+  warn: (message: string, data?: any) => {
+    if (data !== undefined) {
+      console.warn(message, data);
+    } else {
+      console.warn(message);
+    }
+  },
+  error: (message: string, data?: any) => {
+    if (data !== undefined) {
+      console.error(message, data);
+    } else {
+      console.error(message);
+    }
+  }
+};;
 
 /**
  * 内部関数インターフェース（registryとの循環参照を回避）
@@ -46,7 +70,7 @@ export async function initializeIntelligentFS(securityConfig: SecurityConfig): P
     intelligentFS = new IntelligentFileSystem(securityConfig);
     await intelligentFS.initialize();
     isInitialized = true;
-    logger.info('IntelligentFileSystem initialized for tool integration');
+    logger.debug('IntelligentFileSystem initialized for tool integration');
   }
 }
 

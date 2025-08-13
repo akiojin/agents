@@ -72,6 +72,7 @@ export const useSlashCommandProcessor = (
   toggleCorgiMode: () => void,
   setQuittingMessages: (message: HistoryItem[]) => void,
   openPrivacyNotice: () => void,
+  startPlanning: () => void,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<SlashCommand[]>([]);
@@ -207,6 +208,18 @@ export const useSlashCommandProcessor = (
         name: 'corgi',
         action: (_mainCommand, _subCommand, _args) => {
           toggleCorgiMode();
+        },
+      },
+      {
+        name: 'plan',
+        description: 'プランモードを開始し、要件定義から承認フローまでのプロセスを開始します',
+        action: (_mainCommand, _subCommand, _args) => {
+          startPlanning();
+          return {
+            type: 'message',
+            messageType: 'info',
+            content: 'プランモードを開始しました。要件を教えてください。',
+          };
         },
       },
     ];

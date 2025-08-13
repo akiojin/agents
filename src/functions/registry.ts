@@ -560,7 +560,7 @@ export class InternalFunctionRegistry {
     try {
       const { integrateIntelligentFunctions } = await import('./intelligent-registry-integration.js');
       await integrateIntelligentFunctions(this);
-      logger.info('IntelligentFileSystem integration initialized successfully');
+      logger.debug('IntelligentFileSystem integration initialized successfully');
     } catch (error) {
       logger.error('Failed to load IntelligentFileSystem integration:', error);
       // IntelligentFileSystemは必須コンポーネントなので、失敗時は起動を中止

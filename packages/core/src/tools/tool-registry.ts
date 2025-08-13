@@ -330,7 +330,11 @@ export class ToolRegistry {
    * Get the definition of a specific tool.
    */
   getTool(name: string): Tool | undefined {
-    return this.tools.get(name);
+    const tool = this.tools.get(name);
+    if (!tool && this.config.getDebugMode()) {
+      console.log(`[Debug] Tool '${name}' not found in registry. Available tools:`, Array.from(this.tools.keys()).sort());
+    }
+    return tool;
   }
 }
 

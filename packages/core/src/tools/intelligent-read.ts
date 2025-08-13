@@ -89,7 +89,7 @@ export class IntelligentReadTool extends BaseTool<IntelligentReadParams, ToolRes
       
       await this.intelligentFS.initialize();
       this.initialized = true;
-      console.log('🧠 IntelligentFileSystem initialized');
+      // console.log('🧠 IntelligentFileSystem initialized');
     } catch (error) {
       console.warn('Failed to initialize IntelligentFileSystem:', error);
     }

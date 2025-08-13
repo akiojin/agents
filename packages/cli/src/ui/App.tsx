@@ -83,6 +83,11 @@ import { OverflowProvider } from './contexts/OverflowContext.js';
 import { ShowMoreLines } from './components/ShowMoreLines.js';
 import { PrivacyNotice } from './privacy/PrivacyNotice.js';
 import { useMemoryIntegration } from './hooks/useMemoryIntegration.js';
+import { PlanModeIntegration, usePlanModeIntegration } from './components/PlanModeIntegration.js';
+import { PlanApprovalSelect } from './components/PlanApprovalSelect.js';
+import { usePlanApproval } from './hooks/usePlanApproval.js';
+import { useAgentState } from './hooks/useAgentState.js';
+import { AgentMode, Phase, StepState } from './types/agent-state.js';
 
 const CTRL_EXIT_PROMPT_DURATION_MS = 1000;
 
@@ -390,6 +395,9 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     config.setFlashFallbackHandler(flashFallbackHandler);
   }, [config, addItem, userTier]);
 
+  // エージェント状態管理フック（useSlashCommandProcessorより前に配置）
+  const { agentState, updateRequirements, updateDesign, startPlanning } = useAgentState();
+
   const {
     handleSlashCommand,
     slashCommands,
@@ -411,6 +419,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     toggleCorgiMode,
     setQuittingMessages,
     openPrivacyNotice,
+    startPlanning,
   );
   const pendingHistoryItems = [...pendingSlashCommandHistoryItems];
 
@@ -563,6 +572,61 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     openAuthDialog();
   }, [openAuthDialog, setAuthError]);
 
+  // プラン承認フック
+  const {
+    showApprovalUI,
+    pendingPlanData,
+    detectPlanCompletion,
+    handleApprovalAction,
+  } = usePlanApproval({
+    onPlanApproved: (result) => {
+      console.log('Plan approved:', result);
+      addItem({
+        type: MessageType.INFO,
+        text: '✅ プランが承認されました。実装を開始します。'
+      }, Date.now());
+    },
+    onPlanRejected: (result) => {
+      console.log('Plan rejected:', result);
+      addItem({
+        type: MessageType.INFO,
+        text: '❌ プランが拒否されました。新しい要件をお聞かせください。'
+      }, Date.now());
+    },
+    onPlanEditRequested: (result) => {
+      console.log('Plan edit requested:', result);
+      addItem({
+        type: MessageType.INFO,
+        text: '✏️ プランの編集が要求されました。修正内容を入力してください。'
+      }, Date.now());
+    }
+  });
+
+  // コンテンツコールバック（useGeminiStream からのコンテンツを受け取る）
+  const handleContentReceived = useCallback((content: string) => {
+    if (config.getDebugMode()) {
+      console.log('[Plan Detection] Content received:', content.substring(0, 100) + '...');
+    }
+    detectPlanCompletion(content);
+    
+    // AIからの設計提案をコンテキストに保存
+    if (agentState.mode === AgentMode.PLANNING && 
+        agentState.phase === Phase.DESIGN && 
+        agentState.step === StepState.THINKING) {
+      if (content.includes('アーキテクチャ') || content.includes('設計') || 
+          content.includes('プラン') || content.includes('実装方針')) {
+        updateDesign({
+          architecture: content,
+          technologies: [],
+          plan: content
+        });
+        if (config.getDebugMode()) {
+          console.log('[Plan Mode] Design context updated');
+        }
+      }
+    }
+  }, [detectPlanCompletion, config, agentState, updateDesign]);
+
   const {
     streamingState,
     submitQuery,
@@ -583,6 +647,8 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     performMemoryRefresh,
     modelSwitchedFromQuotaError,
     setModelSwitchedFromQuotaError,
+    handleContentReceived, // コンテンツコールバックを追加
+    agentState.mode === AgentMode.PLANNING ? 'planning' : 'idle', // プランモード判定用
   );
   pendingHistoryItems.push(...pendingGeminiHistoryItems);
   const { elapsedTime, currentLoadingPhrase } =
@@ -707,6 +773,72 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
 
   const initialPrompt = useMemo(() => config.getQuestion(), [config]);
   const geminiClient = config.getGeminiClient();
+
+  // プランモード状態変化監視とガイド表示
+  useEffect(() => {
+    if (config.getDebugMode()) {
+      console.log(`[Plan Mode State] Mode: ${agentState.mode}, Phase: ${agentState.phase}, Step: ${agentState.step}`);
+      console.log('[Plan Mode State] Show Approval UI:', showApprovalUI);
+      console.log('[Plan Mode State] Pending Plan Data:', !!pendingPlanData);
+    }
+    
+    // プランモード開始時の要件定義ガイド
+    if (agentState.mode === AgentMode.PLANNING && 
+        agentState.phase === Phase.REQUIREMENTS && 
+        agentState.step === StepState.LISTENING) {
+      addItem({
+        type: MessageType.INFO,
+        text: '🎯 プランモードが開始されました。実現したい機能や要件を詳しく教えてください。'
+      }, Date.now());
+      
+      if (config.getDebugMode()) {
+        console.log('[Plan Mode] Requirements phase started');
+      }
+    }
+    
+    // 設計フェーズ開始時のガイド
+    else if (agentState.mode === AgentMode.PLANNING && 
+             agentState.phase === Phase.DESIGN && 
+             agentState.step === StepState.THINKING) {
+      addItem({
+        type: MessageType.INFO,
+        text: '🏗️ 要件を分析して設計を検討しています...'
+      }, Date.now());
+      
+      if (config.getDebugMode()) {
+        console.log('[Plan Mode] Design phase started - AI is thinking');
+      }
+    }
+    
+    // 設計完了時のガイド（承認UI表示準備）
+    else if (agentState.mode === AgentMode.PLANNING && 
+             agentState.phase === Phase.DESIGN && 
+             agentState.step === StepState.PRESENTING) {
+      if (config.getDebugMode()) {
+        console.log('[Plan Mode] Design phase presenting - waiting for approval UI');
+      }
+      
+      if (!showApprovalUI) {
+        addItem({
+          type: MessageType.INFO,
+          text: '📋 設計が完了しました。承認UIを準備中...'
+        }, Date.now());
+      }
+    }
+    
+    // 実行モード開始時のガイド
+    else if (agentState.mode === AgentMode.EXECUTION && 
+             agentState.phase === Phase.IMPLEMENTATION) {
+      addItem({
+        type: MessageType.INFO,
+        text: '⚡ プランが承認されました。実装を開始します...'
+      }, Date.now());
+      
+      if (config.getDebugMode()) {
+        console.log('[Plan Mode] Execution phase started');
+      }
+    }
+  }, [agentState.mode, agentState.phase, agentState.step, addItem, config, showApprovalUI, pendingPlanData]);
 
   useEffect(() => {
     if (
@@ -964,7 +1096,15 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
                 </OverflowProvider>
               )}
 
-              {/* プランモード表示を入力プロンプトの直前に配置 */}
+              {/* 承認UI表示 */}
+              {showApprovalUI && pendingPlanData && (
+                <Box marginBottom={1}>
+                  <PlanApprovalSelect
+                    planData={pendingPlanData}
+                    onSelect={handleApprovalAction}
+                  />
+                </Box>
+              )}
               <LoadingIndicator
                 thought={
                   streamingState === StreamingState.WaitingForConfirmation ||

@@ -143,7 +143,9 @@ export class WriteFileTool
     params: WriteFileToolParams,
     abortSignal: AbortSignal,
   ): Promise<ToolCallConfirmationDetails | false> {
+    console.log('[DEBUG] WriteFile approval mode:', this.config.getApprovalMode());
     if (this.config.getApprovalMode() === ApprovalMode.AUTO_EDIT) {
+      console.log('[DEBUG] WriteFile AUTO_EDIT mode - skipping confirmation');
       return false;
     }
 

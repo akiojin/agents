@@ -95,6 +95,8 @@ export const useGeminiStream = (
   performMemoryRefresh: () => Promise<void>,
   modelSwitchedFromQuotaError: boolean,
   setModelSwitchedFromQuotaError: React.Dispatch<React.SetStateAction<boolean>>,
+  onContentReceived?: (content: string) => void, // コンテンツコールバックを追加
+  agentMode?: string, // プランモード判定用
 ) => {
   const [initError, setInitError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -145,6 +147,9 @@ export const useGeminiStream = (
   );
 
   const loopDetectedRef = useRef(false);
+  const planModeLoopCountRef = useRef(0);
+  const MAX_PLAN_LOOPS = 3;
+  const submitQueryRef = useRef<any>(null);
 
   const onExec = useCallback(async (done: Promise<void>) => {
     setIsResponding(true);
@@ -298,6 +303,32 @@ export const useGeminiStream = (
         );
         return { queryToSend: null, shouldProceed: false };
       }
+
+      // プランモード時の指示注入
+      if (typeof localQueryToSendToGemini === 'string' && agentMode === 'planning') {
+        const planModePrefix = `[プランモード実行中]
+現在プランモードです。以下の手順で必ず完了まで進めてください：
+
+1. 要件分析：ユーザーの要求を深く分析
+2. 設計検討：複数の選択肢を検討し最適解を選択  
+3. 実装計画：具体的な実装手順を詳細に記述
+4. リスク評価：潜在的な問題と対策を明記
+5. 時間見積：実装にかかる時間を推定
+
+【必須】設計が完了したら、必ず「plan_complete」ツールを呼び出してください。
+このツールには設計要約、次のステップ、推定時間、リスクなどを含めてください。
+不明点は「?」で質問してください。
+
+ユーザーの要求：
+`;
+        localQueryToSendToGemini = planModePrefix + localQueryToSendToGemini;
+        
+        console.log('[Plan Mode] Plan mode instructions injected for query:', localQueryToSendToGemini.substring(0, 100));
+        if (config.getDebugMode()) {
+          onDebugMessage('[Plan Mode] Plan mode instructions injected');
+        }
+      }
+
       return { queryToSend: localQueryToSendToGemini, shouldProceed: true };
     },
     [
@@ -326,7 +357,12 @@ export const useGeminiStream = (
       }
       let newGeminiMessageBuffer = currentGeminiMessageBuffer + eventValue;
       
-      // プランモードの検出
+      // コンテンツコールバックでプラン検出を実行
+      if (onContentReceived) {
+        onContentReceived(eventValue);
+      }
+      
+      // プランモードの検出（既存ロジックも保持）
       if (eventValue.includes('## Plan:') || eventValue.includes('**Plan:**') || eventValue.includes('Planning:')) {
         setIsPlanningMode(true);
       } else if (eventValue.includes('## Implementation:') || eventValue.includes('**Implementation:**')) {
@@ -376,7 +412,7 @@ export const useGeminiStream = (
       }
       return newGeminiMessageBuffer;
     },
-    [addItem, pendingHistoryItemRef, setPendingHistoryItem],
+    [addItem, pendingHistoryItemRef, setPendingHistoryItem, onContentReceived],
   );
 
   const handleUserCancelledEvent = useCallback(
@@ -517,6 +553,85 @@ export const useGeminiStream = (
     );
   }, [addItem]);
 
+  // プランモード自動継続チェック関数
+  const planCompletedRef = useRef(false); // plan_completeツール実行済みフラグ
+  
+  const checkAndContinuePlanMode = useCallback(async () => {
+    if (agentMode !== 'planning' || isResponding || planCompletedRef.current) return;
+    
+    // Historyから最新のGemini応答を取得
+    const lastGeminiItem = history
+      .slice()
+      .reverse()
+      .find(item => item.type === MessageType.GEMINI);
+    
+    const lastResponse = lastGeminiItem?.text || '';
+    
+    console.log(`[Plan Mode] Check loop: ${planModeLoopCountRef.current}/${MAX_PLAN_LOOPS}, agentMode: ${agentMode}, isResponding: ${isResponding}, planCompleted: ${planCompletedRef.current}`);
+    if (config.getDebugMode()) {
+      console.log('[Plan Mode] Checking response for continuation:', lastResponse.substring(0, 200));
+    }
+    
+    // 1. 設計完了チェック
+    if (lastResponse.includes('## 設計完了')) {
+      if (config.getDebugMode()) {
+        console.log('[Plan Mode] Plan completion detected');
+      }
+      // 承認UIトリガー（onContentReceivedコールバック経由）
+      if (onContentReceived) {
+        onContentReceived(lastResponse);
+      }
+      planModeLoopCountRef.current = 0; // ループカウントリセット
+      return;
+    }
+    
+    // 2. 質問チェック（ユーザー入力待ち）
+    if (lastResponse.match(/\?$/) || lastResponse.includes('確認させてください') || 
+        lastResponse.includes('どちら') || lastResponse.includes('教えてください')) {
+      if (config.getDebugMode()) {
+        console.log('[Plan Mode] Question detected, waiting for user input');
+      }
+      return;
+    }
+    
+    // 3. 最大ループ数チェック
+    if (planModeLoopCountRef.current >= MAX_PLAN_LOOPS) {
+      if (config.getDebugMode()) {
+        console.log('[Plan Mode] Max loops reached, forcing completion');
+      }
+      // 強制的に設計完了として処理
+      const forcedCompletion = lastResponse + '\n\n## 設計完了\n上記のプランで実装を進めてよろしいでしょうか？';
+      if (onContentReceived) {
+        onContentReceived(forcedCompletion);
+      }
+      planModeLoopCountRef.current = 0;
+      return;
+    }
+    
+    // 4. 自動継続
+    planModeLoopCountRef.current++;
+    if (config.getDebugMode()) {
+      console.log(`[Plan Mode] Auto-continuing (loop ${planModeLoopCountRef.current}/${MAX_PLAN_LOOPS})`);
+    }
+    
+    const continuationPrompt = `[プランモード継続指示]
+前の分析を踏まえて、設計を完成させてください。
+まだ完了していない項目：
+- 実装計画の詳細
+- リスク評価  
+- 時間見積もり
+
+【重要】設計が完了したら、必ず「plan_complete」ツールを呼び出してください。
+このツールには設計要約、次のステップ、推定時間、リスクなどを含めてください。`;
+    
+    // 3秒待ってから自動継続
+    setTimeout(() => {
+      if (agentMode === 'planning' && !isResponding && !planCompletedRef.current && submitQueryRef.current) {
+        submitQueryRef.current(continuationPrompt, { isContinuation: true });
+      }
+    }, 3000);
+  }, [agentMode, isResponding, onContentReceived, config, history]);
+
   const processGeminiStreamEvents = useCallback(
     async (
       stream: AsyncIterable<GeminiEvent>,
@@ -539,6 +654,15 @@ export const useGeminiStream = (
             break;
           case ServerGeminiEventType.ToolCallRequest:
             toolCallRequests.push(event.value);
+            
+            // plan_completeツール呼び出しの検出
+            if (event.value.name === 'plan_complete' && agentMode === 'planning') {
+              console.log('[Plan Mode] plan_complete tool called:', event.value.args);
+              if (config.getDebugMode()) {
+                onDebugMessage('[Plan Mode] plan_complete tool detected');
+              }
+              // プランモード完了の通知（ツール実行後に処理される）
+            }
             break;
           case ServerGeminiEventType.UserCancelled:
             handleUserCancelledEvent(userMessageTimestamp);
@@ -689,6 +813,17 @@ export const useGeminiStream = (
           loopDetectedRef.current = false;
           handleLoopDetectedEvent();
         }
+        
+        // プランモード時の自動継続チェック
+        if (agentMode === 'planning') {
+          // 少し遅延してからチェック（UIが更新される時間を与える）
+          setTimeout(() => {
+            if (config.getDebugMode()) {
+              console.log('[Plan Mode] Triggering auto-continuation check');
+            }
+            checkAndContinuePlanMode();
+          }, 1000);
+        }
       } catch (error: unknown) {
         if (error instanceof UnauthorizedError) {
           onAuthError();
@@ -773,6 +908,41 @@ export const useGeminiStream = (
           t.status === 'success' &&
           !processedMemoryToolsRef.current.has(t.request.callId),
       );
+
+      // plan_completeツールの成功を検出してプラン承認UIを表示
+      const successfulPlanCompleteTools = completedAndReadyToSubmitTools.filter(
+        (t) =>
+          t.request.name === 'plan_complete' &&
+          t.status === 'success' &&
+          agentMode === 'planning',
+      );
+
+      if (successfulPlanCompleteTools.length > 0) {
+        console.log('[Plan Mode] plan_complete tool completed successfully');
+        if (config.getDebugMode()) {
+          onDebugMessage('[Plan Mode] plan_complete tool completed, triggering approval UI');
+        }
+        
+        // プランモード完了フラグを設定して継続を停止
+        planCompletedRef.current = true;
+        planModeLoopCountRef.current = 0; // ループカウントリセット
+        
+        // ツールの引数から計画データを取得
+        const planTool = successfulPlanCompleteTools[0];
+        const args = planTool.request.args as any;
+        
+        // プラン完了を通知
+        if (onContentReceived) {
+          onContentReceived(`Plan completed by AI: ${args.summary || 'Design completed'}`);
+        }
+        
+        // plan_completeツール完了後は追加のレスポンス送信をスキップ
+        const planCompleteCallIds = successfulPlanCompleteTools.map(t => t.request.callId);
+        markToolsAsSubmitted(planCompleteCallIds);
+        
+        console.log('[Plan Mode] plan_complete tools marked as submitted, stopping further responses');
+        return; // 早期return でその後のsubmitQuery を防ぐ
+      }
 
       if (newSuccessfulMemorySaves.length > 0) {
         // Perform the refresh only if there are new ones.
@@ -966,6 +1136,17 @@ export const useGeminiStream = (
     };
     saveRestorableToolCalls();
   }, [toolCalls, config, onDebugMessage, gitService, history, geminiClient]);
+
+  // submitQueryをrefに代入（checkAndContinuePlanModeで使用するため）
+  submitQueryRef.current = submitQuery;
+  
+  // プランモードが終了したらフラグをリセット
+  useEffect(() => {
+    if (agentMode !== 'planning') {
+      planCompletedRef.current = false;
+      planModeLoopCountRef.current = 0;
+    }
+  }, [agentMode]);
 
   return {
     streamingState,

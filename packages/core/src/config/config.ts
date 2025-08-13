@@ -36,6 +36,7 @@ import {
 import { WebSearchTool } from '../tools/web-search.js';
 import { TodoWriteTool } from '../tools/todo-write-tool.js';
 import { IntelligentAnalysisTool } from '../tools/intelligent-analysis.js';
+import { PlanCompleteTool } from '../tools/plan-complete-tool.js';
 import { GeminiClient } from '../core/client.js';
 import { FileDiscoveryService } from '../services/fileDiscoveryService.js';
 import { GitService } from '../services/gitService.js';
@@ -340,9 +341,7 @@ export class Config {
   getModel(): string {
     // If contentGeneratorConfig is available, use it
     if (this.contentGeneratorConfig?.model) {
-      if (this.debugMode) {
-        console.debug(`[Config] getModel() returning from contentGeneratorConfig: ${this.contentGeneratorConfig.model}`);
-      }
+      // Verbose logging disabled for getModel() to reduce noise
       return this.contentGeneratorConfig.model;
     }
     
@@ -350,17 +349,13 @@ export class Config {
     if (this.contentGeneratorConfig?.authType === AuthType.OPENAI_COMPATIBLE) {
       const envModel = process.env.OPENAI_MODEL || process.env.LOCAL_LLM_MODEL;
       if (envModel) {
-        if (this.debugMode) {
-          console.debug(`[Config] getModel() returning from env vars: ${envModel}`);
-        }
+        // Verbose logging disabled
         return envModel;
       }
     }
     
     // Final fallback to initial model
-    if (this.debugMode) {
-      console.debug(`[Config] getModel() returning initial model: ${this.model}`);
-    }
+    // Verbose logging disabled
     return this.model;
   }
 
@@ -681,6 +676,13 @@ export class Config {
     registerCoreTool(TodoWriteTool);
     // IntelligentAnalysisツールを登録（深層分析用）
     registerCoreTool(IntelligentAnalysisTool, this);
+    // プランモード完了通知ツール
+    registerCoreTool(PlanCompleteTool);
+    
+    // デバッグ：登録されたツール一覧を確認
+    if (this.getDebugMode()) {
+      console.log('[Debug] Registered tools:', registry.getAllTools().map(t => t.name).sort());
+    }
 
     await registry.discoverTools();
     return registry;

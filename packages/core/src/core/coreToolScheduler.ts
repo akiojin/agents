@@ -445,13 +445,17 @@ export class CoreToolScheduler {
 
       const { request: reqInfo, tool: toolInstance } = toolCall;
       try {
+        console.log('[DEBUG] Approval mode:', this.approvalMode);
+        console.log('[DEBUG] Tool name:', reqInfo.name);
         if (this.approvalMode === ApprovalMode.YOLO) {
+          console.log('[DEBUG] YOLO mode - skipping confirmation');
           this.setStatusInternal(reqInfo.callId, 'scheduled');
         } else {
           const confirmationDetails = await toolInstance.shouldConfirmExecute(
             reqInfo.args,
             signal,
           );
+          console.log('[DEBUG] Confirmation details:', !!confirmationDetails);
 
           if (confirmationDetails) {
             const originalOnConfirm = confirmationDetails.onConfirm;

@@ -206,10 +206,18 @@ export const logTask = (
       logger.info(`Task started: ${taskName}`);
       break;
     case 'success':
-      logger.info(`Task completed: ${taskName}`, message ? { message } : undefined);
+      if (message) {
+        logger.info(`Task completed: ${taskName}`, { message });
+      } else {
+        logger.info(`Task completed: ${taskName}`);
+      }
       break;
     case 'error':
-      logger.error(`Task failed: ${taskName}`, message ? new Error(message) : undefined);
+      if (message) {
+        logger.error(`Task failed: ${taskName}`, new Error(message));
+      } else {
+        logger.error(`Task failed: ${taskName}`);
+      }
       break;
   }
 };

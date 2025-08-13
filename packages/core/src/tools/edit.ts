@@ -267,7 +267,9 @@ Expectation for required parameters:
     params: EditToolParams,
     abortSignal: AbortSignal,
   ): Promise<ToolCallConfirmationDetails | false> {
+    console.log('[DEBUG] EditTool approval mode:', this.config.getApprovalMode());
     if (this.config.getApprovalMode() === ApprovalMode.AUTO_EDIT) {
+      console.log('[DEBUG] EditTool AUTO_EDIT mode - skipping confirmation');
       return false;
     }
     const validationError = this.validateToolParams(params);
