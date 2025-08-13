@@ -69,6 +69,10 @@ export class OpenAIContentGenerator implements ContentGenerator {
         this.openai = new OpenAI({
             apiKey: apiKey,
             baseURL: baseURL,
+            // タイムアウトを600秒（10分）に延長
+            timeout: 600 * 1000, // 600秒 = 10分
+            // デフォルトの最大リトライ回数
+            maxRetries: 3,
         });
     }
 

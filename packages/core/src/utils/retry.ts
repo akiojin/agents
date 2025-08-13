@@ -46,6 +46,12 @@ function defaultShouldRetry(error: Error | unknown): boolean {
   if (error instanceof Error && error.message) {
     if (error.message.includes('429')) return true;
     if (error.message.match(/5\d{2}/)) return true;
+    // terminated エラーをリトライ対象に追加（undici fetch abort時のエラー）
+    if (error.message.includes('terminated')) return true;
+    // timeout系のエラーもリトライ対象に追加
+    if (error.message.includes('timeout')) return true;
+    // socket disconnection系のエラーもリトライ対象に追加
+    if (error.message.includes('socket') && error.message.includes('disconnect')) return true;
   }
   return false;
 }
