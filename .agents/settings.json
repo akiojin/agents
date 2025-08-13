@@ -1,23 +1,27 @@
 {
   "llm": {
     "provider": "local-lmstudio",
+    "authType": "openai-compatible",
     "model": "qwen/qwen3-coder-30b",
     "timeout": 120000,
     "maxRetries": 3,
     "temperature": 0.7,
-    "maxTokens": 2000,
-    "responseFormat": {
-      "enabled": true,
-      "maxLineLength": 80,
-      "useSimpleLists": true,
-      "avoidTables": true,
-      "minimizeEmojis": true
-    }
+    "maxTokens": 2000
   },
-  "mcp": {
-    "enabled": true,
-    "timeout": 120000,
-    "maxRetries": 3
+  "localEndpoint": "http://host.docker.internal:1234",
+  "indexing": {
+    "excludeDirectories": [
+      "bundle",
+      "coverage",
+      "tmp",
+      ".vscode",
+      ".idea"
+    ],
+    "excludePatterns": [
+      "*.min.js",
+      "*.bundle.js",
+      "*-lock.json"
+    ]
   },
   "mcpServers": {
     "microsoft.docs.mcp": {
@@ -44,21 +48,19 @@
       "command": "npx",
       "args": ["textlint", "--mcp"],
       "env": {}
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "$(pwd)"
+      ]
     }
-  },
-  "app": {
-    "maxParallel": 5,
-    "timeout": 300000,
-    "logLevel": "debug"
-  },
-  "paths": {
-    "cache": "./.agents/cache",
-    "logs": "./.agents/logs"
-  },
-  "localEndpoint": "http://host.docker.internal:1234",
-  "modelContextLimits": {
-    "qwen/qwen3-coder-30b": 262144,
-    "openai/gpt-oss-20b": 32768,
-    "comment": "Manual override for models that don't report context_length via API"
   }
 }

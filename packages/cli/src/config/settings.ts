@@ -10,7 +10,7 @@ import { homedir, platform } from 'os';
 import * as dotenv from 'dotenv';
 import {
   MCPServerConfig,
-  GEMINI_DIR as AGENTS_DIR,
+  AGENTS_CONFIG_DIR as AGENTS_DIR,
   getErrorMessage,
   BugCommandSettings,
   TelemetrySettings,

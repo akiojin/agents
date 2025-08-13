@@ -15,7 +15,7 @@ import { URI } from 'vscode-uri';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { readFile as fsReadFile, writeFile as fsWriteFile, lstat } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 
 /**
  * セキュリティ設定
@@ -138,6 +138,8 @@ export class IntelligentFileSystem {
   private currentProjectPath: string;
   private editHistory: EditHistoryEntry[] = [];
   private symbolCache: Map<string, TreeSitterSymbolInfo[]> = new Map();
+  private excludeDirectories: Set<string>;
+  private excludePatterns: RegExp[];
   
   // パフォーマンス統計
   private stats = {
@@ -154,22 +156,106 @@ export class IntelligentFileSystem {
   ) {
     this.fileSystem = new InternalFileSystem(securityConfig);
     this.currentProjectPath = projectPath || process.cwd();
-    logger.debug('IntelligentFileSystem initialized', { projectPath: this.currentProjectPath });
+    
+    // デフォルトの除外ディレクトリ（すべてのプロジェクトで共通）
+    const defaultExcludeDirs = [
+      '.git', 'node_modules', 'dist', 'build', '.next', '.cache',
+      'bundle', 'bundles', // バンドルファイル
+      'bin', 'obj', // .NET
+      'target', // Rust/Java
+      'out', // TypeScript/Kotlin
+      '__pycache__', '.pytest_cache', 'venv', '.venv', 'env', // Python
+      'vendor', // Go/PHP
+      'Pods', // iOS
+      '.gradle', // Android/Gradle
+      'Library', 'Temp', 'Logs', // Unity
+      'coverage', '.nyc_output', // テストカバレッジ
+      'tmp', 'temp', '.tmp' // 一時ファイル
+    ];
+    
+    // settings.jsonから追加の除外設定を読み込む
+    const additionalExcludes = this.loadExcludeSettings();
+    this.excludeDirectories = new Set([...defaultExcludeDirs, ...additionalExcludes.directories]);
+    this.excludePatterns = additionalExcludes.patterns.map(p => new RegExp(p.replace(/\*/g, '.*')));
+    
+    logger.debug('IntelligentFileSystem initialized', { 
+      projectPath: this.currentProjectPath,
+      excludeDirectories: Array.from(this.excludeDirectories),
+      excludePatterns: this.excludePatterns.map(r => r.source)
+    });
+  }
+
+  /**
+   * settings.jsonから除外設定を読み込む
+   */
+  private loadExcludeSettings(): { directories: string[], patterns: string[] } {
+    const result = { directories: [] as string[], patterns: [] as string[] };
+    
+    // settings.jsonから読み込み
+    try {
+      const settingsPath = path.join(this.currentProjectPath, '.agents', 'settings.json');
+      if (existsSync(settingsPath)) {
+        const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+        if (settings.indexing) {
+          result.directories.push(...(settings.indexing.excludeDirectories || []));
+          result.patterns.push(...(settings.indexing.excludePatterns || []));
+        }
+      }
+    } catch (error) {
+      logger.debug('Failed to load exclude settings from settings.json', { error });
+    }
+    
+    // .gitignoreから読み込み
+    try {
+      const gitignorePath = path.join(this.currentProjectPath, '.gitignore');
+      if (existsSync(gitignorePath)) {
+        const gitignoreContent = readFileSync(gitignorePath, 'utf-8');
+        const lines = gitignoreContent.split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#')); // コメントと空行を除外
+        
+        for (const line of lines) {
+          // ディレクトリパターン（末尾に/がある）
+          if (line.endsWith('/')) {
+            result.directories.push(line.slice(0, -1));
+          } 
+          // ファイルパターン
+          else if (line.includes('*') || line.includes('.')) {
+            result.patterns.push(line);
+          }
+          // それ以外はディレクトリとして扱う
+          else {
+            result.directories.push(line);
+          }
+        }
+      }
+    } catch (error) {
+      logger.debug('Failed to load .gitignore', { error });
+    }
+    
+    return result;
   }
 
   /**
    * システムを初期化
    */
   async initialize(): Promise<void> {
-    // Tree-sitterシンボルインデックスを初期化
+    // Tree-sitter シンボルインデックスを初期化
     this.symbolIndex = createTreeSitterSymbolIndex(this.currentProjectPath);
     await this.symbolIndex.initialize();
     
-    // LSPクライアントを初期化
-    this.lspClient = createTypeScriptLSPClient(this.currentProjectPath);
-    await this.lspClient.initialize();
+    // LSPクライアントを初期化（オプショナル）
+    try {
+      this.lspClient = createTypeScriptLSPClient(this.currentProjectPath);
+      await this.lspClient.initialize();
+      logger.info('LSP client initialized successfully');
+    } catch (error) {
+      logger.warn('LSP client initialization failed (non-critical):', error);
+      logger.info('Continuing with Tree-sitter only mode');
+      this.lspClient = undefined;
+    }
     
-    logger.info('IntelligentFileSystem fully initialized');
+    logger.info('IntelligentFileSystem initialized');
   }
 
   /**
@@ -1161,19 +1247,25 @@ export class IntelligentFileSystem {
     const targetPath = projectPath || this.currentProjectPath || process.cwd();
     const files: string[] = [];
     
-    async function walk(dir: string): Promise<void> {
+    const walk = async (dir: string): Promise<void> => {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         
-        // Skip common directories to ignore
+        // Skip directories based on exclude settings
         if (entry.isDirectory()) {
-          if (['.git', 'node_modules', 'dist', 'build', '.next', '.cache'].includes(entry.name)) {
+          if (this.excludeDirectories.has(entry.name)) {
             continue;
           }
           await walk(fullPath);
         } else if (entry.isFile()) {
+          // Check if file matches any exclude pattern
+          const shouldExclude = this.excludePatterns.some(pattern => pattern.test(entry.name));
+          if (shouldExclude) {
+            continue;
+          }
+          
           // Include source files
           if (/\.(ts|tsx|js|jsx|py|java|cpp|c|cs|go|rs|rb|php)$/.test(entry.name)) {
             files.push(fullPath);

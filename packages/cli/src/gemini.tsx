@@ -165,10 +165,7 @@ export async function main() {
     }
   }
 
-  // config初期化を先に実行（ツールレジストリの初期化に必要）
-  await config.initialize();
-
-  // 初期化後に認証処理を実行
+  // 認証タイプを先に設定（MCP接続エラーを抑制）
   if (!process.env.SANDBOX) {
     const defaultAuth = getDefaultAuthMethod(settings.merged);
     const authType = settings.merged.selectedAuthType || defaultAuth as AuthType;
@@ -178,6 +175,24 @@ export async function main() {
         if (err) {
           throw new Error(err);
         }
+        // 認証タイプをconfigに設定（refreshAuthの前にセット）
+        (config as any).selectedAuthType = authType;
+      } catch (err) {
+        console.error('Error authenticating:', err);
+        process.exit(1);
+      }
+    }
+  }
+
+  // config初期化（ツールレジストリの初期化）
+  await config.initialize();
+
+  // 初期化後に認証を完了
+  if (!process.env.SANDBOX) {
+    const defaultAuth = getDefaultAuthMethod(settings.merged);
+    const authType = settings.merged.selectedAuthType || defaultAuth as AuthType;
+    if (authType) {
+      try {
         await config.refreshAuth(authType);
       } catch (err) {
         console.error('Error authenticating:', err);

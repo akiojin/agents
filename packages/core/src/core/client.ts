@@ -129,6 +129,7 @@ export class GeminiClient {
   }
 
   async initialize(contentGeneratorConfig: ContentGeneratorConfig) {
+    // Initialize with contentGeneratorConfig
     this.contentGenerator = await createContentGenerator(
       contentGeneratorConfig,
       this.config,
@@ -151,6 +152,29 @@ export class GeminiClient {
     }
     
     this.chat = await this.startChat();
+    
+    // 初期化時にセッションを保存
+    try {
+      const sessionDir = path.join(this.config.getWorkingDir(), '.agents', 'sessions');
+      const sessionManager = getSessionManager(sessionDir);
+      const history = this.getChat().getHistory();
+      sessionManager.updateHistory(history);
+      
+      // 初期トークン数を計算
+      const { totalTokens } = await this.getContentGenerator().countTokens({
+        model: this.config.getModel(),
+        contents: history,
+      });
+      if (totalTokens !== undefined) {
+        sessionManager.updateTokenCount(totalTokens);
+      }
+      
+      // セッションを保存
+      await sessionManager.saveSession();
+      console.log('Initial session saved successfully');
+    } catch (error) {
+      console.error('Failed to save initial session:', error);
+    }
   }
 
   getContentGenerator(): ContentGenerator {
@@ -449,6 +473,29 @@ export class GeminiClient {
         );
       }
     }
+    
+    // メッセージ送信後にセッションを保存
+    try {
+      const sessionDir = path.join(this.config.getWorkingDir(), '.agents', 'sessions');
+      const sessionManager = getSessionManager(sessionDir);
+      const history = this.getChat().getHistory();
+      sessionManager.updateHistory(history);
+      
+      // トークン数を計算して更新
+      const { totalTokens } = await this.getContentGenerator().countTokens({
+        model: this.config.getModel(),
+        contents: history,
+      });
+      if (totalTokens !== undefined) {
+        sessionManager.updateTokenCount(totalTokens);
+      }
+      
+      // セッションを保存
+      await sessionManager.saveSession();
+    } catch (error) {
+      console.error('Failed to save session after message:', error);
+    }
+    
     return turn;
   }
 
@@ -721,7 +768,8 @@ export class GeminiClient {
     console.log(`📝 ステップ2/4: 履歴を分析中... (圧縮対象: ${historyToCompress.length}件, 保持: ${historyToKeep.length}件)`);
 
     // セッションマネージャーを取得
-    const sessionManager = getSessionManager();
+    const sessionDir = path.join(this.config.getWorkingDir(), '.agents', 'sessions');
+    const sessionManager = getSessionManager(sessionDir);
     
     // 圧縮前の履歴をセッションに保存
     sessionManager.updateHistory(curatedHistory);

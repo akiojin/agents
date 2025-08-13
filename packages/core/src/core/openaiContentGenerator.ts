@@ -40,15 +40,16 @@ export class OpenAIContentGenerator implements ContentGenerator {
     private startTime: number = 0;
 
     constructor(private readonly config: ContentGeneratorConfig, configForTelemetry?: Config) {
+        // OpenAIContentGenerator initialized
         this.configForTelemetry = configForTelemetry;
         
-        // ローカルLLMまたはOpenAI互換APIのベースURL設定
-        let baseURL = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL || 'https://api.openai.com/v1';
+        // ContentGeneratorConfigからbaseURLを優先的に使用
+        // config.baseURLを最優先、次に環境変数
+        let baseURL = config.baseURL || process.env.LOCAL_LLM_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
         
         // LM Studioの場合、/v1が含まれていない場合は追加
         if ((baseURL.includes('localhost:1234') || baseURL.includes('127.0.0.1:1234') || baseURL.includes('host.docker.internal:1234')) && !baseURL.includes('/v1')) {
             baseURL = baseURL.replace(/\/$/, '') + '/v1';
-            // ログ削減: デバッグモードでのみ表示
         }
         const isLocalLLM = baseURL.includes('localhost') || 
                            baseURL.includes('127.0.0.1') || 
@@ -266,7 +267,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
             console.error('[OpenAI Compatible API] Request failed:', error);
             console.error('Request details:', {
                 model: this.config.model || 'gpt-3.5-turbo',
-                baseURL: process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL,
+                baseURL: process.env.LOCAL_LLM_BASE_URL || process.env.OPENAI_BASE_URL,
                 hasApiKey: !!(this.config.apiKey || process.env.OPENAI_API_KEY),
             });
             
@@ -363,7 +364,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
             console.error('[OpenAI Compatible API] Stream request failed:', error);
             console.error('Request details:', {
                 model: this.config.model || 'gpt-3.5-turbo',
-                baseURL: process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL,
+                baseURL: process.env.LOCAL_LLM_BASE_URL || process.env.OPENAI_BASE_URL,
                 hasApiKey: !!(this.config.apiKey || process.env.OPENAI_API_KEY),
             });
             
@@ -394,7 +395,7 @@ export class OpenAIContentGenerator implements ContentGenerator {
             // OpenAI準拠のAPIでは、chunk.usageに直接格納される
             if (chunk.usage) {
                 finalUsage = chunk.usage as any;
-                console.log('[Usage Debug] Received usage info in chunk:', finalUsage);
+                // Received usage info in chunk
             }
 
             // テキストコンテンツを累積

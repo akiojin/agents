@@ -146,12 +146,16 @@ export class TreeSitterSymbolIndex {
   private fileLanguageCache: Map<string, TreeSitterLanguage> = new Map();
   private symbolsCache: Map<string, TreeSitterSymbolInfo[]> = new Map();
   private wasmInitialized = false;
+  private indexCachePath: string;
+  private fileTimestamps: Map<string, number> = new Map();
 
   constructor(
     private dbPath: string,
     private workspaceRoot: string
   ) {
     // WASM初期化は非同期のためinitialize()で実行
+    // キャッシュファイルのパスを設定
+    this.indexCachePath = path.join(workspaceRoot, '.agents', 'cache', 'index-cache.json');
   }
 
   /**
@@ -239,8 +243,14 @@ export class TreeSitterSymbolIndex {
     await this.createTables();
     this.isInitialized = true;
 
-    // プロジェクトインデックス作成
-    await this.indexProject();
+    // キャッシュが存在しない場合のみプロジェクトインデックス作成
+    const cache = await this.loadIndexCache();
+    if (!cache) {
+      console.log('No cache found during initialization. Creating initial index...');
+      await this.indexProject();
+    } else {
+      console.log('Using cached index from previous run.');
+    }
 
     console.log('WebAssembly Tree-sitter Symbol Index initialized successfully');
   }
@@ -288,12 +298,99 @@ export class TreeSitterSymbolIndex {
   }
 
   /**
+   * キャッシュをクリア
+   */
+  async clearCache(): Promise<void> {
+    try {
+      if (fsSync.existsSync(this.indexCachePath)) {
+        await fs.unlink(this.indexCachePath);
+        console.log('Index cache cleared successfully');
+      }
+    } catch (error) {
+      console.error('Failed to clear index cache:', error);
+    }
+  }
+
+  /**
+   * キャッシュからインデックス情報を読み込む
+   */
+  private async loadIndexCache(): Promise<{ timestamps: Record<string, number>, stats?: TreeSitterProjectStats } | null> {
+    try {
+      const cacheDir = path.dirname(this.indexCachePath);
+      if (!fsSync.existsSync(cacheDir)) {
+        await fs.mkdir(cacheDir, { recursive: true });
+      }
+      
+      if (fsSync.existsSync(this.indexCachePath)) {
+        const cacheContent = await fs.readFile(this.indexCachePath, 'utf-8');
+        return JSON.parse(cacheContent);
+      }
+    } catch (error) {
+      console.debug('Failed to load index cache:', error);
+    }
+    return null;
+  }
+
+  /**
+   * インデックス情報をキャッシュに保存
+   */
+  private async saveIndexCache(timestamps: Map<string, number>, stats: TreeSitterProjectStats): Promise<void> {
+    try {
+      const cacheDir = path.dirname(this.indexCachePath);
+      if (!fsSync.existsSync(cacheDir)) {
+        await fs.mkdir(cacheDir, { recursive: true });
+      }
+      
+      const cacheData = {
+        timestamps: Object.fromEntries(timestamps),
+        stats,
+        savedAt: new Date().toISOString()
+      };
+      
+      await fs.writeFile(this.indexCachePath, JSON.stringify(cacheData, null, 2));
+    } catch (error) {
+      console.debug('Failed to save index cache:', error);
+    }
+  }
+
+  /**
+   * ファイルが変更されているかチェック
+   */
+  private async isFileChanged(filePath: string, cachedTimestamp?: number): Promise<boolean> {
+    try {
+      const stats = await fs.stat(filePath);
+      const currentTimestamp = stats.mtimeMs;
+      
+      if (!cachedTimestamp) {
+        return true; // キャッシュがない場合は変更ありとみなす
+      }
+      
+      return currentTimestamp > cachedTimestamp;
+    } catch (error) {
+      return true; // エラーの場合は安全のため変更ありとみなす
+    }
+  }
+
+  /**
    * プロジェクト全体のインデックス作成
    * Tree-sitterのインクリメンタル解析でメモリ効率化
    */
   async indexProject(): Promise<TreeSitterProjectStats> {
     console.log('Tree-sitter project indexing started...');
     const startTime = Date.now();
+    
+    // キャッシュを読み込む
+    const cache = await this.loadIndexCache();
+    let cachedTimestamps: Record<string, number> = {};
+    let shouldFullIndex = true;
+    
+    if (cache && cache.timestamps) {
+      cachedTimestamps = cache.timestamps;
+      shouldFullIndex = false;
+      console.log('Index cache found. Performing incremental indexing...');
+    } else {
+      console.log('No cache found. Performing full indexing...');
+    }
 
     const files = await this.discoverSourceFiles();
     console.log(`${files.length} source files discovered`);
@@ -316,9 +413,38 @@ export class TreeSitterSymbolIndex {
       stats.languageBreakdown[lang] = 0;
     });
 
-    // メモリ効率のため単一ファイル処理
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    // 変更されたファイルのみを特定
+    const filesToIndex: string[] = [];
+    const unchangedFiles: string[] = [];
+    
+    for (const file of files) {
+      const cachedTimestamp = cachedTimestamps[file];
+      const isChanged = await this.isFileChanged(file, cachedTimestamp);
+      
+      if (isChanged) {
+        filesToIndex.push(file);
+      } else {
+        unchangedFiles.push(file);
+      }
+      
+      // 現在のタイムスタンプを記録
+      const fileStats = await fs.stat(file);
+      this.fileTimestamps.set(file, fileStats.mtimeMs);
+    }
+    
+    console.log(`Files to index: ${filesToIndex.length} changed, ${unchangedFiles.length} unchanged`);
+    
+    // キャッシュから既存の統計を復元
+    if (cache && cache.stats && unchangedFiles.length > 0) {
+      stats.totalSymbols = cache.stats.totalSymbols || 0;
+      stats.totalReferences = cache.stats.totalReferences || 0;
+      stats.languageBreakdown = cache.stats.languageBreakdown || {};
+      stats.kindBreakdown = cache.stats.kindBreakdown || {};
+    }
+
+    // 変更されたファイルのみインデックス化
+    for (let i = 0; i < filesToIndex.length; i++) {
+      const file = filesToIndex[i];
       
       try {
         const result = await this.indexFile(file);
@@ -327,12 +453,12 @@ export class TreeSitterSymbolIndex {
 
         const language = this.detectLanguage(file);
         if (language) {
-          stats.languageBreakdown[language] += result.symbolCount;
+          stats.languageBreakdown[language] = (stats.languageBreakdown[language] || 0) + result.symbolCount;
         }
 
-        // 進捗表示
-        const progress = Math.round(((i + 1) / files.length) * 100);
-        console.log(`Progress: ${progress}% (${i + 1}/${files.length}) - ${file}`);
+        // 進捗表示（変更されたファイルのみ）
+        const progress = Math.round(((i + 1) / filesToIndex.length) * 100);
+        console.log(`Indexing changed files: ${progress}% (${i + 1}/${filesToIndex.length}) - ${file}`);
 
         // メモリ管理（Tree-sitterの自動GCに加えて）
         if ((i + 1) % 50 === 0 && global.gc) {
@@ -343,12 +469,23 @@ export class TreeSitterSymbolIndex {
         console.error(`Failed to index ${file}:`, error);
       }
     }
+    
+    // 変更されていないファイルも統計に含める
+    stats.indexedFiles.push(...unchangedFiles);
 
     stats.filesIndexed = stats.indexedFiles.length;
     stats.averageSymbolsPerFile = stats.filesIndexed > 0 ? stats.totalSymbols / stats.filesIndexed : 0;
     stats.elapsedMs = Date.now() - startTime;
 
+    // キャッシュを保存
+    await this.saveIndexCache(this.fileTimestamps, stats);
+
     console.log(`Tree-sitter indexing completed: ${stats.totalSymbols} symbols in ${stats.elapsedMs}ms`);
+    if (filesToIndex.length === 0) {
+      console.log('No files changed since last index. Using cached data.');
+    } else {
+      console.log(`Indexed ${filesToIndex.length} changed files, skipped ${unchangedFiles.length} unchanged files.`);
+    }
     return stats;
   }
 
@@ -615,7 +752,8 @@ export class TreeSitterSymbolIndex {
       '**/*.rb'
     ];
 
-    const ignorePatterns = [
+    // デフォルトの除外パターン
+    const defaultIgnorePatterns = [
       '**/node_modules/**',
       '**/dist/**',
       '**/build/**',
@@ -625,8 +763,66 @@ export class TreeSitterSymbolIndex {
       '**/target/**',
       '**/bin/**',
       '**/obj/**',
-      '**/vendor/**'
+      '**/vendor/**',
+      '**/venv/**',
+      '**/.venv/**',
+      '**/env/**',
+      '**/.env/**',
+      '**/bundle/**',
+      '**/bundles/**',
+      '**/.cache/**',
+      '**/.next/**',
+      '**/tmp/**',
+      '**/temp/**',
+      '**/.tmp/**',
+      '**/analyze/**',  // テスト/分析用ディレクトリ
+      '**/Pods/**',     // iOS
+      '**/.gradle/**',  // Android/Gradle
+      '**/Library/**',  // Unity
+      '**/Temp/**',     // Unity
+      '**/Logs/**'      // Unity
     ];
+    
+    // settings.jsonから追加の除外設定を読み込む
+    const additionalIgnorePatterns: string[] = [];
+    try {
+      const settingsPath = path.join(this.workspaceRoot, '.agents', 'settings.json');
+      if (fsSync.existsSync(settingsPath)) {
+        const settings = JSON.parse(fsSync.readFileSync(settingsPath, 'utf-8'));
+        if (settings.indexing?.excludeDirectories) {
+          for (const dir of settings.indexing.excludeDirectories) {
+            additionalIgnorePatterns.push(`**/${dir}/**`);
+          }
+        }
+      }
+    } catch (error) {
+      console.debug('Failed to load additional ignore patterns from settings.json:', error);
+    }
+    
+    // .gitignoreから除外パターンを読み込む
+    try {
+      const gitignorePath = path.join(this.workspaceRoot, '.gitignore');
+      if (fsSync.existsSync(gitignorePath)) {
+        const gitignoreContent = fsSync.readFileSync(gitignorePath, 'utf-8');
+        const lines = gitignoreContent.split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#'));
+        
+        for (const line of lines) {
+          // ディレクトリパターン
+          if (line.endsWith('/')) {
+            additionalIgnorePatterns.push(`**/${line}**`);
+          } else if (!line.includes('*') && !line.startsWith('.')) {
+            // ディレクトリ名のみの場合
+            additionalIgnorePatterns.push(`**/${line}/**`);
+          }
+        }
+      }
+    } catch (error) {
+      console.debug('Failed to load .gitignore patterns:', error);
+    }
+    
+    const ignorePatterns = [...defaultIgnorePatterns, ...additionalIgnorePatterns];
 
     const files = await glob(patterns, {
       cwd: this.workspaceRoot,

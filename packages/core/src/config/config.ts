@@ -122,6 +122,7 @@ export type FlashFallbackHandler = (
 ) => Promise<boolean | string | null>;
 
 export interface ConfigParameters {
+  authType?: AuthType;
   sessionId: string;
   embeddingModel?: string;
   sandbox?: SandboxConfig;
@@ -262,6 +263,20 @@ export class Config {
       setGeminiMdFilename(params.contextFileName);
     }
 
+    // Initialize contentGeneratorConfig if authType is provided
+    if (params.authType) {
+      // Initialize contentGeneratorConfig
+      this.contentGeneratorConfig = createContentGeneratorConfig(
+        this,
+        params.authType,
+      );
+    } else {
+      // No authType provided, skipping createContentGeneratorConfig
+    }
+    
+    // Initialize GeminiClient
+    this.geminiClient = new GeminiClient(this);
+
     if (this.telemetrySettings.enabled) {
       initializeTelemetry(this);
     }
@@ -276,12 +291,21 @@ export class Config {
   }
 
   async initialize(): Promise<void> {
+    // Initialize centralized services
     // Initialize centralized FileDiscoveryService
     this.getFileService();
     if (this.getCheckpointingEnabled()) {
       await this.getGitService();
     }
     this.toolRegistry = await this.createToolRegistry();
+    
+    // Initialize GeminiClient with contentGeneratorConfig if available
+    if (this.contentGeneratorConfig && this.geminiClient) {
+      // Initialize GeminiClient with contentGeneratorConfig
+      await this.geminiClient.initialize(this.contentGeneratorConfig);
+    } else {
+      // Skipping GeminiClient initialization
+    }
   }
 
   async refreshAuth(authMethod: AuthType) {

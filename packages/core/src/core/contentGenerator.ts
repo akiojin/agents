@@ -50,6 +50,7 @@ export enum AuthType {
 export type ContentGeneratorConfig = {
   model: string;
   apiKey?: string;
+  baseURL?: string;
   vertexai?: boolean;
   authType?: AuthType | undefined;
 };
@@ -58,9 +59,12 @@ export function createContentGeneratorConfig(
   config: Config,
   authType: AuthType | undefined,
 ): ContentGeneratorConfig {
+  if (config.getDebugMode()) {
+    console.debug('[createContentGeneratorConfig] Called with authType:', authType);
+  }
   // authTypeが明示的に指定されている場合は、それを優先する
   // 環境変数は、authTypeに応じて選択的に使用する
-  const geminiApiKey = process.env.GEMINI_API_KEY || undefined;
+  const geminiApiKey = process.env.AGENTS_API_KEY || undefined;
   const googleApiKey = process.env.GOOGLE_API_KEY || undefined;
   const googleCloudProject = process.env.GOOGLE_CLOUD_PROJECT || undefined;
   const googleCloudLocation = process.env.GOOGLE_CLOUD_LOCATION || undefined;
@@ -95,10 +99,10 @@ export function createContentGeneratorConfig(
     return contentGeneratorConfig;
   }
 
-  // authTypeが明示的にUSE_GEMINIの場合のみGEMINI_API_KEYを使用
+  // authTypeが明示的にUSE_GEMINIの場合のみAGENTS_API_KEYを使用
   if (authType === AuthType.USE_GEMINI) {
     if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY is required for Gemini API authentication');
+      throw new Error('AGENTS_API_KEY is required for Gemini API authentication');
     }
     contentGeneratorConfig.apiKey = geminiApiKey;
     contentGeneratorConfig.vertexai = false;
@@ -126,6 +130,15 @@ export function createContentGeneratorConfig(
   }
 
   if (authType === AuthType.OPENAI_COMPATIBLE) {
+    if (config.getDebugMode()) {
+      console.debug('[createContentGeneratorConfig] OPENAI_COMPATIBLE mode detected');
+      console.debug('[createContentGeneratorConfig] Environment variables:', {
+        OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+        LOCAL_LLM_BASE_URL: process.env.LOCAL_LLM_BASE_URL,
+        LOCAL_LLM_MODEL: process.env.LOCAL_LLM_MODEL,
+        OPENAI_MODEL: process.env.OPENAI_MODEL,
+      });
+    }
     const baseUrl = process.env.OPENAI_BASE_URL || process.env.LOCAL_LLM_BASE_URL;
     const isLocalLLM = baseUrl && (
       baseUrl.includes('localhost') || 
@@ -134,21 +147,24 @@ export function createContentGeneratorConfig(
       baseUrl.includes('host.docker.internal')
     );
     
-    // ローカルLLMの場合はAPI KEY不要
-    if (!isLocalLLM) {
+    // baseURLを設定に追加
+    if (baseUrl) {
+      contentGeneratorConfig.baseURL = baseUrl;
+      if (config.getDebugMode()) {
+        console.debug('[ContentGeneratorConfig] Setting baseURL:', baseUrl);
+      }
+    }
+    
+    // ローカルLLMの場合はAPI KEY不要、ダミーキーを設定
+    if (isLocalLLM) {
+      contentGeneratorConfig.apiKey = 'dummy-key-for-local-llm';
+    } else {
       contentGeneratorConfig.apiKey = process.env.OPENAI_API_KEY;
     }
     
     // モデル設定は既に上部で設定済み
     
-    if (config.getDebugMode()) {
-      console.log('[ContentGeneratorConfig] OpenAI Compatible settings:', {
-        baseUrl,
-        isLocalLLM,
-        model: contentGeneratorConfig.model,
-        hasApiKey: !!contentGeneratorConfig.apiKey,
-      });
-    }
+    // OpenAI Compatible settings configured
     
     return contentGeneratorConfig;
   }
@@ -193,6 +209,7 @@ export async function createContentGenerator(
         authType: config.authType,
         model: config.model,
         hasApiKey: !!config.apiKey,
+        baseURL: config.baseURL,  // 追加: baseURLも出力
       });
     }
     return new OpenAIContentGenerator(config, gcConfig);

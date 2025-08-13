@@ -23,6 +23,12 @@ import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 // SQLiteMemoryClientはローカルファイルベースのため、外部サーバー起動不要
 
+// package.jsonを読み込み
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packagePath = join(__dirname, '..', 'package.json');
+const pkg = JSON.parse(readFileSync(packagePath, 'utf-8'));
+
 const nodeArgs = [];
 // デバッグモードの設定
 if (process.env.DEBUG) {

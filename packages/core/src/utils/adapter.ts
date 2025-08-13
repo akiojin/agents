@@ -307,11 +307,22 @@ export class OpenAIToAgentsConverter {
             return [];
         }
 
-        return toolCalls.map(toolCall => ({
-             id: toolCall.id,
-             name: toolCall.function.name,
-             args: JSON.parse(toolCall.function.arguments || '{}'),
-         }));
+        return toolCalls.map(toolCall => {
+            if (toolCall.type === 'function') {
+                return {
+                    id: toolCall.id,
+                    name: toolCall.function.name,
+                    args: JSON.parse(toolCall.function.arguments || '{}'),
+                };
+            } else {
+                // Handle custom tool calls
+                return {
+                    id: toolCall.id,
+                    name: toolCall.custom.name,
+                    args: JSON.parse(toolCall.custom.input || '{}'),
+                };
+            }
+        });
      }
 
     /**
@@ -324,7 +335,10 @@ export class OpenAIToAgentsConverter {
         console.log('[OpenAI Response Debug] Message content:', message.content);
         console.log('[OpenAI Response Debug] Tool calls:', message.tool_calls?.length || 0);
         if (message.tool_calls) {
-            console.log('[OpenAI Response Debug] Tool call details:', message.tool_calls.map(tc => ({ name: tc.function.name, args: tc.function.arguments })));
+            console.log('[OpenAI Response Debug] Tool call details:', message.tool_calls.map(tc => ({
+                name: tc.type === 'function' ? tc.function.name : tc.custom.name,
+                args: tc.type === 'function' ? tc.function.arguments : tc.custom.input
+            })));
         }
 
         // 构建 parts
@@ -344,13 +358,24 @@ export class OpenAIToAgentsConverter {
         if (message.tool_calls) {
             console.log('[OpenAI Response Debug] Converting', message.tool_calls.length, 'tool calls to Gemini format');
             for (const toolCall of message.tool_calls) {
-                const functionCallPart: Part = {
-                    functionCall: {
-                        name: toolCall.function.name,
-                        args: JSON.parse(toolCall.function.arguments),
-                    },
-                };
-                parts.push(functionCallPart);
+                if (toolCall.type === 'function') {
+                    const functionCallPart: Part = {
+                        functionCall: {
+                            name: toolCall.function.name,
+                            args: JSON.parse(toolCall.function.arguments),
+                        },
+                    };
+                    parts.push(functionCallPart);
+                } else {
+                    // Handle custom tool calls
+                    const functionCallPart: Part = {
+                        functionCall: {
+                            name: toolCall.custom.name,
+                            args: JSON.parse(toolCall.custom.input),
+                        },
+                    };
+                    parts.push(functionCallPart);
+                }
             }
         }
 

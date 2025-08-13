@@ -24,6 +24,7 @@
     "test/data"
   ],
   "dependencies": {
+    "2": "^3.0.0",
     "@agents/memory": "1.0.0",
     "@google/genai": "1.9.0",
     "@modelcontextprotocol/sdk": "^1.11.0",

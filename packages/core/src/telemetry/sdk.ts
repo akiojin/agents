@@ -31,7 +31,11 @@ import { initializeMetrics } from './metrics.js';
 import { ClearcutLogger } from './clearcut-logger/clearcut-logger.js';
 
 // For troubleshooting, set the log level to DiagLogLevel.DEBUG
-diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
+// Only set logger if not already configured to avoid overwrite warnings
+const currentLogger = (diag as any)._logger;
+if (!currentLogger || currentLogger.constructor === Object) {
+  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
+}
 
 let sdk: NodeSDK | undefined;
 let telemetryInitialized = false;
@@ -110,7 +114,8 @@ export function initializeTelemetry(config: Config): void {
 
   try {
     sdk.start();
-    console.log('OpenTelemetry SDK started successfully.');
+    // Suppress success log for cleaner startup
+    // console.log('OpenTelemetry SDK started successfully.');
     telemetryInitialized = true;
     initializeMetrics(config);
   } catch (error) {

@@ -15,8 +15,8 @@ import {
   setGeminiMdFilename as setServerGeminiMdFilename,
   getCurrentGeminiMdFilename,
   ApprovalMode,
-  DEFAULT_GEMINI_MODEL,
-  DEFAULT_GEMINI_EMBEDDING_MODEL,
+  DEFAULT_AGENTS_MODEL,
+  DEFAULT_AGENTS_EMBEDDING_MODEL,
   FileDiscoveryService,
   TelemetryTarget,
   MCPServerConfig,
@@ -76,7 +76,7 @@ export async function parseArguments(): Promise<CliArgs> {
       alias: 'm',
       type: 'string',
       description: `Model`,
-      default: process.env.AGENTS_MODEL || DEFAULT_GEMINI_MODEL,
+      default: process.env.AGENTS_MODEL || DEFAULT_AGENTS_MODEL,
     })
     .option('prompt', {
       alias: 'p',
@@ -283,6 +283,7 @@ export async function loadCliConfig(
   );
 
   // .agents/settings.jsonファイルを読み込む
+  // .agents/settings.jsonファイルを読み込む
   let authType: AuthType | undefined;
   let localEndpoint: string | undefined;
   let localModel: string | undefined;
@@ -297,12 +298,26 @@ export async function loadCliConfig(
         localEndpoint = agentsSettings.localEndpoint || agentsSettings.llm?.localEndpoint;
         localModel = agentsSettings.llm?.model;
         
+        if (debugMode) {
+          logger.debug('[loadCliConfig] Local LLM settings detected:', {
+            authType,
+            localEndpoint,
+            localModel
+          });
+        }
+        
         // 環境変数を設定（OpenAI互換APIで使用）
         if (localEndpoint && !process.env.LOCAL_LLM_BASE_URL) {
           process.env.LOCAL_LLM_BASE_URL = localEndpoint;
+          if (debugMode) {
+            logger.debug('[loadCliConfig] Set LOCAL_LLM_BASE_URL:', localEndpoint);
+          }
         }
         if (localModel && !process.env.LOCAL_LLM_MODEL) {
           process.env.LOCAL_LLM_MODEL = localModel;
+          if (debugMode) {
+            logger.debug('[loadCliConfig] Set LOCAL_LLM_MODEL:', localModel);
+          }
         }
       }
       
@@ -325,14 +340,13 @@ export async function loadCliConfig(
   if (debugMode) {
     console.debug(`[Config] authType: ${authType}, AuthType.OPENAI_COMPATIBLE: ${AuthType.OPENAI_COMPATIBLE}`);
     console.debug(`[Config] LOCAL_LLM_MODEL: ${process.env.LOCAL_LLM_MODEL}, localModel: ${localModel}`);
-    console.debug(`[Config] AGENTS_MODEL: ${process.env.AGENTS_MODEL}, DEFAULT_GEMINI_MODEL: ${DEFAULT_GEMINI_MODEL}`);
+    console.debug(`[Config] AGENTS_MODEL: ${process.env.AGENTS_MODEL}, DEFAULT_AGENTS_MODEL: ${DEFAULT_AGENTS_MODEL}`);
   }
   
-  const modelName = argv.model || (
-    authType === AuthType.OPENAI_COMPATIBLE
-      ? (process.env.LOCAL_LLM_MODEL || localModel || 'llama-3.2-3b-instruct')
-      : (process.env.AGENTS_MODEL || DEFAULT_GEMINI_MODEL)
-  );
+  // OpenAI互換モードの場合、argv.modelがデフォルト値の場合は無視する
+  const modelName = authType === AuthType.OPENAI_COMPATIBLE
+    ? ((argv.model && argv.model !== DEFAULT_AGENTS_MODEL) ? argv.model : (process.env.LOCAL_LLM_MODEL || localModel || 'llama-3.2-3b-instruct'))
+    : (argv.model || process.env.AGENTS_MODEL || DEFAULT_AGENTS_MODEL);
   
   if (debugMode) {
     console.debug(`[Config] Final modelName: ${modelName}`);
@@ -406,9 +420,13 @@ export async function loadCliConfig(
   // Sandbox機能は削除されました
   const sandboxConfig = undefined;
 
+  if (debugMode) {
+    logger.debug('[loadCliConfig] Creating Config with authType:', authType);
+  }
   return new Config({
+    authType,
     sessionId,
-    embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
+    embeddingModel: DEFAULT_AGENTS_EMBEDDING_MODEL,
     sandbox: sandboxConfig,
     targetDir: process.cwd(),
     debugMode,

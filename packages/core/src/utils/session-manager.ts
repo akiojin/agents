@@ -43,6 +43,10 @@ export class SessionManager {
   constructor(baseDir: string = path.join(process.cwd(), '.agents', 'sessions')) {
     this.sessionsDir = baseDir;
     this.currentSession = this.createNewSession();
+    // 初期セッションを即座に保存
+    this.saveSession().catch(error => {
+      console.error('Failed to save initial session:', error);
+    });
   }
 
   /**
