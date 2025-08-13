@@ -15,6 +15,7 @@ export enum StreamingState {
   Responding = 'responding',
   WaitingForConfirmation = 'waiting_for_confirmation',
   Compressing = 'compressing',
+  Planning = 'planning',  // プランモード用の新しい状態
 }
 
 // Copied from server/src/core/turn.ts for CLI usage

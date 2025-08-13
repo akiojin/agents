@@ -109,6 +109,8 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     checkForUpdates().then(setUpdateMessage);
   }, []);
 
+
+
   const { history, addItem, clearItems, loadHistory } = useHistory();
   const {
     consoleMessages,
@@ -909,20 +911,6 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
             />
           ) : (
             <>
-              <LoadingIndicator
-                thought={
-                  streamingState === StreamingState.WaitingForConfirmation ||
-                  config.getAccessibility()?.disableLoadingPhrases
-                    ? undefined
-                    : thought
-                }
-                currentLoadingPhrase={
-                  config.getAccessibility()?.disableLoadingPhrases
-                    ? undefined
-                    : currentLoadingPhrase
-                }
-                elapsedTime={elapsedTime}
-              />
               <Box
                 marginTop={1}
                 display="flex"
@@ -975,6 +963,22 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
                   </Box>
                 </OverflowProvider>
               )}
+
+              {/* プランモード表示を入力プロンプトの直前に配置 */}
+              <LoadingIndicator
+                thought={
+                  streamingState === StreamingState.WaitingForConfirmation ||
+                  config.getAccessibility()?.disableLoadingPhrases
+                    ? undefined
+                    : thought
+                }
+                currentLoadingPhrase={
+                  config.getAccessibility()?.disableLoadingPhrases
+                    ? undefined
+                    : currentLoadingPhrase
+                }
+                elapsedTime={elapsedTime}
+              />
 
               {isInputActive && (
                 <InputPrompt

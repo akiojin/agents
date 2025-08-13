@@ -32,6 +32,18 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
     return null;
   }
 
+  // プランモードの場合、専用の表示
+  if (streamingState === StreamingState.Planning) {
+    return (
+      <Box marginTop={1} paddingLeft={0}>
+        <Box marginRight={1}>
+          <GeminiRespondingSpinner />
+        </Box>
+        <Text color={Colors.AccentYellow}>📋 Planning mode: Analyzing request and creating execution plan...</Text>
+      </Box>
+    );
+  }
+
   const primaryText = thought?.subject || currentLoadingPhrase;
 
   return (

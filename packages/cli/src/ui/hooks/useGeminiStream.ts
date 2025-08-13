@@ -101,6 +101,7 @@ export const useGeminiStream = (
   const turnCancelledRef = useRef(false);
   const [isResponding, setIsResponding] = useState<boolean>(false);
   const [thought, setThought] = useState<ThoughtSummary | null>(null);
+  const [isPlanningMode, setIsPlanningMode] = useState(false);
   const [pendingHistoryItemRef, setPendingHistoryItem] =
     useStateAndRef<HistoryItemWithoutId | null>(null);
   const processedMemoryToolsRef = useRef<Set<string>>(new Set());
@@ -160,6 +161,10 @@ export const useGeminiStream = (
   );
 
   const streamingState = useMemo(() => {
+    // プランモードの検出
+    if (isPlanningMode) {
+      return StreamingState.Planning;
+    }
     if (toolCalls.some((tc) => tc.status === 'awaiting_approval')) {
       return StreamingState.WaitingForConfirmation;
     }
@@ -180,7 +185,7 @@ export const useGeminiStream = (
       return StreamingState.Responding;
     }
     return StreamingState.Idle;
-  }, [isResponding, toolCalls]);
+  }, [isResponding, toolCalls, isPlanningMode]);
 
   useInput((_input, key) => {
     if (streamingState === StreamingState.Responding && key.escape) {
@@ -320,6 +325,13 @@ export const useGeminiStream = (
         return '';
       }
       let newGeminiMessageBuffer = currentGeminiMessageBuffer + eventValue;
+      
+      // プランモードの検出
+      if (eventValue.includes('## Plan:') || eventValue.includes('**Plan:**') || eventValue.includes('Planning:')) {
+        setIsPlanningMode(true);
+      } else if (eventValue.includes('## Implementation:') || eventValue.includes('**Implementation:**')) {
+        setIsPlanningMode(false);
+      }
       if (
         pendingHistoryItemRef.current?.type !== 'gemini' &&
         pendingHistoryItemRef.current?.type !== 'gemini_content'
