@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { Config } from '@indenscale/open-gemini-cli-core';
 import { 
   AgentState, 
   AgentMode, 
@@ -14,7 +15,7 @@ import {
  * エージェント状態管理Hook
  * プランモード・実行モードの状態遷移を管理
  */
-export const useAgentState = () => {
+export const useAgentState = (config?: Config) => {
   const sessionIdRef = useRef<string>(Date.now().toString());
   
   const [agentState, setAgentState] = useState<AgentState>({
@@ -48,6 +49,14 @@ export const useAgentState = () => {
         reason
       };
 
+      // Configインスタンスのagent modeも同期
+      if (config && 'setAgentMode' in config && typeof config.setAgentMode === 'function') {
+        const configAgentMode = mode === AgentMode.PLANNING ? 'planning' : 
+                               mode === AgentMode.EXECUTION ? 'execution' : 'idle';
+        config.setAgentMode(configAgentMode);
+        console.log(`[Agent State] Config agent mode updated to: ${configAgentMode}`);
+      }
+
       return {
         ...prev,
         mode,
@@ -56,7 +65,7 @@ export const useAgentState = () => {
         history: [...prev.history, transition]
       };
     });
-  }, []);
+  }, [config]);
 
   /**
    * 要件コンテキストの更新
@@ -202,4 +211,4 @@ export const useAgentState = () => {
     getCurrentContext,
     getSessionInfo
   };
-};
+};;

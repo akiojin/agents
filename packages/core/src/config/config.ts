@@ -308,20 +308,22 @@ export class Config {
     this.toolRegistry = await this.createToolRegistry();
     console.log('[Config] Tool registry created successfully');
     
-    // plan_completeツールの確実な登録確認（非インタラクティブモード対応）
+    // plan_completeツールの登録確認（バックアップ対応）
     const allTools = this.toolRegistry.getAllTools();
     const planCompleteFound = allTools.find((t: any) => t.name === 'plan_complete');
+    console.log('[Config] plan_complete tool registration check: found =', !!planCompleteFound);
+    
     if (!planCompleteFound) {
-      console.log('[Config] plan_complete tool not found, force registering...');
+      console.warn('[Config] plan_complete tool not found after registry creation - attempting fallback registration');
       try {
         const planCompleteInstance = new PlanCompleteTool();
         this.toolRegistry.registerTool(planCompleteInstance);
-        console.log('[Config] plan_complete tool force registered successfully');
+        console.log('[Config] plan_complete tool fallback registration successful');
       } catch (error) {
-        console.error('[Config] Error force registering plan_complete tool:', error);
+        console.error('[Config] CRITICAL: Failed to register plan_complete tool via fallback:', error);
       }
     } else {
-      console.log('[Config] plan_complete tool already registered');
+      console.log('[Config] plan_complete tool successfully registered via normal flow');
     }
     
     // Initialize GeminiClient with contentGeneratorConfig if available
@@ -714,13 +716,8 @@ export class Config {
     // IntelligentAnalysisツールを登録（深層分析用）
     registerCoreTool(IntelligentAnalysisTool, this);
     
-    // plan_completeツールの確実な登録（excludeToolsを無視）
-    try {
-      const planCompleteInstance = new PlanCompleteTool();
-      registry.registerTool(planCompleteInstance);
-    } catch (error) {
-      console.error('[Tool Registration] Error registering PlanCompleteTool:', error);
-    }
+    // PlanCompleteToolを他のツールと同じパターンで登録
+    registerCoreTool(PlanCompleteTool);
 
     await registry.discoverTools();
     return registry;
@@ -764,14 +761,6 @@ export class Config {
     registerPlanModeTool(TodoWriteTool);
     registerPlanModeTool(IntelligentAnalysisTool, this);
     registerPlanModeTool(PlanCompleteTool);
-    
-    // PlanCompleteToolの強制登録（確実に登録されるように）
-    try {
-      const planCompleteInstance = new PlanCompleteTool();
-      registry.registerTool(planCompleteInstance);
-    } catch (error) {
-      console.error(`[Plan Mode Registry] Error force registering PlanCompleteTool:`, error);
-    }
 
     await registry.discoverTools();
     return registry;

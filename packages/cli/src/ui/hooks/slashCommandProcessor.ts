@@ -214,7 +214,12 @@ export const useSlashCommandProcessor = (
         name: 'plan',
         description: 'プランモードを開始し、要件定義から承認フローまでのプロセスを開始します',
         action: (_mainCommand, _subCommand, _args) => {
+          // エージェント状態とConfig両方を更新
           startPlanning();
+          if (config && 'setAgentMode' in config && typeof config.setAgentMode === 'function') {
+            config.setAgentMode('planning');
+            console.log('[Plan Command] Config agent mode set to planning');
+          }
           return {
             type: 'message',
             messageType: 'info',

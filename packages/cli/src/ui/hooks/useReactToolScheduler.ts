@@ -19,10 +19,11 @@ import {
   ToolCallsUpdateHandler,
   Tool,
   ToolCall,
+  ToolRegistry,
   Status as CoreStatus,
   EditorType,
 } from '@indenscale/open-gemini-cli-core';
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect } from 'react';
 import {
   HistoryItemToolGroup,
   IndividualToolCallDisplay,
@@ -178,31 +179,51 @@ export function useReactToolScheduler(
     [setToolCallsForDisplay],
   );
 
-  const scheduler = useMemo(
-    () =>
-      new CoreToolScheduler({
-        toolRegistry: config.getToolRegistry(),
+  // agentModeを取得してCoreToolSchedulerの再作成トリガーに使用
+  // 直接configからagentModeを取得（存在しない場合は'idle'）
+  const [agentMode, setAgentModeState] = useState<string>('idle');
+  
+  // configの変更を監視してagentModeを更新
+  useEffect(() => {
+    const mode = (config as any).agentMode || (config as any).getAgentMode?.() || 'idle';
+    setAgentModeState(mode);
+  }, [config]);
+  
+  // CoreToolSchedulerを即座に作成（非同期ではなく同期的に）
+  const scheduler = useMemo(() => {
+    try {
+      // CoreToolSchedulerは内部でPromiseを管理するため、config.getToolRegistry()をそのまま渡す
+      return new CoreToolScheduler({
+        toolRegistry: config.getToolRegistry(), // Promise<ToolRegistry>を渡す
         outputUpdateHandler,
         onAllToolCallsComplete: allToolCallsCompleteHandler,
         onToolCallsUpdate: toolCallsUpdateHandler,
         approvalMode: config.getApprovalMode(),
         getPreferredEditor,
         config,
-      }),
-    [
-      config,
-      outputUpdateHandler,
-      allToolCallsCompleteHandler,
-      toolCallsUpdateHandler,
-      getPreferredEditor,
-    ],
-  );
+      });
+    } catch (error) {
+      console.error('[useReactToolScheduler] Failed to create scheduler:', error);
+      return null;
+    }
+  }, [
+    config,
+    agentMode,
+    outputUpdateHandler,
+    allToolCallsCompleteHandler,
+    toolCallsUpdateHandler,
+    getPreferredEditor
+  ]); // 依存配列に必要な項目を追加
 
   const schedule: ScheduleFn = useCallback(
     (
       request: ToolCallRequestInfo | ToolCallRequestInfo[],
       signal: AbortSignal,
     ) => {
+      if (!scheduler) {
+        console.error('[useReactToolScheduler] Cannot schedule tools: scheduler not ready');
+        return;
+      }
       scheduler.schedule(request, signal);
     },
     [scheduler],
@@ -229,131 +250,49 @@ export function useReactToolScheduler(
  */
 function mapCoreStatusToDisplayStatus(coreStatus: CoreStatus): ToolCallStatus {
   switch (coreStatus) {
+    case 'scheduled':
+      return ToolCallStatus.Pending;
     case 'validating':
-      return ToolCallStatus.Executing;
+      return ToolCallStatus.Pending;
     case 'awaiting_approval':
       return ToolCallStatus.Confirming;
     case 'executing':
       return ToolCallStatus.Executing;
     case 'success':
       return ToolCallStatus.Success;
-    case 'cancelled':
-      return ToolCallStatus.Canceled;
     case 'error':
       return ToolCallStatus.Error;
-    case 'scheduled':
-      return ToolCallStatus.Pending;
+    case 'cancelled':
+      return ToolCallStatus.Canceled;
     default: {
       const exhaustiveCheck: never = coreStatus;
-      console.warn(`Unknown core status encountered: ${exhaustiveCheck}`);
-      return ToolCallStatus.Error;
+      return exhaustiveCheck;
     }
   }
 }
 
 /**
- * Transforms `TrackedToolCall` objects into `HistoryItemToolGroup` objects for UI display.
+ * Convert a CoreToolScheduler ToolCall into its equivalent for display by the
+ * UI.
  */
-export function mapToDisplay(
-  toolOrTools: TrackedToolCall[] | TrackedToolCall,
-): HistoryItemToolGroup {
-  const toolCalls = Array.isArray(toolOrTools) ? toolOrTools : [toolOrTools];
-
-  const toolDisplays = toolCalls.map(
-    (trackedCall): IndividualToolCallDisplay => {
-      let displayName = trackedCall.request.name;
-      let description = '';
-      let renderOutputAsMarkdown = false;
-
-      const currentToolInstance =
-        'tool' in trackedCall && trackedCall.tool
-          ? (trackedCall as { tool: Tool }).tool
-          : undefined;
-
-      if (currentToolInstance) {
-        displayName = currentToolInstance.displayName;
-        description = currentToolInstance.getDescription(
-          trackedCall.request.args,
-        );
-        renderOutputAsMarkdown = currentToolInstance.isOutputMarkdown;
-      } else if ('request' in trackedCall && 'args' in trackedCall.request) {
-        description = JSON.stringify(trackedCall.request.args);
-      }
-
-      const baseDisplayProperties: Omit<
-        IndividualToolCallDisplay,
-        'status' | 'resultDisplay' | 'confirmationDetails'
-      > = {
-        callId: trackedCall.request.callId,
-        name: displayName,
-        description,
-        renderOutputAsMarkdown,
-      };
-
-      switch (trackedCall.status) {
-        case 'success':
-          return {
-            ...baseDisplayProperties,
-            status: mapCoreStatusToDisplayStatus(trackedCall.status),
-            resultDisplay: trackedCall.response.resultDisplay,
-            confirmationDetails: undefined,
-          };
-        case 'error':
-          return {
-            ...baseDisplayProperties,
-            name: currentToolInstance?.displayName ?? trackedCall.request.name,
-            status: mapCoreStatusToDisplayStatus(trackedCall.status),
-            resultDisplay: trackedCall.response.resultDisplay,
-            confirmationDetails: undefined,
-          };
-        case 'cancelled':
-          return {
-            ...baseDisplayProperties,
-            status: mapCoreStatusToDisplayStatus(trackedCall.status),
-            resultDisplay: trackedCall.response.resultDisplay,
-            confirmationDetails: undefined,
-          };
-        case 'awaiting_approval':
-          return {
-            ...baseDisplayProperties,
-            status: mapCoreStatusToDisplayStatus(trackedCall.status),
-            resultDisplay: undefined,
-            confirmationDetails: trackedCall.confirmationDetails,
-          };
-        case 'executing':
-          return {
-            ...baseDisplayProperties,
-            status: mapCoreStatusToDisplayStatus(trackedCall.status),
-            resultDisplay:
-              (trackedCall as TrackedExecutingToolCall).liveOutput ?? undefined,
-            confirmationDetails: undefined,
-          };
-        case 'validating': // Fallthrough
-        case 'scheduled':
-          return {
-            ...baseDisplayProperties,
-            status: mapCoreStatusToDisplayStatus(trackedCall.status),
-            resultDisplay: undefined,
-            confirmationDetails: undefined,
-          };
-        default: {
-          const exhaustiveCheck: never = trackedCall;
-          return {
-            callId: (exhaustiveCheck as TrackedToolCall).request.callId,
-            name: 'Unknown Tool',
-            description: 'Encountered an unknown tool call state.',
-            status: ToolCallStatus.Error,
-            resultDisplay: 'Unknown tool call state',
-            confirmationDetails: undefined,
-            renderOutputAsMarkdown: false,
-          };
-        }
-      }
-    },
-  );
+export function convertCoreToolCallToIndividualDisplay(
+  tc: ToolCall,
+): IndividualToolCallDisplay {
+  const name = tc.request.name;
 
   return {
-    type: 'tool_group',
-    tools: toolDisplays,
+    callId: tc.request.callId,
+    name,
+    description: `${name} Tool Call`,
+    resultDisplay: tc.status === 'success' ? tc.response.resultDisplay : undefined,
+    status: mapCoreStatusToDisplayStatus(tc.status),
+    confirmationDetails:
+      tc.status === 'awaiting_approval' ? tc.confirmationDetails : undefined,
+    renderOutputAsMarkdown: false,
   };
 }
+
+// mapToDisplayという名前のエクスポートも追加（後方互換性のため）
+export const mapToDisplay = convertCoreToolCallToIndividualDisplay;
+
+export default useReactToolScheduler;

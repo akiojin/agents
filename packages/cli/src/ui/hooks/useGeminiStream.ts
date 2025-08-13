@@ -97,6 +97,7 @@ export const useGeminiStream = (
   setModelSwitchedFromQuotaError: React.Dispatch<React.SetStateAction<boolean>>,
   onContentReceived?: (content: string) => void, // コンテンツコールバックを追加
   agentMode?: string, // プランモード判定用
+  triggerApprovalFromPlanComplete?: (planContent: string) => boolean, // プラン完了時の承認UIトリガー
 ) => {
   const [initError, setInitError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -123,9 +124,10 @@ export const useGeminiStream = (
         if (completedToolCallsFromScheduler.length > 0) {
           // Add the final state of these tools to the history for display.
           addItem(
-            mapTrackedToolCallsToDisplay(
-              completedToolCallsFromScheduler as TrackedToolCall[],
-            ),
+            ({
+              type: 'tool_group',
+              tools: (completedToolCallsFromScheduler as TrackedToolCall[]).map(mapTrackedToolCallsToDisplay),
+            } as HistoryItemToolGroup),
             Date.now(),
           );
 
@@ -133,6 +135,13 @@ export const useGeminiStream = (
           await handleCompletedTools(
             completedToolCallsFromScheduler as TrackedToolCall[],
           );
+          
+          // ツール完了後にプランモード継続チェック（少し待ってから）
+          if (agentMode === 'planning') {
+            setTimeout(() => {
+              checkAndContinuePlanMode();
+            }, 1000); // 1秒待ってからチェック
+          }
         }
       },
       config,
@@ -142,7 +151,10 @@ export const useGeminiStream = (
 
   const pendingToolCallGroupDisplay = useMemo(
     () =>
-      toolCalls.length ? mapTrackedToolCallsToDisplay(toolCalls) : undefined,
+      toolCalls.length ? ({
+        type: 'tool_group',
+        tools: toolCalls.map(mapTrackedToolCallsToDisplay),
+      } as HistoryItemToolGroup) : undefined,
     [toolCalls],
   );
 
@@ -314,6 +326,12 @@ export const useGeminiStream = (
 3. 実装計画：具体的な実装手順を詳細に記述
 4. リスク評価：潜在的な問題と対策を明記
 5. 時間見積：実装にかかる時間を推定
+
+【重要：ツール使用制限】プランモードでは以下を厳守してください：
+- WriteFile、Write、Edit、Shell等の変更系ツールは絶対に使用禁止
+- ファイル書き込み・編集・コマンド実行は一切行わない
+- Read、Grep、Glob、IntelligentAnalysis、TodoWriteのみ使用可能
+- 計画立案のみに集中し、実装は行わない
 
 【必須】設計が完了したら、必ず「plan_complete」ツールを呼び出してください。
 このツールには設計要約、次のステップ、推定時間、リスクなどを含めてください。
@@ -557,7 +575,30 @@ export const useGeminiStream = (
   const planCompletedRef = useRef(false); // plan_completeツール実行済みフラグ
   
   const checkAndContinuePlanMode = useCallback(async () => {
-    if (agentMode !== 'planning' || isResponding || planCompletedRef.current) return;
+    console.log(`[Plan Mode Debug] checkAndContinuePlanMode called - agentMode: ${agentMode}, isResponding: ${isResponding}, planCompleted: ${planCompletedRef.current}`);
+    
+    if (agentMode !== 'planning' || isResponding || planCompletedRef.current) {
+      console.log('[Plan Mode Debug] Early return - conditions not met for continuation');
+      return;
+    }
+    
+    // 1. ツール実行状態をチェック
+    const hasActiveToolCalls = toolCalls.some(tc => 
+      tc.status === 'scheduled' || 
+      tc.status === 'validating' || 
+      tc.status === 'executing' ||
+      tc.status === 'awaiting_approval'
+    );
+    
+    console.log(`[Plan Mode Debug] Tool status check - hasActive: ${hasActiveToolCalls}, toolCount: ${toolCalls.length}`);
+    if (toolCalls.length > 0) {
+      console.log('[Plan Mode Debug] Tool statuses:', toolCalls.map(tc => `${tc.request.name}: ${tc.status}`));
+    }
+    
+    if (hasActiveToolCalls) {
+      console.log(`[Plan Mode Debug] Tools still executing, waiting... Active tools: ${toolCalls.filter(tc => tc.status === 'executing').length}`);
+      return;
+    }
     
     // Historyから最新のGemini応答を取得
     const lastGeminiItem = history
@@ -567,25 +608,23 @@ export const useGeminiStream = (
     
     const lastResponse = lastGeminiItem?.text || '';
     
-    console.log(`[Plan Mode] Check loop: ${planModeLoopCountRef.current}/${MAX_PLAN_LOOPS}, agentMode: ${agentMode}, isResponding: ${isResponding}, planCompleted: ${planCompletedRef.current}`);
+    console.log(`[Plan Mode] Check loop: ${planModeLoopCountRef.current}/${MAX_PLAN_LOOPS}, agentMode: ${agentMode}, isResponding: ${isResponding}, planCompleted: ${planCompletedRef.current}, activeTools: ${hasActiveToolCalls}`);
     if (config.getDebugMode()) {
       console.log('[Plan Mode] Checking response for continuation:', lastResponse.substring(0, 200));
     }
     
-    // 1. 設計完了チェック
-    if (lastResponse.includes('## 設計完了')) {
+    // 2. 応答品質チェック（短すぎる応答は継続しない）
+    if (lastResponse.length < 200) {
       if (config.getDebugMode()) {
-        console.log('[Plan Mode] Plan completion detected');
+        console.log(`[Plan Mode] Response too short (${lastResponse.length} chars), waiting for better response`);
       }
-      // 承認UIトリガー（onContentReceivedコールバック経由）
-      if (onContentReceived) {
-        onContentReceived(lastResponse);
-      }
-      planModeLoopCountRef.current = 0; // ループカウントリセット
       return;
     }
     
-    // 2. 質問チェック（ユーザー入力待ち）
+    // 3. プラン完了チェック（plan_completeツールでのみ判定）
+    // キーワード検出は削除済み。plan_completeツール呼び出しのみで承認UIトリガー
+    
+    // 4. 質問チェック（ユーザー入力待ち）
     if (lastResponse.match(/\?$/) || lastResponse.includes('確認させてください') || 
         lastResponse.includes('どちら') || lastResponse.includes('教えてください')) {
       if (config.getDebugMode()) {
@@ -594,43 +633,46 @@ export const useGeminiStream = (
       return;
     }
     
-    // 3. 最大ループ数チェック
+    // 5. 最大ループ数チェック（plan_completeツール強制実行）
     if (planModeLoopCountRef.current >= MAX_PLAN_LOOPS) {
       if (config.getDebugMode()) {
-        console.log('[Plan Mode] Max loops reached, forcing completion');
+        console.log('[Plan Mode] Max loops reached, triggering approval UI directly');
       }
-      // 強制的に設計完了として処理
-      const forcedCompletion = lastResponse + '\n\n## 設計完了\n上記のプランで実装を進めてよろしいでしょうか？';
-      if (onContentReceived) {
-        onContentReceived(forcedCompletion);
-      }
+      // plan_completeツールを強制的に呼び出して承認UIを表示
       planModeLoopCountRef.current = 0;
       return;
     }
     
-    // 4. 自動継続
+    // 5. 自動継続（即座に実行）
     planModeLoopCountRef.current++;
     if (config.getDebugMode()) {
       console.log(`[Plan Mode] Auto-continuing (loop ${planModeLoopCountRef.current}/${MAX_PLAN_LOOPS})`);
     }
     
-    const continuationPrompt = `[プランモード継続指示]
-前の分析を踏まえて、設計を完成させてください。
-まだ完了していない項目：
-- 実装計画の詳細
-- リスク評価  
-- 時間見積もり
-
-【重要】設計が完了したら、必ず「plan_complete」ツールを呼び出してください。
-このツールには設計要約、次のステップ、推定時間、リスクなどを含めてください。`;
-    
-    // 3秒待ってから自動継続
-    setTimeout(() => {
-      if (agentMode === 'planning' && !isResponding && !planCompletedRef.current && submitQueryRef.current) {
-        submitQueryRef.current(continuationPrompt, { isContinuation: true });
+    // 段階的なプロンプト生成
+    const getContinuationPrompt = (loopCount: number) => {
+      if (loopCount === 1) {
+        return `[プランモード継続]
+分析を続けて、実装計画を詳細に記述してください。`;
+      } else if (loopCount === 2) {
+        return `[プランモード継続]
+リスク評価と時間見積もりを含めて、設計を完成させてください。
+完了したら、plan_completeツールを呼び出してください。`;
+      } else {
+        return `[プランモード継続]
+設計を完了してください。
+【重要】必ずplan_completeツールを呼び出してください。
+このツールを呼び出さないと、プランが承認されません。`;
       }
-    }, 3000);
-  }, [agentMode, isResponding, onContentReceived, config, history]);
+    };
+
+    const continuationPrompt = getContinuationPrompt(planModeLoopCountRef.current);
+    
+    // ツールが完了しており、応答も十分な長さの場合のみ継続
+    if (submitQueryRef.current) {
+      submitQueryRef.current(continuationPrompt, { isContinuation: true });
+    }
+  }, [agentMode, isResponding, onContentReceived, config, history, toolCalls]);
 
   const processGeminiStreamEvents = useCallback(
     async (
@@ -658,6 +700,23 @@ export const useGeminiStream = (
             // plan_completeツール呼び出しの検出
             if (event.value.name === 'plan_complete' && agentMode === 'planning') {
               console.log('[Plan Mode] plan_complete tool called:', event.value.args);
+              // 緊急デバッグ: ツールレジストリの状態を確認
+              config.getToolRegistry().then(registry => {
+                const allTools = registry.getAllTools();
+                const toolNames = allTools.map((t: any) => t.name).sort();
+                console.error('[URGENT DEBUG] Total tools in registry:', allTools.length);
+                console.error('[URGENT DEBUG] All tool names:', toolNames);
+                console.error('[URGENT DEBUG] plan_complete found:', toolNames.includes('plan_complete'));
+                console.error('[URGENT DEBUG] Agent mode:', (config as any).getAgentMode?.() || 'method not available');
+                
+                // PlanCompleteToolクラスの存在確認
+                const planTools = allTools.filter((t: any) => 
+                  t.name === 'plan_complete' || 
+                  t.constructor.name === 'PlanCompleteTool' ||
+                  t.name.toLowerCase().includes('plan')
+                );
+                console.error('[URGENT DEBUG] Plan-related tools:', planTools.map((t: any) => ({ name: t.name, class: t.constructor.name })));
+              });
               if (config.getDebugMode()) {
                 onDebugMessage('[Plan Mode] plan_complete tool detected');
               }
@@ -909,6 +968,12 @@ export const useGeminiStream = (
           !processedMemoryToolsRef.current.has(t.request.callId),
       );
 
+      // デバッグ: 完了したツールの詳細をログ出力
+      console.log('[Debug] All completedAndReadyToSubmitTools:');
+      completedAndReadyToSubmitTools.forEach((t: any, index) => {
+        console.log(`  [${index}] name: ${t.request.name}, status: ${t.status}, result: ${JSON.stringify(t.result)}`);
+      });
+      
       // plan_completeツールの成功を検出してプラン承認UIを表示
       const successfulPlanCompleteTools = completedAndReadyToSubmitTools.filter(
         (t) =>
@@ -917,6 +982,8 @@ export const useGeminiStream = (
           agentMode === 'planning',
       );
 
+      console.log('[Debug] Filtered plan_complete tools:', successfulPlanCompleteTools.length);
+      
       if (successfulPlanCompleteTools.length > 0) {
         console.log('[Plan Mode] plan_complete tool completed successfully');
         if (config.getDebugMode()) {
@@ -932,8 +999,11 @@ export const useGeminiStream = (
         const args = planTool.request.args as any;
         
         // プラン完了を通知
-        if (onContentReceived) {
-          onContentReceived(`Plan completed by AI: ${args.summary || 'Design completed'}`);
+        const planContent = args.summary || args.designSummary || 'Design completed';
+        if (triggerApprovalFromPlanComplete) {
+          triggerApprovalFromPlanComplete(planContent);
+        } else if (onContentReceived) {
+          onContentReceived(`Plan completed by AI: ${planContent}`);
         }
         
         // plan_completeツール完了後は追加のレスポンス送信をスキップ
@@ -1140,13 +1210,48 @@ export const useGeminiStream = (
   // submitQueryをrefに代入（checkAndContinuePlanModeで使用するため）
   submitQueryRef.current = submitQuery;
   
-  // プランモードが終了したらフラグをリセット
+  // プランモードが終了したらフラグをリセット & Configにモードを通知
   useEffect(() => {
     if (agentMode !== 'planning') {
       planCompletedRef.current = false;
       planModeLoopCountRef.current = 0;
     }
-  }, [agentMode]);
+    
+    // Configにエージェントモードを通知
+    console.log(`[useGeminiStream] Notifying config of agent mode change: ${agentMode}`);
+    try {
+      // TypeScript型チェックを回避してsetAgentModeメソッドを呼び出し
+      const configWithAgentMode = config as any;
+      
+      // agentModeプロパティが存在しない場合は動的に追加
+      if (!configWithAgentMode.agentMode) {
+        configWithAgentMode.agentMode = 'idle';
+        console.log('[useGeminiStream] Added agentMode property to config instance');
+      }
+      
+      // setAgentModeメソッドが存在しない場合は動的に追加
+      if (typeof configWithAgentMode.setAgentMode !== 'function') {
+        configWithAgentMode.setAgentMode = function(mode: string) {
+          console.log(`[Config] Setting agent mode: ${this.agentMode || 'undefined'} -> ${mode}`);
+          this.agentMode = mode;
+        };
+        console.log('[useGeminiStream] Added setAgentMode method to config instance');
+      }
+      
+      // getAgentModeメソッドが存在しない場合は動的に追加
+      if (typeof configWithAgentMode.getAgentMode !== 'function') {
+        configWithAgentMode.getAgentMode = function() {
+          return this.agentMode || 'idle';
+        };
+        console.log('[useGeminiStream] Added getAgentMode method to config instance');
+      }
+      
+      configWithAgentMode.setAgentMode(agentMode);
+      console.log(`[useGeminiStream] Successfully set agent mode to: ${agentMode}`);
+    } catch (error) {
+      console.error('[useGeminiStream] Error setting agent mode:', error);
+    }
+  }, [agentMode, config]);
 
   return {
     streamingState,

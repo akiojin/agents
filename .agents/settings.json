@@ -23,6 +23,7 @@
       "*-lock.json"
     ]
   },
+  "debugMode": true,
   "mcpServers": {
     "microsoft.docs.mcp": {
       "type": "http",
