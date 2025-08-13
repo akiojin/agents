@@ -372,6 +372,13 @@ async function loadNonInteractiveConfig(
       config.getSessionId(),
       argv,
     );
+    // 元のconfigからagentModeを継承（プランモード状態を保持）
+    const originalAgentMode = (config as any).agentMode || config.agentMode || 'idle';
+    if (originalAgentMode !== 'idle' && 'setAgentMode' in finalConfig && typeof finalConfig.setAgentMode === 'function') {
+      finalConfig.setAgentMode(originalAgentMode);
+      console.log(`[NonInteractive] Inherited agent mode: ${originalAgentMode}`);
+    }
+    
     console.log('[NonInteractive] Calling finalConfig.initialize()...');
     await finalConfig.initialize();
     console.log('[NonInteractive] finalConfig.initialize() completed');

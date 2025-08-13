@@ -716,8 +716,14 @@ export class Config {
     // IntelligentAnalysisツールを登録（深層分析用）
     registerCoreTool(IntelligentAnalysisTool, this);
     
-    // PlanCompleteToolを他のツールと同じパターンで登録
-    registerCoreTool(PlanCompleteTool);
+    // PlanCompleteTool: 特別扱いでexcludeToolsチェックを回避（プランモードで必須）
+    try {
+      const planCompleteInstance = new PlanCompleteTool();
+      registry.registerTool(planCompleteInstance);
+      console.log('[Tool Registration] plan_complete tool registered (bypass excludeTools check)');
+    } catch (error) {
+      console.error('[Tool Registration] CRITICAL: Failed to register plan_complete tool:', error);
+    }
 
     await registry.discoverTools();
     return registry;
@@ -761,6 +767,22 @@ export class Config {
     registerPlanModeTool(TodoWriteTool);
     registerPlanModeTool(IntelligentAnalysisTool, this);
     registerPlanModeTool(PlanCompleteTool);
+    
+    // バックアップ：plan_completeツールの確実な登録（プランモードでは絶対必須）
+    const allTools = registry.getAllTools();
+    const planCompleteFound = allTools.find((t: any) => t.name === 'plan_complete');
+    if (!planCompleteFound) {
+      console.warn('[Plan Mode Registry] plan_complete not found via registerPlanModeTool, forcing registration');
+      try {
+        const planCompleteInstance = new PlanCompleteTool();
+        registry.registerTool(planCompleteInstance);
+        console.log('[Plan Mode Registry] plan_complete tool backup registration successful');
+      } catch (error) {
+        console.error('[Plan Mode Registry] CRITICAL: plan_complete backup registration failed:', error);
+      }
+    } else {
+      console.log('[Plan Mode Registry] plan_complete tool successfully registered via normal flow');
+    }
 
     await registry.discoverTools();
     return registry;
@@ -805,6 +827,7 @@ const PLAN_MODE_ALLOWED_TOOLS = [
   
   // メモリ検索（既存知識の活用）
   'SearchMemory',
+  'MemoryFeedback',  // メモリ関連フィードバック
   'MemoryStats',
   
   // プラン完了通知
