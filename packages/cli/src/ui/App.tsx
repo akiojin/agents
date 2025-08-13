@@ -396,7 +396,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
   }, [config, addItem, userTier]);
 
   // エージェント状態管理フック（useSlashCommandProcessorより前に配置）
-  const { agentState, updateRequirements, updateDesign, startPlanning } = useAgentState();
+  const { agentState, updateRequirements, updateDesign, startPlanning } = useAgentState(config);
 
   const {
     handleSlashCommand,
@@ -576,7 +576,8 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
   const {
     showApprovalUI,
     pendingPlanData,
-    detectPlanCompletion,
+    // detectPlanCompletion, // 削除: 無限ループの原因
+    triggerApprovalFromPlanComplete,
     handleApprovalAction,
   } = usePlanApproval({
     onPlanApproved: (result) => {
@@ -607,7 +608,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     if (config.getDebugMode()) {
       console.log('[Plan Detection] Content received:', content.substring(0, 100) + '...');
     }
-    detectPlanCompletion(content);
+    // detectPlanCompletion(content); // 削除: plan_completeツール呼び出しのみを使用
     
     // AIからの設計提案をコンテキストに保存
     if (agentState.mode === AgentMode.PLANNING && 
@@ -625,7 +626,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
         }
       }
     }
-  }, [detectPlanCompletion, config, agentState, updateDesign]);
+  }, [config, agentState, updateDesign]);
 
   const {
     streamingState,
@@ -649,6 +650,7 @@ const App = ({ config, settings, startupWarnings = [], version }: AppProps) => {
     setModelSwitchedFromQuotaError,
     handleContentReceived, // コンテンツコールバックを追加
     agentState.mode === AgentMode.PLANNING ? 'planning' : 'idle', // プランモード判定用
+    triggerApprovalFromPlanComplete, // プラン完了時の承認UIトリガー
   );
   pendingHistoryItems.push(...pendingGeminiHistoryItems);
   const { elapsedTime, currentLoadingPhrase } =

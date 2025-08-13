@@ -32,49 +32,27 @@ export const usePlanApproval = (options: UsePlanApprovalOptions) => {
   const [detectionCount, setDetectionCount] = useState(0);
   const MAX_DETECTION_ATTEMPTS = 5;
 
+  // detectPlanCompletion関数は削除済み - plan_completeツールのみでトリガー
+
   /**
-   * プラン完了の検出と承認UIの表示
+   * plan_completeツール完了時に承認UIを表示
    */
-  const detectPlanCompletion = useCallback((content: string) => {
-    // 検出試行回数をインクリメント
-    setDetectionCount(prev => prev + 1);
+  const triggerApprovalFromPlanComplete = useCallback((planContent: string) => {
+    console.log('[Plan Approval] Triggered by plan_complete tool');
     
-    console.log(`[Plan Approval] Detection attempt ${detectionCount + 1}/${MAX_DETECTION_ATTEMPTS}`);
-    console.log('[Plan Approval] Content:', content.substring(0, 300) + '...');
-    
-    // プラン完了を示すキーワードを検出
-    const completionKeywords = [
-      '## 設計完了',
-      '## Plan Complete',
-      'Ready for approval',
-      'プラン提示',
-      '承認をお願いします',
-      'Plan ready for review'
-    ];
-
-    const hasCompletionKeyword = completionKeywords.some(keyword => 
-      content.includes(keyword)
-    );
-
-    console.log('[Plan Approval] Completion keyword found:', hasCompletionKeyword);
-    console.log('[Plan Approval] Agent mode:', agentState.mode);
-
-    if (hasCompletionKeyword && agentState.mode === AgentMode.PLANNING) {
+    if (agentState.mode === AgentMode.PLANNING) {
       const context = getCurrentContext();
       
-      // コンテキストからプランデータを作成（部分的でもOK）
+      // コンテキストからプランデータを作成
       const planData: PlanApprovalData = {
-        requirements: context.requirements?.analyzed || 
-          [content.includes('要件') ? '要件分析完了' : 'AIによる分析内容'],
+        requirements: context.requirements?.analyzed || ['AIによる分析内容'],
         design: {
-          architecture: context.design?.architecture || 
-            (content.includes('アーキテクチャ') ? 'アーキテクチャ設計完了' : 'AI提案の設計'),
-          technologies: context.design?.technologies || 
-            (content.includes('技術') ? ['提案技術スタック'] : []),
-          plan: context.design?.plan || content.substring(0, 500) + '...'
+          architecture: context.design?.architecture || 'AI提案の設計',
+          technologies: context.design?.technologies || [],
+          plan: context.design?.plan || planContent.substring(0, 500) + '...'
         },
-        estimatedTime: extractEstimatedTime(content),
-        riskAssessment: extractRiskAssessment(content)
+        estimatedTime: extractEstimatedTime(planContent),
+        riskAssessment: extractRiskAssessment(planContent)
       };
 
       console.log('[Plan Approval] Creating plan data:', planData);
@@ -87,33 +65,8 @@ export const usePlanApproval = (options: UsePlanApprovalOptions) => {
       return true;
     }
     
-    // 最大試行回数に達した場合の強制表示
-    if (detectionCount >= MAX_DETECTION_ATTEMPTS && 
-        agentState.mode === AgentMode.PLANNING && 
-        !showApprovalUI) {
-      console.log('[Plan Approval] Max attempts reached, forcing approval UI');
-      
-      const context = getCurrentContext();
-      const forcedPlanData: PlanApprovalData = {
-        requirements: ['AIによる深層分析完了'],
-        design: {
-          architecture: 'AI提案の設計アーキテクチャ',
-          technologies: ['提案された技術スタック'],
-          plan: content || 'AIが作成した実装計画'
-        },
-        estimatedTime: '詳細検討中',
-        riskAssessment: '標準的なリスク'
-      };
-      
-      setPendingPlanData(forcedPlanData);
-      setShowApprovalUI(true);
-      setDetectionCount(0); // リセット
-      transitionTo(AgentMode.PLANNING, Phase.DESIGN, StepState.PRESENTING, 'Plan forced for approval');
-      return true;
-    }
-    
     return false;
-  }, [agentState.mode, getCurrentContext, transitionTo, detectionCount, showApprovalUI]);
+  }, [agentState.mode, getCurrentContext, transitionTo]);
 
   /**
    * 承認アクションの処理
@@ -189,7 +142,7 @@ export const usePlanApproval = (options: UsePlanApprovalOptions) => {
     isProcessingApproval,
     
     // アクション
-    detectPlanCompletion,
+    triggerApprovalFromPlanComplete,
     handleApprovalAction,
     resetApprovalUI,
     onPlanEditCompleted,

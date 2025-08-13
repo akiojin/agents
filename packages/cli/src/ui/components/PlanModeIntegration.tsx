@@ -30,7 +30,6 @@ export const PlanModeIntegration: React.FC<PlanModeIntegrationProps> = ({
     showApprovalUI,
     pendingPlanData,
     isProcessingApproval,
-    detectPlanCompletion,
     handleApprovalAction,
   } = usePlanApproval({
     onPlanApproved: (result) => {
@@ -52,11 +51,11 @@ export const PlanModeIntegration: React.FC<PlanModeIntegrationProps> = ({
     if (onContentReceived) {
       const originalHandler = onContentReceived;
       onContentReceived = (content: string) => {
-        detectPlanCompletion(content);
+        // detectPlanCompletion(content); // 削除: plan_completeツール呼び出しのみを使用
         originalHandler(content);
       };
     }
-  }, [detectPlanCompletion, onContentReceived]);
+  }, [onContentReceived]); // detectPlanCompletionを依存配列から削除
 
   // 承認UI表示中は他のUIをブロック
   if (showApprovalUI && pendingPlanData) {
