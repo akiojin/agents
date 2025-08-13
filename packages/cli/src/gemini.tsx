@@ -325,8 +325,13 @@ async function loadNonInteractiveConfig(
   settings: LoadedSettings,
   argv: CliArgs,
 ) {
+  console.log('[NonInteractive] loadNonInteractiveConfig called');
+  console.log('[NonInteractive] Current approvalMode:', config.getApprovalMode());
+  console.log('[NonInteractive] ApprovalMode.YOLO:', ApprovalMode.YOLO);
+  
   let finalConfig = config;
   if (config.getApprovalMode() !== ApprovalMode.YOLO) {
+    console.log('[NonInteractive] Creating new config with excluded tools...');
     // Everything is not allowed, ensure that only read-only tools are configured.
     const existingExcludeTools = settings.merged.excludeTools || [];
     const interactiveTools = [
@@ -338,6 +343,24 @@ async function loadNonInteractiveConfig(
     const newExcludeTools = [
       ...new Set([...existingExcludeTools, ...interactiveTools]),
     ];
+    
+    // plan_completeツールは除外リストから除外（プランモードで必要）
+    const planCompleteIndex = newExcludeTools.indexOf('plan_complete');
+    if (planCompleteIndex !== -1) {
+      newExcludeTools.splice(planCompleteIndex, 1);
+      console.log('[NonInteractive] plan_complete tool removed from excludeTools');
+    }
+    const planCompleteClassIndex = newExcludeTools.indexOf('PlanCompleteTool');
+    if (planCompleteClassIndex !== -1) {
+      newExcludeTools.splice(planCompleteClassIndex, 1);
+      console.log('[NonInteractive] PlanCompleteTool removed from excludeTools');
+    }
+    
+    console.log('[NonInteractive] excludeTools:', newExcludeTools);
+    console.log('[NonInteractive] Checking if plan_complete is excluded...');
+    const isPlanCompleteExcluded = newExcludeTools.includes('plan_complete') || 
+                                  newExcludeTools.includes('PlanCompleteTool');
+    console.log('[NonInteractive] plan_complete excluded:', isPlanCompleteExcluded);
 
     const nonInteractiveSettings = {
       ...settings.merged,
@@ -349,7 +372,23 @@ async function loadNonInteractiveConfig(
       config.getSessionId(),
       argv,
     );
+    console.log('[NonInteractive] Calling finalConfig.initialize()...');
     await finalConfig.initialize();
+    console.log('[NonInteractive] finalConfig.initialize() completed');
+    
+    // ツールレジストリの確認
+    const toolRegistry = await finalConfig.getToolRegistry();
+    const allTools = toolRegistry.getAllTools();
+    console.log('[NonInteractive] Tools in finalConfig registry:', allTools.length);
+    const planCompleteFound = allTools.find((t: any) => t.name === 'plan_complete');
+    console.log('[NonInteractive] plan_complete tool found in finalConfig:', !!planCompleteFound);
+    
+    // plan_completeツール登録はConfig.initialize()に委ねる
+    if (!planCompleteFound) {
+      console.warn('[NonInteractive] plan_complete tool not found in registry - should be handled by Config.initialize()');
+    }
+  } else {
+    console.log('[NonInteractive] ApprovalMode is YOLO, skipping initialize()');
   }
 
   return await validateNonInterActiveAuth(

@@ -212,6 +212,11 @@ export class Config {
   private readonly summarizeToolOutput:
     | Record<string, SummarizeToolOutputSettings>
     | undefined;
+  
+  // プランモード管理用の追加プロパティ
+  private agentMode: 'idle' | 'planning' | 'execution' = 'idle';
+  private planModeToolRegistry?: ToolRegistry;
+  private normalToolRegistry?: ToolRegistry;
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId;
@@ -292,13 +297,32 @@ export class Config {
   }
 
   async initialize(): Promise<void> {
+    console.log('[Config] initialize() called - starting config initialization');
     // Initialize centralized services
     // Initialize centralized FileDiscoveryService
     this.getFileService();
     if (this.getCheckpointingEnabled()) {
       await this.getGitService();
     }
+    console.log('[Config] Creating tool registry...');
     this.toolRegistry = await this.createToolRegistry();
+    console.log('[Config] Tool registry created successfully');
+    
+    // plan_completeツールの確実な登録確認（非インタラクティブモード対応）
+    const allTools = this.toolRegistry.getAllTools();
+    const planCompleteFound = allTools.find((t: any) => t.name === 'plan_complete');
+    if (!planCompleteFound) {
+      console.log('[Config] plan_complete tool not found, force registering...');
+      try {
+        const planCompleteInstance = new PlanCompleteTool();
+        this.toolRegistry.registerTool(planCompleteInstance);
+        console.log('[Config] plan_complete tool force registered successfully');
+      } catch (error) {
+        console.error('[Config] Error force registering plan_complete tool:', error);
+      }
+    } else {
+      console.log('[Config] plan_complete tool already registered');
+    }
     
     // Initialize GeminiClient with contentGeneratorConfig if available
     if (this.contentGeneratorConfig && this.geminiClient) {
@@ -430,9 +454,6 @@ export class Config {
     return this.targetDir;
   }
 
-  getToolRegistry(): Promise<ToolRegistry> {
-    return Promise.resolve(this.toolRegistry);
-  }
 
   getFileParserService(): FileParserService {
     if (!this.fileParserService) {
@@ -599,6 +620,16 @@ export class Config {
     return this.ideMode;
   }
 
+  // エージェントモード管理用メソッドを public に移動
+  public setAgentMode(mode: 'idle' | 'planning' | 'execution'): void {
+    // Agent mode changed to ${mode}
+    this.agentMode = mode;
+  }
+
+  getAgentMode(): 'idle' | 'planning' | 'execution' {
+    return this.agentMode;
+  }
+
   async getGitService(): Promise<GitService> {
     if (!this.gitService) {
       this.gitService = new GitService(this.targetDir);
@@ -629,6 +660,7 @@ export class Config {
     const registerCoreTool = (ToolClass: any, ...args: unknown[]) => {
       const className = ToolClass.name;
       const toolName = ToolClass.Name || className;
+      
       const coreTools = this.getCoreTools();
       const excludeTools = this.getExcludeTools();
 
@@ -653,7 +685,12 @@ export class Config {
       }
 
       if (isEnabled) {
-        registry.registerTool(new ToolClass(...args));
+        try {
+          const toolInstance = new ToolClass(...args);
+          registry.registerTool(toolInstance);
+        } catch (error) {
+          console.error(`[Tool Registration] Error creating/registering ${className}:`, error);
+        }
       }
     };
 
@@ -676,17 +713,115 @@ export class Config {
     registerCoreTool(TodoWriteTool);
     // IntelligentAnalysisツールを登録（深層分析用）
     registerCoreTool(IntelligentAnalysisTool, this);
-    // プランモード完了通知ツール
-    registerCoreTool(PlanCompleteTool);
     
-    // デバッグ：登録されたツール一覧を確認
-    if (this.getDebugMode()) {
-      console.log('[Debug] Registered tools:', registry.getAllTools().map(t => t.name).sort());
+    // plan_completeツールの確実な登録（excludeToolsを無視）
+    try {
+      const planCompleteInstance = new PlanCompleteTool();
+      registry.registerTool(planCompleteInstance);
+    } catch (error) {
+      console.error('[Tool Registration] Error registering PlanCompleteTool:', error);
     }
 
     await registry.discoverTools();
     return registry;
   }
+
+  // プランモード専用のツールレジストリを作成
+  async createPlanModeToolRegistry(): Promise<ToolRegistry> {
+    const registry = new ToolRegistry(this);
+
+    // プランモードで許可されたツールのみ登録
+    const registerPlanModeTool = (ToolClass: any, ...args: unknown[]) => {
+      const className = ToolClass.name;
+      const toolName = ToolClass.Name || className;
+      
+      // プランモードで使用可能かチェック
+      const isAllowedInPlanMode = PLAN_MODE_ALLOWED_TOOLS.some(allowedTool => 
+        toolName === allowedTool || 
+        className === allowedTool ||
+        toolName.toLowerCase() === allowedTool.toLowerCase() ||
+        className.toLowerCase() === allowedTool.toLowerCase()
+      );
+      
+      if (isAllowedInPlanMode) {
+        try {
+          const toolInstance = new ToolClass(...args);
+          registry.registerTool(toolInstance);
+        } catch (error) {
+          console.error(`[Plan Mode Registry] Error registering ${className}:`, error);
+        }
+      }
+    };
+
+    // プランモードで使用可能なツールのみ登録
+    registerPlanModeTool(LSTool, this);
+    registerPlanModeTool(ReadFileTool, this);
+    registerPlanModeTool(GrepTool, this);
+    registerPlanModeTool(GlobTool, this);
+    registerPlanModeTool(SearchMemoryTool);
+    registerPlanModeTool(MemoryFeedbackTool);
+    registerPlanModeTool(MemoryStatsTool);
+    registerPlanModeTool(TodoWriteTool);
+    registerPlanModeTool(IntelligentAnalysisTool, this);
+    registerPlanModeTool(PlanCompleteTool);
+    
+    // PlanCompleteToolの強制登録（確実に登録されるように）
+    try {
+      const planCompleteInstance = new PlanCompleteTool();
+      registry.registerTool(planCompleteInstance);
+    } catch (error) {
+      console.error(`[Plan Mode Registry] Error force registering PlanCompleteTool:`, error);
+    }
+
+    await registry.discoverTools();
+    return registry;
+  }
+
+
+  // モードに応じたツールレジストリを取得
+  async getToolRegistry(): Promise<ToolRegistry> {
+    const currentMode = (this as any).agentMode || this.agentMode || 'idle';
+    
+    if (currentMode === 'planning') {
+      if (!this.planModeToolRegistry) {
+        this.planModeToolRegistry = await this.createPlanModeToolRegistry();
+      }
+      return this.planModeToolRegistry;
+    } else {
+      if (!this.normalToolRegistry) {
+        this.normalToolRegistry = this.toolRegistry;
+      }
+      return this.normalToolRegistry;
+    }
+  }
 }
+// プランモードで使用可能なツールのリスト（読み取り専用・分析ツールのみ）
+const PLAN_MODE_ALLOWED_TOOLS = [
+  // ファイルシステム読み取り
+  'ls',           // ディレクトリ構造の確認
+  'read_file',    // ファイル内容の読み取り
+  'ReadFile',     // 同上（クラス名）
+  
+  // コード検索・分析
+  'grep',         // パターン検索（影響範囲調査）
+  'Grep',         // 同上（クラス名）
+  'glob',         // ファイル名パターン検索
+  'Glob',         // 同上（クラス名）
+  
+  // AI分析ツール
+  'IntelligentAnalysis',  // 深層コード分析
+  
+  // タスク管理
+  'TodoWrite',    // タスク計画の記録
+  
+  // メモリ検索（既存知識の活用）
+  'SearchMemory',
+  'MemoryStats',
+  
+  // プラン完了通知
+  'plan_complete',
+  'PlanCompleteTool'
+];
+
 // Export model constants for use in CLI
 export { DEFAULT_AGENTS_FLASH_MODEL };
