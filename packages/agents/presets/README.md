@@ -81,9 +81,9 @@ This repository contains 46 specialized subagents that extend Claude Code's capa
 
 All 46 subagents are configured with specific Claude models based on task complexity:
 
-### 🚀 Claude Haiku 3.5 (Fast & Cost-Effective) - 8 agents
+### 🚀 Claude Haiku 4.5 (Fast & Cost-Effective) - 8 agents
 
-**Model:** `claude-3-5-haiku-20241022`
+**Model:** `claude-haiku-4-5-20251001`
 
 - `data-scientist` - SQL queries and data analysis
 - `api-documenter` - OpenAPI/Swagger documentation
@@ -94,9 +94,9 @@ All 46 subagents are configured with specific Claude models based on task comple
 - `search-specialist` - Web research and information gathering
 - `legal-advisor` - Privacy policies and compliance documents
 
-### ⚡ Claude Sonnet 4 (Balanced Performance) - 26 agents
+### ⚡ Claude Sonnet 4.6 (Balanced Performance) - 26 agents
 
-**Model:** `claude-sonnet-4-20250514`
+**Model:** `claude-sonnet-4-6`
 
 **Development & Languages:**
 
@@ -133,9 +133,9 @@ All 46 subagents are configured with specific Claude models based on task comple
 - `legacy-modernizer` - Framework migrations
 - `payment-integration` - Payment processing
 
-### 🧠 Claude Opus 4 (Maximum Capability) - 11 agents
+### 🧠 Claude Opus 4.8 (Maximum Capability) - 11 agents
 
-**Model:** `claude-opus-4-20250514`
+**Model:** `claude-opus-4-8`
 
 - `ai-engineer` - LLM applications and RAG systems
 - `security-auditor` - Vulnerability analysis
@@ -265,7 +265,7 @@ Each subagent follows this structure:
 ---
 name: subagent-name
 description: When this subagent should be invoked
-model: claude-3-5-haiku-20241022 # Optional - specify which model to use
+model: claude-haiku-4-5-20251001 # Optional - specify which model to use
 tools: tool1, tool2 # Optional - defaults to all tools
 ---
 
@@ -276,15 +276,15 @@ System prompt defining the subagent's role and capabilities
 
 As of Claude Code v1.0.64, subagents can specify which Claude model they should use. This allows for cost-effective task delegation based on complexity:
 
-- **Low Complexity (Haiku 3.5)**: Simple tasks like basic data analysis, documentation generation, and standard responses
-- **Medium Complexity (Sonnet 4)**: Development tasks, code review, testing, and standard engineering work
-- **High Complexity (Opus 4)**: Critical tasks like security auditing, architecture review, incident response, and AI/ML engineering
+- **Low Complexity (Haiku 4.5)**: Simple tasks like basic data analysis, documentation generation, and standard responses
+- **Medium Complexity (Sonnet 4.6)**: Development tasks, code review, testing, and standard engineering work
+- **High Complexity (Opus 4.8)**: Critical tasks like security auditing, architecture review, incident response, and AI/ML engineering
 
 Available models:
 
-- `claude-3-5-haiku-20241022` - Fast and cost-effective for simple tasks
-- `claude-sonnet-4-20250514` - Balanced performance for most development work
-- `claude-opus-4-20250514` - Most capable for complex analysis and critical tasks
+- `claude-haiku-4-5-20251001` - Fast and cost-effective for simple tasks
+- `claude-sonnet-4-6` - Balanced performance for most development work
+- `claude-opus-4-8` - Most capable for complex analysis and critical tasks
 
 If no model is specified, the subagent will use the system's default model.
 

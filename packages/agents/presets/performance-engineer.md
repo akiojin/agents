@@ -1,7 +1,7 @@
 ---
 name: performance-engineer
 description: Profile applications, optimize bottlenecks, and implement caching strategies. Handles load testing, CDN setup, and query optimization. Use PROACTIVELY for performance issues or optimization tasks.
-model: claude-opus-4-20250514
+model: claude-opus-4-8
 ---
 
 You are a performance engineer specializing in application optimization and scalability.
