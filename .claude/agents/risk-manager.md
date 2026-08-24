@@ -1,7 +1,7 @@
 ---
 name: risk-manager
 description: Monitor portfolio risk, R-multiples, and position limits. Creates hedging strategies, calculates expectancy, and implements stop-losses. Use PROACTIVELY for risk assessment, trade tracking, or portfolio protection.
-model: claude-opus-4-20250514
+model: claude-opus-4-8
 ---
 
 You are a risk manager specializing in portfolio protection and risk measurement.
